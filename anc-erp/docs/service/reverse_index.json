@@ -1,0 +1,393 @@
+[
+  {
+    "id": "00-overall-bootstrap",
+    "folder": "00-overall",
+    "name": "전체 골격 / Bootstrap",
+    "number": "00",
+    "actualParent": "repository root / docs",
+    "primaryContainer": "Repository + ERP shell",
+    "implementationOrder": 0,
+    "primaryRoutes": [
+      "/dashboard",
+      "/projects",
+      "/webhard",
+      "/mail",
+      "/admin"
+    ],
+    "contains": "전역 설계, 디자인 시스템, Reverse Map, 포함 구조",
+    "paths": {
+      "master": "docs/aec-erp/00-overall/00_MASTER_MARKDOWN.md",
+      "functionIndex": "docs/aec-erp/00-overall/01_FUNCTION_INDEX.md",
+      "designSystem": "docs/aec-erp/00-overall/02_GLOBAL_DESIGN_SYSTEM.md",
+      "globalReversePrompt": "docs/aec-erp/00-overall/03_GLOBAL_REVERSE_PROMPT.md",
+      "documentPackRule": "docs/aec-erp/00-overall/04_DOCUMENT_PACK_RULE.md",
+      "containmentMap": "docs/aec-erp/00-overall/05_MODULE_CONTAINMENT_MAP.md",
+      "globalReverseMap": "docs/aec-erp/00-overall/10_GLOBAL_REVERSE_MAP.md"
+    }
+  },
+  {
+    "id": "project.field.registry",
+    "folder": "01-project-field",
+    "name": "프로젝트/현장 원장 관리",
+    "number": "01",
+    "actualParent": "Project root",
+    "primaryContainer": "Project",
+    "implementationOrder": 1,
+    "primaryRoutes": [
+      "/projects",
+      "/projects/new",
+      "/projects/[projectId]"
+    ],
+    "contains": "공사개요, 관계자, 발주처/시공사/A&C 담당자",
+    "paths": {
+      "readme": "docs/aec-erp/01-project-field/README.md",
+      "product": "docs/aec-erp/01-project-field/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/01-project-field/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/01-project-field/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/01-project-field/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/01-project-field/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/01-project-field/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/01-project-field/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/01-project-field/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "contract.estimate.management",
+    "folder": "02-contract-estimate",
+    "name": "계약/견적 관리",
+    "number": "02",
+    "actualParent": "Project",
+    "primaryContainer": "Project Detail > Contracts tab",
+    "implementationOrder": 2,
+    "primaryRoutes": [
+      "/projects/[projectId]/contracts",
+      "/projects/[projectId]/contracts/new",
+      "/contracts/[contractId]"
+    ],
+    "contains": "계약서, 견적서, 지급조건, 발주처별 분담금액",
+    "paths": {
+      "readme": "docs/aec-erp/02-contract-estimate/README.md",
+      "product": "docs/aec-erp/02-contract-estimate/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/02-contract-estimate/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/02-contract-estimate/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/02-contract-estimate/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/02-contract-estimate/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/02-contract-estimate/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/02-contract-estimate/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/02-contract-estimate/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "inspection.schedule.management",
+    "folder": "03-inspection-schedule",
+    "name": "점검회차/일정 관리",
+    "number": "03",
+    "actualParent": "Project",
+    "primaryContainer": "Project Detail > Inspection Rounds tab",
+    "implementationOrder": 3,
+    "primaryRoutes": [
+      "/projects/[projectId]/inspections",
+      "/inspections/[inspectionRoundId]",
+      "/calendar/inspections"
+    ],
+    "contains": "점검회차, 발주처별 보고서 업무, 회차별 업무",
+    "paths": {
+      "readme": "docs/aec-erp/03-inspection-schedule/README.md",
+      "product": "docs/aec-erp/03-inspection-schedule/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/03-inspection-schedule/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/03-inspection-schedule/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/03-inspection-schedule/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/03-inspection-schedule/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/03-inspection-schedule/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/03-inspection-schedule/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/03-inspection-schedule/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "inspection.checklist.management",
+    "folder": "05-field-inspection-checklist",
+    "name": "현장점검 체크리스트",
+    "number": "05",
+    "actualParent": "InspectionRound",
+    "primaryContainer": "Inspection Round Detail > Checklist tab",
+    "implementationOrder": 4,
+    "primaryRoutes": [
+      "/inspections/[inspectionRoundId]/checklist",
+      "/inspections/[inspectionRoundId]/checklist/mobile",
+      "/inspections/[inspectionRoundId]/checklist/review"
+    ],
+    "contains": "체크리스트, 위험성 감소대책, 추가 유해위험요인",
+    "paths": {
+      "readme": "docs/aec-erp/05-field-inspection-checklist/README.md",
+      "product": "docs/aec-erp/05-field-inspection-checklist/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/05-field-inspection-checklist/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/05-field-inspection-checklist/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/05-field-inspection-checklist/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/05-field-inspection-checklist/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/05-field-inspection-checklist/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/05-field-inspection-checklist/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/05-field-inspection-checklist/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "finding.action.photo_ledger",
+    "folder": "06-finding-action-photo-ledger",
+    "name": "지적사항/조치현황/사진대지",
+    "number": "06",
+    "actualParent": "InspectionRound + Document section",
+    "primaryContainer": "Inspection Round Detail > Findings/Photo Ledger tabs; Document > photo_ledger section",
+    "implementationOrder": 5,
+    "primaryRoutes": [
+      "/inspections/[inspectionRoundId]/findings",
+      "/inspections/[inspectionRoundId]/photo-ledger",
+      "/documents/safety-reports/[documentId]/sections/photo_ledger"
+    ],
+    "contains": "Finding, CorrectiveAction, EvidencePhoto, PhotoLedgerEntry",
+    "paths": {
+      "readme": "docs/aec-erp/06-finding-action-photo-ledger/README.md",
+      "product": "docs/aec-erp/06-finding-action-photo-ledger/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/06-finding-action-photo-ledger/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/06-finding-action-photo-ledger/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/06-finding-action-photo-ledger/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/06-finding-action-photo-ledger/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/06-finding-action-photo-ledger/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/06-finding-action-photo-ledger/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/06-finding-action-photo-ledger/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "safety_cost.usage",
+    "folder": "07-safety-cost-usage",
+    "name": "산업안전보건관리비 사용내용 확인",
+    "number": "07",
+    "actualParent": "InspectionRound + OwnerParty + Document section",
+    "primaryContainer": "Inspection Round Detail > Safety Cost tab; Document > safety_cost_usage section",
+    "implementationOrder": 6,
+    "primaryRoutes": [
+      "/projects/[projectId]/safety-costs",
+      "/inspections/[inspectionRoundId]/safety-costs",
+      "/documents/safety-reports/[documentId]/sections/safety_cost_usage"
+    ],
+    "contains": "계상금액, 사용금액, 사용률, 증빙, 적정성 의견",
+    "paths": {
+      "readme": "docs/aec-erp/07-safety-cost-usage/README.md",
+      "product": "docs/aec-erp/07-safety-cost-usage/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/07-safety-cost-usage/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/07-safety-cost-usage/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/07-safety-cost-usage/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/07-safety-cost-usage/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/07-safety-cost-usage/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/07-safety-cost-usage/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/07-safety-cost-usage/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "document.safety_health_ledger_report",
+    "folder": "04-safety-health-ledger-report",
+    "name": "공사안전보건대장 이행확인 보고서 자동화",
+    "number": "04",
+    "actualParent": "Project + InspectionRound + OwnerParty",
+    "primaryContainer": "Project Detail > Documents; InspectionRound > Owner Report Tasks; DocumentInstance",
+    "implementationOrder": 7,
+    "primaryRoutes": [
+      "/projects/[projectId]/documents/safety-reports",
+      "/documents/safety-reports/[documentId]",
+      "/inspections/[inspectionRoundId]/owner-reports/[ownerReportTaskId]/document"
+    ],
+    "contains": "발주처별 보고서, 섹션, A4 미리보기, export",
+    "paths": {
+      "readme": "docs/aec-erp/04-safety-health-ledger-report/README.md",
+      "product": "docs/aec-erp/04-safety-health-ledger-report/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/04-safety-health-ledger-report/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/04-safety-health-ledger-report/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/04-safety-health-ledger-report/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/04-safety-health-ledger-report/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/04-safety-health-ledger-report/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/04-safety-health-ledger-report/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/04-safety-health-ledger-report/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "document.safety_management_plan",
+    "folder": "08-safety-management-plan",
+    "name": "안전관리계획서 자동화",
+    "number": "08",
+    "actualParent": "Project Document",
+    "primaryContainer": "Project Detail > Documents > Safety Management Plan",
+    "implementationOrder": 8,
+    "primaryRoutes": [
+      "/projects/[projectId]/documents/safety-management-plans",
+      "/documents/safety-management-plans/[documentId]"
+    ],
+    "contains": "공사개요, 공종, 위험요인, 안전관리조직, 비상대응",
+    "paths": {
+      "readme": "docs/aec-erp/08-safety-management-plan/README.md",
+      "product": "docs/aec-erp/08-safety-management-plan/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/08-safety-management-plan/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/08-safety-management-plan/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/08-safety-management-plan/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/08-safety-management-plan/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/08-safety-management-plan/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/08-safety-management-plan/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/08-safety-management-plan/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "document.safety_health_ledger",
+    "folder": "09-safety-health-ledger",
+    "name": "안전보건대장 자동화",
+    "number": "09",
+    "actualParent": "Project Document / Project ledger",
+    "primaryContainer": "Project Detail > Documents > Safety Health Ledger",
+    "implementationOrder": 9,
+    "primaryRoutes": [
+      "/projects/[projectId]/documents/safety-health-ledgers",
+      "/documents/safety-health-ledgers/[documentId]"
+    ],
+    "contains": "프로젝트 전체 기간 누적 대장",
+    "paths": {
+      "readme": "docs/aec-erp/09-safety-health-ledger/README.md",
+      "product": "docs/aec-erp/09-safety-health-ledger/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/09-safety-health-ledger/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/09-safety-health-ledger/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/09-safety-health-ledger/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/09-safety-health-ledger/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/09-safety-health-ledger/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/09-safety-health-ledger/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/09-safety-health-ledger/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "webhard.files",
+    "folder": "10-webhard",
+    "name": "웹하드",
+    "number": "10",
+    "actualParent": "Full-screen app + Project-linked file layer",
+    "primaryContainer": "Webhard shell; Project Detail > Webhard tab",
+    "implementationOrder": 10,
+    "primaryRoutes": [
+      "/webhard",
+      "/webhard/projects/[projectId]",
+      "/projects/[projectId]/webhard"
+    ],
+    "contains": "Folder, FileAsset, FileVersion, ShareLink",
+    "paths": {
+      "readme": "docs/aec-erp/10-webhard/README.md",
+      "product": "docs/aec-erp/10-webhard/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/10-webhard/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/10-webhard/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/10-webhard/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/10-webhard/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/10-webhard/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/10-webhard/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/10-webhard/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "mailbox.messages",
+    "folder": "11-mailbox",
+    "name": "메일함",
+    "number": "11",
+    "actualParent": "Full-screen app + Project/Document/Submission linked communication layer",
+    "primaryContainer": "Mailbox 3-pane shell; Project Detail > Mail tab",
+    "implementationOrder": 11,
+    "primaryRoutes": [
+      "/mail",
+      "/mail/compose",
+      "/projects/[projectId]/mail"
+    ],
+    "contains": "MailAccount, MailThread, MailMessage, MailAttachment",
+    "paths": {
+      "readme": "docs/aec-erp/11-mailbox/README.md",
+      "product": "docs/aec-erp/11-mailbox/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/11-mailbox/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/11-mailbox/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/11-mailbox/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/11-mailbox/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/11-mailbox/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/11-mailbox/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/11-mailbox/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "approval.signature.submission",
+    "folder": "12-approval-signature-submission",
+    "name": "결재/서명/제출",
+    "number": "12",
+    "actualParent": "DocumentInstance",
+    "primaryContainer": "Document Detail > Approval/Signature/Submission; global inbox as queue only",
+    "implementationOrder": 12,
+    "primaryRoutes": [
+      "/documents/[documentId]/approval",
+      "/documents/[documentId]/signature",
+      "/documents/[documentId]/submission",
+      "/approvals"
+    ],
+    "contains": "ApprovalWorkflow, SignatureTask, FinalDocumentPackage, Submission",
+    "paths": {
+      "readme": "docs/aec-erp/12-approval-signature-submission/README.md",
+      "product": "docs/aec-erp/12-approval-signature-submission/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/12-approval-signature-submission/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/12-approval-signature-submission/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/12-approval-signature-submission/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/12-approval-signature-submission/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/12-approval-signature-submission/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/12-approval-signature-submission/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/12-approval-signature-submission/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "admin.template.prompt",
+    "folder": "13-admin-template-prompt",
+    "name": "관리자/템플릿/프롬프트",
+    "number": "13",
+    "actualParent": "Admin module",
+    "primaryContainer": "Admin shell",
+    "implementationOrder": 13,
+    "primaryRoutes": [
+      "/admin",
+      "/admin/templates",
+      "/admin/prompts",
+      "/admin/checklists"
+    ],
+    "contains": "DocumentTemplate, PromptTemplate, ChecklistTemplate, 권한",
+    "paths": {
+      "readme": "docs/aec-erp/13-admin-template-prompt/README.md",
+      "product": "docs/aec-erp/13-admin-template-prompt/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/13-admin-template-prompt/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/13-admin-template-prompt/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/13-admin-template-prompt/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/13-admin-template-prompt/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/13-admin-template-prompt/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/13-admin-template-prompt/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/13-admin-template-prompt/prompts/08_REVERSE_PROMPT.md"
+    }
+  },
+  {
+    "id": "dashboard.statistics",
+    "folder": "14-dashboard-statistics",
+    "name": "대시보드/통계",
+    "number": "14",
+    "actualParent": "Global dashboard + Project health summaries",
+    "primaryContainer": "Dashboard shell",
+    "implementationOrder": 14,
+    "primaryRoutes": [
+      "/dashboard",
+      "/dashboard/projects",
+      "/dashboard/documents",
+      "/dashboard/findings"
+    ],
+    "contains": "MetricSnapshot, ProjectHealthSummary, UrgentTask",
+    "paths": {
+      "readme": "docs/aec-erp/14-dashboard-statistics/README.md",
+      "product": "docs/aec-erp/14-dashboard-statistics/markdown/01_PRODUCT_MARKDOWN.md",
+      "tech": "docs/aec-erp/14-dashboard-statistics/markdown/02_TECH_MARKDOWN.md",
+      "designMarkdown": "docs/aec-erp/14-dashboard-statistics/markdown/05_DESIGN_MARKDOWN.md",
+      "reverseMap": "docs/aec-erp/14-dashboard-statistics/markdown/07_REVERSE_MAP.md",
+      "serviceAiPrompt": "docs/aec-erp/14-dashboard-statistics/prompts/03_SERVICE_AI_PROMPT.md",
+      "codexImplementationPrompt": "docs/aec-erp/14-dashboard-statistics/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "designPrompt": "docs/aec-erp/14-dashboard-statistics/prompts/06_DESIGN_PROMPT.md",
+      "reversePrompt": "docs/aec-erp/14-dashboard-statistics/prompts/08_REVERSE_PROMPT.md"
+    }
+  }
+]

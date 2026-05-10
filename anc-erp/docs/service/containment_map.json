@@ -1,0 +1,266 @@
+{
+  "rule": "Feature folders are implementation units, not standalone top-level apps.",
+  "rootEntity": "Project",
+  "hierarchy": {
+    "Project": [
+      "ProjectParty",
+      "Contact",
+      "Contract",
+      "Estimate",
+      "InspectionRound",
+      "DocumentInstance",
+      "Project-linked FileAsset",
+      "Project-linked MailThread",
+      "ActivityLog"
+    ],
+    "InspectionRound": [
+      "ChecklistSession",
+      "ChecklistResult",
+      "Finding",
+      "CorrectiveAction",
+      "EvidencePhoto",
+      "PhotoLedger",
+      "SafetyCostUsage",
+      "InspectionOwnerReportTask"
+    ],
+    "DocumentInstance": [
+      "DocumentSection",
+      "PhotoLedger section",
+      "SafetyCost section",
+      "ApprovalWorkflow",
+      "SignatureTask",
+      "FinalDocumentPackage",
+      "Submission"
+    ]
+  },
+  "features": [
+    {
+      "id": "00-overall-bootstrap",
+      "folder": "00-overall",
+      "name": "전체 골격 / Bootstrap",
+      "number": "00",
+      "actualParent": "repository root / docs",
+      "primaryContainer": "Repository + ERP shell",
+      "implementationOrder": 0,
+      "primaryRoutes": [
+        "/dashboard",
+        "/projects",
+        "/webhard",
+        "/mail",
+        "/admin"
+      ],
+      "contains": "전역 설계, 디자인 시스템, Reverse Map, 포함 구조"
+    },
+    {
+      "id": "project.field.registry",
+      "folder": "01-project-field",
+      "name": "프로젝트/현장 원장 관리",
+      "number": "01",
+      "actualParent": "Project root",
+      "primaryContainer": "Project",
+      "implementationOrder": 1,
+      "primaryRoutes": [
+        "/projects",
+        "/projects/new",
+        "/projects/[projectId]"
+      ],
+      "contains": "공사개요, 관계자, 발주처/시공사/A&C 담당자"
+    },
+    {
+      "id": "contract.estimate.management",
+      "folder": "02-contract-estimate",
+      "name": "계약/견적 관리",
+      "number": "02",
+      "actualParent": "Project",
+      "primaryContainer": "Project Detail > Contracts tab",
+      "implementationOrder": 2,
+      "primaryRoutes": [
+        "/projects/[projectId]/contracts",
+        "/projects/[projectId]/contracts/new",
+        "/contracts/[contractId]"
+      ],
+      "contains": "계약서, 견적서, 지급조건, 발주처별 분담금액"
+    },
+    {
+      "id": "inspection.schedule.management",
+      "folder": "03-inspection-schedule",
+      "name": "점검회차/일정 관리",
+      "number": "03",
+      "actualParent": "Project",
+      "primaryContainer": "Project Detail > Inspection Rounds tab",
+      "implementationOrder": 3,
+      "primaryRoutes": [
+        "/projects/[projectId]/inspections",
+        "/inspections/[inspectionRoundId]",
+        "/calendar/inspections"
+      ],
+      "contains": "점검회차, 발주처별 보고서 업무, 회차별 업무"
+    },
+    {
+      "id": "inspection.checklist.management",
+      "folder": "05-field-inspection-checklist",
+      "name": "현장점검 체크리스트",
+      "number": "05",
+      "actualParent": "InspectionRound",
+      "primaryContainer": "Inspection Round Detail > Checklist tab",
+      "implementationOrder": 4,
+      "primaryRoutes": [
+        "/inspections/[inspectionRoundId]/checklist",
+        "/inspections/[inspectionRoundId]/checklist/mobile",
+        "/inspections/[inspectionRoundId]/checklist/review"
+      ],
+      "contains": "체크리스트, 위험성 감소대책, 추가 유해위험요인"
+    },
+    {
+      "id": "finding.action.photo_ledger",
+      "folder": "06-finding-action-photo-ledger",
+      "name": "지적사항/조치현황/사진대지",
+      "number": "06",
+      "actualParent": "InspectionRound + Document section",
+      "primaryContainer": "Inspection Round Detail > Findings/Photo Ledger tabs; Document > photo_ledger section",
+      "implementationOrder": 5,
+      "primaryRoutes": [
+        "/inspections/[inspectionRoundId]/findings",
+        "/inspections/[inspectionRoundId]/photo-ledger",
+        "/documents/safety-reports/[documentId]/sections/photo_ledger"
+      ],
+      "contains": "Finding, CorrectiveAction, EvidencePhoto, PhotoLedgerEntry"
+    },
+    {
+      "id": "safety_cost.usage",
+      "folder": "07-safety-cost-usage",
+      "name": "산업안전보건관리비 사용내용 확인",
+      "number": "07",
+      "actualParent": "InspectionRound + OwnerParty + Document section",
+      "primaryContainer": "Inspection Round Detail > Safety Cost tab; Document > safety_cost_usage section",
+      "implementationOrder": 6,
+      "primaryRoutes": [
+        "/projects/[projectId]/safety-costs",
+        "/inspections/[inspectionRoundId]/safety-costs",
+        "/documents/safety-reports/[documentId]/sections/safety_cost_usage"
+      ],
+      "contains": "계상금액, 사용금액, 사용률, 증빙, 적정성 의견"
+    },
+    {
+      "id": "document.safety_health_ledger_report",
+      "folder": "04-safety-health-ledger-report",
+      "name": "공사안전보건대장 이행확인 보고서 자동화",
+      "number": "04",
+      "actualParent": "Project + InspectionRound + OwnerParty",
+      "primaryContainer": "Project Detail > Documents; InspectionRound > Owner Report Tasks; DocumentInstance",
+      "implementationOrder": 7,
+      "primaryRoutes": [
+        "/projects/[projectId]/documents/safety-reports",
+        "/documents/safety-reports/[documentId]",
+        "/inspections/[inspectionRoundId]/owner-reports/[ownerReportTaskId]/document"
+      ],
+      "contains": "발주처별 보고서, 섹션, A4 미리보기, export"
+    },
+    {
+      "id": "document.safety_management_plan",
+      "folder": "08-safety-management-plan",
+      "name": "안전관리계획서 자동화",
+      "number": "08",
+      "actualParent": "Project Document",
+      "primaryContainer": "Project Detail > Documents > Safety Management Plan",
+      "implementationOrder": 8,
+      "primaryRoutes": [
+        "/projects/[projectId]/documents/safety-management-plans",
+        "/documents/safety-management-plans/[documentId]"
+      ],
+      "contains": "공사개요, 공종, 위험요인, 안전관리조직, 비상대응"
+    },
+    {
+      "id": "document.safety_health_ledger",
+      "folder": "09-safety-health-ledger",
+      "name": "안전보건대장 자동화",
+      "number": "09",
+      "actualParent": "Project Document / Project ledger",
+      "primaryContainer": "Project Detail > Documents > Safety Health Ledger",
+      "implementationOrder": 9,
+      "primaryRoutes": [
+        "/projects/[projectId]/documents/safety-health-ledgers",
+        "/documents/safety-health-ledgers/[documentId]"
+      ],
+      "contains": "프로젝트 전체 기간 누적 대장"
+    },
+    {
+      "id": "webhard.files",
+      "folder": "10-webhard",
+      "name": "웹하드",
+      "number": "10",
+      "actualParent": "Full-screen app + Project-linked file layer",
+      "primaryContainer": "Webhard shell; Project Detail > Webhard tab",
+      "implementationOrder": 10,
+      "primaryRoutes": [
+        "/webhard",
+        "/webhard/projects/[projectId]",
+        "/projects/[projectId]/webhard"
+      ],
+      "contains": "Folder, FileAsset, FileVersion, ShareLink"
+    },
+    {
+      "id": "mailbox.messages",
+      "folder": "11-mailbox",
+      "name": "메일함",
+      "number": "11",
+      "actualParent": "Full-screen app + Project/Document/Submission linked communication layer",
+      "primaryContainer": "Mailbox 3-pane shell; Project Detail > Mail tab",
+      "implementationOrder": 11,
+      "primaryRoutes": [
+        "/mail",
+        "/mail/compose",
+        "/projects/[projectId]/mail"
+      ],
+      "contains": "MailAccount, MailThread, MailMessage, MailAttachment"
+    },
+    {
+      "id": "approval.signature.submission",
+      "folder": "12-approval-signature-submission",
+      "name": "결재/서명/제출",
+      "number": "12",
+      "actualParent": "DocumentInstance",
+      "primaryContainer": "Document Detail > Approval/Signature/Submission; global inbox as queue only",
+      "implementationOrder": 12,
+      "primaryRoutes": [
+        "/documents/[documentId]/approval",
+        "/documents/[documentId]/signature",
+        "/documents/[documentId]/submission",
+        "/approvals"
+      ],
+      "contains": "ApprovalWorkflow, SignatureTask, FinalDocumentPackage, Submission"
+    },
+    {
+      "id": "admin.template.prompt",
+      "folder": "13-admin-template-prompt",
+      "name": "관리자/템플릿/프롬프트",
+      "number": "13",
+      "actualParent": "Admin module",
+      "primaryContainer": "Admin shell",
+      "implementationOrder": 13,
+      "primaryRoutes": [
+        "/admin",
+        "/admin/templates",
+        "/admin/prompts",
+        "/admin/checklists"
+      ],
+      "contains": "DocumentTemplate, PromptTemplate, ChecklistTemplate, 권한"
+    },
+    {
+      "id": "dashboard.statistics",
+      "folder": "14-dashboard-statistics",
+      "name": "대시보드/통계",
+      "number": "14",
+      "actualParent": "Global dashboard + Project health summaries",
+      "primaryContainer": "Dashboard shell",
+      "implementationOrder": 14,
+      "primaryRoutes": [
+        "/dashboard",
+        "/dashboard/projects",
+        "/dashboard/documents",
+        "/dashboard/findings"
+      ],
+      "contains": "MetricSnapshot, ProjectHealthSummary, UrgentTask"
+    }
+  ]
+}

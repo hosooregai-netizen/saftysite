@@ -1,0 +1,30 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>A&C ERP Implementation Sequence</title><style>
+:root { --blue:#102A5C; --line:#E5E7EB; --muted:#6B7280; --bg:#F9FAFB; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin:0; background:var(--bg); color:#111827; }
+header { background:var(--blue); color:white; padding:24px 32px; }
+main { padding:24px 32px; max-width:1280px; margin:0 auto; }
+.card { background:white; border:1px solid var(--line); border-radius:14px; padding:18px; margin:16px 0; box-shadow:0 1px 2px rgba(0,0,0,.03); }
+table { border-collapse:collapse; width:100%; background:white; font-size:14px; }
+th, td { border:1px solid var(--line); padding:10px 12px; vertical-align:top; }
+th { background:#F3F4F6; text-align:left; }
+code { background:#F3F4F6; padding:2px 6px; border-radius:6px; }
+a { color:#1F4E9E; text-decoration:none; }
+a:hover { text-decoration:underline; }
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#EFF6FF; color:#1F4E9E; font-size:12px; }
+.small { color:var(--muted); font-size:12px; }
+</style></head><body>
+<header><h1>Implementation Sequence</h1><p>Codex 작업 순서</p></header><main><table><thead><tr><th>Order</th><th>Folder</th><th>Feature</th><th>Actual parent</th><th>Primary routes</th></tr></thead><tbody><tr><td>0</td><td><code>00-overall-bootstrap</code></td><td>전체 골격 / Bootstrap</td><td>repository root / docs</td><td>/dashboard<br>/projects<br>/webhard<br>/mail<br>/admin</td></tr>
+<tr><td>1</td><td><code>01-project-field</code></td><td>프로젝트/현장 원장 관리</td><td>Project root</td><td>/projects<br>/projects/new<br>/projects/[projectId]</td></tr>
+<tr><td>2</td><td><code>02-contract-estimate</code></td><td>계약/견적 관리</td><td>Project</td><td>/projects/[projectId]/contracts<br>/projects/[projectId]/contracts/new<br>/contracts/[contractId]</td></tr>
+<tr><td>3</td><td><code>03-inspection-schedule</code></td><td>점검회차/일정 관리</td><td>Project</td><td>/projects/[projectId]/inspections<br>/inspections/[inspectionRoundId]<br>/calendar/inspections</td></tr>
+<tr><td>4</td><td><code>05-field-inspection-checklist</code></td><td>현장점검 체크리스트</td><td>InspectionRound</td><td>/inspections/[inspectionRoundId]/checklist<br>/inspections/[inspectionRoundId]/checklist/mobile<br>/inspections/[inspectionRoundId]/checklist/review</td></tr>
+<tr><td>5</td><td><code>06-finding-action-photo-ledger</code></td><td>지적사항/조치현황/사진대지</td><td>InspectionRound + Document section</td><td>/inspections/[inspectionRoundId]/findings<br>/inspections/[inspectionRoundId]/photo-ledger<br>/documents/safety-reports/[documentId]/sections/photo_ledger</td></tr>
+<tr><td>6</td><td><code>07-safety-cost-usage</code></td><td>산업안전보건관리비 사용내용 확인</td><td>InspectionRound + OwnerParty + Document section</td><td>/projects/[projectId]/safety-costs<br>/inspections/[inspectionRoundId]/safety-costs<br>/documents/safety-reports/[documentId]/sections/safety_cost_usage</td></tr>
+<tr><td>7</td><td><code>04-safety-health-ledger-report</code></td><td>공사안전보건대장 이행확인 보고서 자동화</td><td>Project + InspectionRound + OwnerParty</td><td>/projects/[projectId]/documents/safety-reports<br>/documents/safety-reports/[documentId]<br>/inspections/[inspectionRoundId]/owner-reports/[ownerReportTaskId]/document</td></tr>
+<tr><td>8</td><td><code>08-safety-management-plan</code></td><td>안전관리계획서 자동화</td><td>Project Document</td><td>/projects/[projectId]/documents/safety-management-plans<br>/documents/safety-management-plans/[documentId]</td></tr>
+<tr><td>9</td><td><code>09-safety-health-ledger</code></td><td>안전보건대장 자동화</td><td>Project Document / Project ledger</td><td>/projects/[projectId]/documents/safety-health-ledgers<br>/documents/safety-health-ledgers/[documentId]</td></tr>
+<tr><td>10</td><td><code>10-webhard</code></td><td>웹하드</td><td>Full-screen app + Project-linked file layer</td><td>/webhard<br>/webhard/projects/[projectId]<br>/projects/[projectId]/webhard</td></tr>
+<tr><td>11</td><td><code>11-mailbox</code></td><td>메일함</td><td>Full-screen app + Project/Document/Submission linked communication layer</td><td>/mail<br>/mail/compose<br>/projects/[projectId]/mail</td></tr>
+<tr><td>12</td><td><code>12-approval-signature-submission</code></td><td>결재/서명/제출</td><td>DocumentInstance</td><td>/documents/[documentId]/approval<br>/documents/[documentId]/signature<br>/documents/[documentId]/submission<br>/approvals</td></tr>
+<tr><td>13</td><td><code>13-admin-template-prompt</code></td><td>관리자/템플릿/프롬프트</td><td>Admin module</td><td>/admin<br>/admin/templates<br>/admin/prompts<br>/admin/checklists</td></tr>
+<tr><td>14</td><td><code>14-dashboard-statistics</code></td><td>대시보드/통계</td><td>Global dashboard + Project health summaries</td><td>/dashboard<br>/dashboard/projects<br>/dashboard/documents<br>/dashboard/findings</td></tr></tbody></table></main></body></html>

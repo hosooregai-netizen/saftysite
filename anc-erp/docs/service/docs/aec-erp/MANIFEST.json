@@ -1,0 +1,36 @@
+{
+  "package": "aec_erp_sequence_00_14_dashboard_statistics_v1_pack",
+  "createdAt": "2026-05-08T14:00:00Z",
+  "includedFeatures": [
+    "00-overall",
+    "01-project-field",
+    "02-contract-estimate",
+    "03-inspection-schedule",
+    "04-safety-health-ledger-report",
+    "05-field-inspection-checklist",
+    "06-finding-action-photo-ledger",
+    "07-safety-cost-usage",
+    "08-safety-management-plan",
+    "09-safety-health-ledger",
+    "10-webhard",
+    "11-mailbox",
+    "12-approval-signature-submission",
+    "13-admin-template-prompt",
+    "14-dashboard-statistics"
+  ],
+  "moduleFileRule": {
+    "markdown": [
+      "01_PRODUCT_MARKDOWN.md",
+      "02_TECH_MARKDOWN.md",
+      "05_DESIGN_MARKDOWN.md",
+      "07_REVERSE_MAP.md"
+    ],
+    "prompts": [
+      "03_SERVICE_AI_PROMPT.md",
+      "04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "06_DESIGN_PROMPT.md",
+      "08_REVERSE_PROMPT.md"
+    ]
+  },
+  "fileCount": 136
+}

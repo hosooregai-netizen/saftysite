@@ -1,0 +1,1757 @@
+{
+  "generatedAt": "2026-05-09T09:08:12.258938+00:00",
+  "root": "aec_erp_project_ready_docs_v1",
+  "count": 250,
+  "files": [
+    {
+      "path": "AEC_ERP_ALL_IN_ONE.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 941978,
+      "sha256": "28dd81ab0d038485ca49c18e4617fbb566cb8fdeac9766647fb3b4996971f775"
+    },
+    {
+      "path": "AGENTS.md",
+      "category": "agent-rules",
+      "extension": ".md",
+      "sizeBytes": 3308,
+      "sha256": "6d19572ac11725035059cc1d042f85f7a8475fa99d44aacc2ffd157dfe077ee0"
+    },
+    {
+      "path": "Agent.md",
+      "category": "agent-rules",
+      "extension": ".md",
+      "sizeBytes": 3308,
+      "sha256": "6d19572ac11725035059cc1d042f85f7a8475fa99d44aacc2ffd157dfe077ee0"
+    },
+    {
+      "path": "CODEX_START_HERE.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1465,
+      "sha256": "803cca4eec28d416f1f387e59450ad6cb6777cc1e500f7782deb529dec49ff75"
+    },
+    {
+      "path": "COPY_TO_REPO.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 383,
+      "sha256": "0ca1f30aed118d1044d941b578fe0d5568a535b6721ae860490f8c1703123928"
+    },
+    {
+      "path": "README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1042,
+      "sha256": "2dba941719116b7af93cbae7aa133720bc0aae22e82e437c66e931bd1d8be224"
+    },
+    {
+      "path": "codex-runbook/COPY_PASTE_SEQUENCE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 929,
+      "sha256": "3402f04eb3c56d56b954ac31f1bc46f99cfd1dbfbfb5125263a6d816c94c3d80"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1223,
+      "sha256": "50c15f53e5b950bf784f0af6864abdc683b25b5a899c90f86ee1268b73e214b7"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1466,
+      "sha256": "689ddaff6f2ff5aa492b8b3400ca4ba97412e31dd3bdec03c4d2ba6ba108c3ce"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 642,
+      "sha256": "8132a0115a04303f8b81e71cab40a0fc71489291181e963bf9f94c80b3677812"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 998,
+      "sha256": "e4845c5ba11f0a716aaf06e323580a943d1d36578aa64066746b9513ad50d5bf"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 510,
+      "sha256": "e5de57cc592426da72f972260c53b1c217b8795c58715ace279bc1022487bab2"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/00-overall-bootstrap/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 918,
+      "sha256": "82bf750671320e9a3e89f07dd7d5df73011a5ac7b49a4e77d82e4fd48a3e1493"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1265,
+      "sha256": "2b652bfe8187bb4ba924ccf6afcdcc43df7c5b0b1225f360e4c05431b36c76e2"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1484,
+      "sha256": "1290b9fe7f899ac5f281f344876ec774e64ea46d3a714cacf8474f5ce825e67c"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 652,
+      "sha256": "dec1aeb953b01445caf9c4ef732c23f8867cc7e4a1bc61fe6d0a80a87ba6b45c"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1018,
+      "sha256": "1f6c32d9ba101e6128b4f78768574eea160187ad48c917ddfa5d3b81bde85791"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 520,
+      "sha256": "a0d408b34e7286e7645a3ab251a625df63b00d9b6a5224f70dd1cc8871a20241"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/01-project-field/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 906,
+      "sha256": "5d8e1902ed4fa0894636863ef028802ab657452430fd21df2a28502c3667073d"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1281,
+      "sha256": "b0714c8824796f2acec1193199c5cb7bdbf5dc7ed309ba2fc075f0abff9c72cf"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1559,
+      "sha256": "1bfbb9abc1c0139917a1e0577650f99c77dba592927c4c5f4b236d7f9795a262"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 642,
+      "sha256": "71a08e2c95d68a371ce51be1eefb94bf028dbf82005e2bb1510c8e5dd1dfb792"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1013,
+      "sha256": "423902e076e4b4c50d8379d663039ab8fb6f77aff9578576d83dc90001215c68"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 510,
+      "sha256": "73129ff327d4cfd56c9ec4cf91fe2ce65e25990bb7a0063ee77cd3a8e4171879"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/02-contract-estimate/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 961,
+      "sha256": "c1267afc126ea0467e4ed6562e85847ec8f682910c8a95dd8b6777af962d13db"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1303,
+      "sha256": "7b9673c2c2f8b6b4bc36f0fa5caa81662d6501dc8062af9c1ef5245d7d160892"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1582,
+      "sha256": "d0e1c896942487df9de2b47698b55b77c710a1a9b118f1478eabb2e059e822b8"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 652,
+      "sha256": "6d405c384286ed08e4285fb47da7803cb14b6c79cb8dda01863e916fd6c1b8cb"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1023,
+      "sha256": "a7b6ac2d3fb9ce1824cea312bbfd363809b48ca26d84c466f265216c3d3221c9"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 520,
+      "sha256": "ada043e8c5b556a8c56ccce544e4c9ead5395f05f2dae8f12d0eba7770e6b38b"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/03-inspection-schedule/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 974,
+      "sha256": "435b2d5874a7b47ba2e886eb3e17d929039f6a364d4d2a153402c3dfbe93e4fa"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1427,
+      "sha256": "1b67d94e7684c8b9203bf64ca8bef85a08d2e5dcd9d32ee69700956449d63e17"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1809,
+      "sha256": "a523c8fd4347b31a85fdea9a165b18561953deba9486a5fcb8991a3df6e02de9"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 730,
+      "sha256": "1ae8e1d2e7db46c10ccc63c581f1638a98ef007f9377049b47916d045d454590"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1070,
+      "sha256": "6721e7fd44a6308e4a1070fafeef13a87a670e0da399b415566388f01a852f71"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 598,
+      "sha256": "125fc47199c817be96a1e6df3e4a0f7ec0cb87d49eba7593caf7bd0120906e28"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/04-safety-health-ledger-report/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1161,
+      "sha256": "9092098358f237a51a5ff224356dbbcd36da81319ea46da21e15d2894ee34790"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1363,
+      "sha256": "99999b9bbb2eca7582c2dd6224f44e92b0a55525bd5f899dae71c5ba76099435"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1689,
+      "sha256": "9b41547640f8aed3a3e756e3d83bf0ee100620e9d45b6268b693e61a6fff545e"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 676,
+      "sha256": "91b6564b8f43608f1be40a163c23331224c442776e8113abd9f8cfb9cbd8d98b"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1039,
+      "sha256": "0efaa1747564bd5b6e790689fb0610e8fa3d39988ec663de87575ab34441c98f"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 544,
+      "sha256": "ba0747b519878a2eecb0497351d4b9f1b8c7b1a8baf12bfa2b385364816ed220"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/05-field-inspection-checklist/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1046,
+      "sha256": "afbfb7efc9f768833b2bd83ee403e19c21d9b8411a354ae4da86b560ce2df127"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1395,
+      "sha256": "d84d2bbca3e2ea22ad1820d6397762b2a552914ad9e3ba140329e18bb8c67a1e"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1776,
+      "sha256": "15305b475bf80867b6ef02a9a257a06c4033893f5b398a31f81f41ad09711734"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 707,
+      "sha256": "7919752addbba5a622d2e5b80af05eb557ed5eee00c5992257b675d3c749b557"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1051,
+      "sha256": "20ff637ebc8aaf1ab57f6d6949590294760a7c72ec7de0620a67a9d365a75ae4"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 575,
+      "sha256": "6db745ff4962d90b1cc2fca8ecb1c62844a9e9492ba77dc27e50dec74b34f71e"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/06-finding-action-photo-ledger/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1128,
+      "sha256": "3e03b1ab513a319019d1d3923ad8790387862c717bbe03244b22e301f15b5e67"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1337,
+      "sha256": "7d974922f60e5735df65e864d671ca3b0ba45eedf58b4812caa6cc727aa690f9"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1730,
+      "sha256": "a67da4b22618ae2113ff65fed7a26753ccd780708935635c0c742a77d2dc2486"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 709,
+      "sha256": "14d0370177f1749159e6a857b492bb3bb9aac2ddfe07e20cbf866c34dfbf6829"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1040,
+      "sha256": "3c884fbf5078b0f1361bcb99392abbdf8c8936226651901396c0336f6d0eef56"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 577,
+      "sha256": "9f4d9d3e3bc8368820aaed3bfca82ea6d0368aacc42fb41911136105584dd9e1"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/07-safety-cost-usage/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1132,
+      "sha256": "31d41f9a48028c435d1100c2415b87fda01f086f1958d60bc04423eee1c4516f"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1339,
+      "sha256": "ca20ba2b5feee89d0ccea66644c5de67813460d60999bd800146f8e3f25787be"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1640,
+      "sha256": "438ae5c5f32010b2ad70ec990fb76d502898fcdc605c6146ad03a12f0f2e4555"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 672,
+      "sha256": "3df46f2b5ecd4c3706892891cd45d7225f69719c04e7faa22b5980302c999bd7"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1034,
+      "sha256": "45950febb95e04d7232e51ec80422ef191ede7b26c90ceebf4b98010b56648e8"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 540,
+      "sha256": "be81a866f18d40d8afd164a56e88bea3e4a2baf30fda9937f680a191192b992e"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/08-safety-management-plan/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1017,
+      "sha256": "8d985c2e603f7e95d40dabf4af2fd7cbcf0db2ee9a4d213bff9e1f5debf59ca6"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1337,
+      "sha256": "7e694a16fde0599492f6c88aa680907198c96565faaf5afe4aeb1ec790866051"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1636,
+      "sha256": "76740b2dd0573dbf9ecf2a2ea802de4e6d5efb6a0530b0f563035d5226020fa9"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 682,
+      "sha256": "79aa470d95887251a87f82ccbd6ee3d98afc678c802002e61881061c7a329ad8"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1027,
+      "sha256": "f123eeba22ea63d261863087bc684faa3a55e961b2948354d01b192f5821150f"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 550,
+      "sha256": "c89e1daf742efe21d6d128098a5d5c9bf779228944b922312951f405bc671c8d"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/09-safety-health-ledger/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1023,
+      "sha256": "7d31cdb066c15591d76100fa52126172ebe1c5803032b0bea45708fcea9c2432"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1221,
+      "sha256": "26cc0bc48ce5bb3fcbefa57fe0a9848af79f4491be1f204394ca4fb9a8c820a8"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1514,
+      "sha256": "a663c4b01e91c5c15fe8a05d3ee3835dda5bec808dce1425c5d353eae4881d43"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 647,
+      "sha256": "75616506eeca3089b6b8a0471e93116353a5e11a10e60b81c25ab622f4751f42"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 982,
+      "sha256": "7c35138b3c703a01894fd403aa836cfca422cfe96235b521a62b8e5a138ca931"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 515,
+      "sha256": "f281774f3116d2968b4ce32561204b9b6c40f48fe8fe3378881de570f8fbd887"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/10-webhard/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 966,
+      "sha256": "71dcfb6d7eea9a796139b3beadaebb3cda4ad3d47fd82275507e24739d7c6e5c"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1253,
+      "sha256": "3687db741e6717c3db68d9ac8bea8766c0529b92d50ffbc7df8326d7fb23d866"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1525,
+      "sha256": "e5186ed424938ec74b202e067e46a2c4a748d1a45f8dbdc57c19a8eded0fcec3"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 676,
+      "sha256": "4567422b1c498d098127d1d696a3014d52cf71d5132ec9c07ca3b872460d3edf"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 982,
+      "sha256": "9e9f5ecece0da1539f0cf8c9c24f69051f39b1070d89d853b33c9858fde324a6"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 544,
+      "sha256": "aceab3fc256f4291b9536cdfdd92c9a7ffb7aaf6842314dd70b1e25d67c2a641"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/11-mailbox/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 977,
+      "sha256": "1690803eb864f7ac4ee0bc21777078ca384f3e81ee5a34f91d88cab1fec1f2b4"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1375,
+      "sha256": "b40ced1b0bb45674831a0102fd53cba06b0b19edae8031161ffddf9d174d0d06"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1708,
+      "sha256": "afd87ad40ba17906d0234daffd7cc9528283c68adc8520bad853492b1728b707"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 675,
+      "sha256": "0c359092747df78f5aecc6cf10e4ac1cf4823712b1ff52d806b34cc1c69ca348"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1037,
+      "sha256": "374f9adb37073192ea85841f4ce57c9a22e0f769cd7bc7115ffcc46bbce0f15f"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 543,
+      "sha256": "dd092704d08d1690238df091075438dfc1f6d16a3ce86b8b9e08566da9ccb3d9"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/12-approval-signature-submission/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1050,
+      "sha256": "0350f2b3bb417a30d57a2758de2246599dd6966fb6dd0b2e58b4da1f523601fa"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1319,
+      "sha256": "0dba7a5d26847ed9a9643956ebd183c399efb591dd1b3bd3d4f7b566a9602cec"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1548,
+      "sha256": "fdf3256532a93602b15e02328bcd43af586f74bde90b028d3100d3eade3018d3"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 667,
+      "sha256": "12d4f83a60fcbd9e4c17051c7eb41ece87396f9c5c95519fe97a0c82b8cf579d"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1033,
+      "sha256": "3e6d1ee0c760d991968cd1ed09a1710277cb08afca57fdae70c24444d5f8000e"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 535,
+      "sha256": "1439b2c3935abbad2e38167bb004dcc517a9a231d53d2971fadfc0ede9b73773"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/13-admin-template-prompt/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 930,
+      "sha256": "3b25b9e33b6d39af305239deb2f06c39aa3ee3883403bd16c0bd0c97a13c5402"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/00_PLAN_ONLY.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1329,
+      "sha256": "16b461fd4dc7d86cd94c182c48358bff7887db45af44e05b909d9ad7ac3da380"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/01_IMPLEMENT_FEATURE.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1579,
+      "sha256": "1e9fee6b01d2924ace0e23477f49889f1f630f1f0935ed08872930d52bff62bb"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/02_DESIGN_PASS.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 683,
+      "sha256": "185ab15110da68419524dce093eb388eb52f5bb2f79ce73c99ce61390724b82c"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/03_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 1018,
+      "sha256": "cd90334e2becc0123fa449ebd347b047826c665f2fb94543749dff7e6ef7a31c"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/04_PATCH_FROM_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 551,
+      "sha256": "c74f826bf099324f2937f40d2df8ed0d7f5ffa84ce386e076b74e5cbc59697ea"
+    },
+    {
+      "path": "codex-runbook/FEATURE_PROMPTS/14-dashboard-statistics/05_VALIDATE_PARENT_CHILD_PLACEMENT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 966,
+      "sha256": "570e754a64723e630e323ebbd9a5fa08f7b619d7c75c873729f55cdcd3db12d2"
+    },
+    {
+      "path": "codex-runbook/ROOT_PROMPTS/00_READ_AND_PLAN.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 795,
+      "sha256": "1c57f91dc73b48ba452bf4353962751871bf6a1c59d46ee53c1f050133f5b3d5"
+    },
+    {
+      "path": "codex-runbook/ROOT_PROMPTS/01_BOOTSTRAP_SKELETON.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 808,
+      "sha256": "7ff2a7f1b78143ae0fbbdb8ccc0e9fac3c88dc620991538e9cc3eb5ed9b9abae"
+    },
+    {
+      "path": "codex-runbook/ROOT_PROMPTS/02_BOOTSTRAP_REVERSE_AUDIT.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 657,
+      "sha256": "61340ec44cf3b63611d1ba8b893e0ac24b95ded724ffd7dd79d4da8e03200c6c"
+    },
+    {
+      "path": "codex-runbook/ROOT_PROMPTS/03_VALIDATE_CONTAINMENT_BEFORE_IMPLEMENTATION.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 555,
+      "sha256": "20a71569b96d1f336aa8c14bd538092a6e5bd924cf6da9a30c32a66f5d68ee3e"
+    },
+    {
+      "path": "codex-runbook/ROOT_PROMPTS/04_SERVICE_AI_PROMPTS_SEED_LATER.md",
+      "category": "codex-runbook",
+      "extension": ".md",
+      "sizeBytes": 506,
+      "sha256": "8d46a4a8bd57101ccfc1b9f0e7621918c9a008d6d0261f15bd8b5c48a2f83e23"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/00_MASTER_MARKDOWN.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 5147,
+      "sha256": "88f0b74d93565512f9d0c141cf507b2ac4565f4ae93f45cef573fcd00a3d18b6"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/01_FUNCTION_INDEX.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 1912,
+      "sha256": "682e6d00feff4070f5e781610c323f4078dcac7545dbd7aec096383576825290"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/02_GLOBAL_DESIGN_SYSTEM.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 5209,
+      "sha256": "792440788da0da9d4065c2a855d8a0f65c4844020c0c253aa65d711c85775643"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/03_GLOBAL_REVERSE_PROMPT.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 2610,
+      "sha256": "8100241c0670b49de1769e8bf50cddf3462bca45228879e084bbdfe4bf246742"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/04_DOCUMENT_PACK_RULE.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 1909,
+      "sha256": "19b7169d80aa957e328d568f2567e023407460949fc386c84fd9bb79894bc9df"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/05_MODULE_CONTAINMENT_MAP.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 6561,
+      "sha256": "b42371e4ffeaad01a4e4bd47978ed11c087a82c56fcbd8e9fa68bd08751ccdf4"
+    },
+    {
+      "path": "docs/aec-erp/00-overall/10_GLOBAL_REVERSE_MAP.md",
+      "category": "overall-spec",
+      "extension": ".md",
+      "sizeBytes": 6192,
+      "sha256": "a9ca2ad40a654cd7d77ad52df8c9631ee67ea9c55d7ff991047595b972686d08"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1492,
+      "sha256": "b22c6c6b6338effd38a2a009da1873ddac48b8cd8fee805047295b30051d67d9"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8188,
+      "sha256": "6e55183cd6fc714abc843125fcd214e3b771af51a41b04352a582fc8d0b71c7c"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 12107,
+      "sha256": "4a23b04688e25fd51ca9de960014e943db56b5ac5aeff3c72fa0dc5fcdbedd1d"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5672,
+      "sha256": "5883f3f284920d3156c6f8b8a38a5cfd2d77cf0507333fb737e34a871fb23bf7"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7092,
+      "sha256": "7b1840060d00a9629f20707d4c9027cedcff8b6029de79f1f14b89cb62deb6d4"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4236,
+      "sha256": "435849f08674ac6848605bd5fb2f9bdb4fc9aab4753cbc60509c8391c74ec923"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6218,
+      "sha256": "f31f07a755c03538c269b4ca0c9fe025260d17547c8920c6f99cd1f3576f6a37"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3597,
+      "sha256": "89ccde5fc326c34b7b185a4fca7d0da5229792daff8240c59b980d3035f8ae2b"
+    },
+    {
+      "path": "docs/aec-erp/01-project-field/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4035,
+      "sha256": "902c0bdf203b359b924cbe2c7afd3532f070701e7844d32a4fcf0a3956456e74"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1226,
+      "sha256": "974dec76f3862f030d0f4b77f1463d5afcbd1858d1b8b112e2eec0e2b990427e"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6832,
+      "sha256": "29986cdce2fe0bb0087ace888a955ffbb004972109d72092c8c52c39ccc70b7e"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 10650,
+      "sha256": "610772bbf88d0c6e511f3135228c91316207283fc57cfb68ebc43f42ab9fa473"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5443,
+      "sha256": "c836faa40293332c1d6d718c34e4a32eda402589dc99b9185637fb2cd5c343a0"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6766,
+      "sha256": "950825da42551f5641ea9dcb92f97ea8f4ca13a87975ecfa8c47a343040424b2"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4200,
+      "sha256": "be326aa218f1ad06892fd1e896e9fc6e4e538e284183c571f9a1aa562081d9fb"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6130,
+      "sha256": "0db42015cc0fd05450d34358982a29ef1740fe2d534e2df439a5d1926db3bcde"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3445,
+      "sha256": "101f47ee58d20b0fab0c4de7692b4d31824c177e2ca7be3da08f49e3d9fc0ad3"
+    },
+    {
+      "path": "docs/aec-erp/02-contract-estimate/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3875,
+      "sha256": "a864b9dfe9784bea4dca629d3f2843556c153e110b4f82649a5c3d3118200382"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1163,
+      "sha256": "520c51c52b17c67149019f8f52174d934e15e2e490984b07a198e1e9694e95e4"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7967,
+      "sha256": "fd8510bff0494c7408c8edc615e4235635fcb216a09f6686ed02db8f4557757c"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 11490,
+      "sha256": "6e9753786498a39f4607d39183a8096eda4aff0d2e80ccd85dadffb053a8f4b5"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5787,
+      "sha256": "bebe0eb7be22dab9c19474f2d65937ac2b412750aa9390f15f209aea205c7330"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7252,
+      "sha256": "a22a110d545d414758b285024fd8a26a8506e64844f7202f4fb10596ff5400c0"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5100,
+      "sha256": "6218771bd115a03a4a20e1ec0f85c0fb5deae2008ff56c5159dc0c06162f4b4a"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6779,
+      "sha256": "d7ea572b40cd414103cc5a332ec21ddbabc0f6cb62437727654ac0831f14a6c6"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3351,
+      "sha256": "c9b88467b59aa830e64cc329206d0715494d6fd81b938bcb1265cdd7d7940d38"
+    },
+    {
+      "path": "docs/aec-erp/03-inspection-schedule/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4481,
+      "sha256": "5e3122ef852889feac36b6e399f2105f55732eb3eaac9eae09d3220e19eb2a07"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1364,
+      "sha256": "a76194c0b236fd408c4b9689773aa90cd8292d44978c1095d461f2bf9d31bb9b"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6775,
+      "sha256": "ae8df69f05ab9c0f537c757c0d163f0be5d99448c010fda41e881e8f514d4cc9"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 9194,
+      "sha256": "a4bb9a18c9ae6408a8b77ae869bfebbb70c32fc3b986180d654003d431beb906"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5891,
+      "sha256": "89d2a543153bb2284176fb768e544f69dc6d28fde12548a3ed1eda87ea7a9c7f"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7318,
+      "sha256": "70add663476d59b63e7510b70e8cb3366aa8bf8f1a688df69bd444a3d9fdf573"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5364,
+      "sha256": "4dae0a1df5a92bd1e9eddff07fc566fbe69ef17ba522d8bf7b015f2e83845345"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6467,
+      "sha256": "de996eb7ed64fd2177ab2c3341bf809dda89a281681216c87acc532a0b3636c2"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3766,
+      "sha256": "34fec9cf8ac58d5993466481db8e2870a01f5066479f8e7487783435a91cf832"
+    },
+    {
+      "path": "docs/aec-erp/04-safety-health-ledger-report/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5519,
+      "sha256": "4bd0eec4067732dcdd60247a229c681503c0e24c294fef53025689e2d315519b"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1435,
+      "sha256": "f10daf9380d656f4a1eb9339cfae11bbd0bd6d797775a2270abe695a03e97a3f"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7559,
+      "sha256": "780ff68ca82ecf49ff1d124e4502db5d124daaaacf3ad41a0737b897951d5e5d"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 9079,
+      "sha256": "dfa7154590fa40ce27109d666dfbef58b44d81d77d17d01b29706d6aae3fcc33"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 4764,
+      "sha256": "8c039ee9284ffd0ed66332f8a07a99df1028de99a259fa273bf6d54b3f5f9aee"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5585,
+      "sha256": "be0f87779b515cab4bd765b9dae6e34173d495fd774c4f5cc2a2224404ccbe5e"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3058,
+      "sha256": "3974b6070e04b0fe1a4f848834e0582a64828824baf856add530b3b6d2f063b6"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5865,
+      "sha256": "7e417ca36eb22b0303064a0dcee6673c30431fa9b08e25ce1c934017859d0ffd"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3492,
+      "sha256": "7ec1aa11a0b0035c2c4cb5380bdd64607729da25312b88417b83e1efae97a20d"
+    },
+    {
+      "path": "docs/aec-erp/05-field-inspection-checklist/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3195,
+      "sha256": "07f81720f096721f36c29f2097bfef77769cdd5ca3354ba6a45de80c434f45e2"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1857,
+      "sha256": "06ca2e028b5934b56ee08d55f5900c7de140096ed78910829feb4c85083a91f0"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8463,
+      "sha256": "0277dbe909ed74b11cb46754775552b1e2b528a7bf8993feca0c81df9cb0b1d7"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 12317,
+      "sha256": "f961435c9bb0274acbc0c57b6e8e8d85ed48d9e9f46bdde2ae512e07cc326763"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6660,
+      "sha256": "4a8eff5929e71d820a24ba35f399a05f130b826e4f01b90125d877bb301c0912"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6981,
+      "sha256": "0458ca2b83acfa4f58cb68db406425a145e1d0811899bc55ad202e574dd20945"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4769,
+      "sha256": "552dc8936f2333b15fd65211dae62c7a01312c462a605a19502e7e63f8b25251"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 8587,
+      "sha256": "0625a00771e6bb69b9d6e3deb477283a9259ea0bacc27d7bce3ac44578105b4e"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3960,
+      "sha256": "24ea7328228af08188b712d2b5d1030770c39489a1c3e61f48bb9fcb63b547d8"
+    },
+    {
+      "path": "docs/aec-erp/06-finding-action-photo-ledger/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5380,
+      "sha256": "abb47ab62dbbf0d6cf57fa4a5a8c77fd710797569f4640f2c813578260df165e"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 2087,
+      "sha256": "c6d3a71f0441bcc1bc01133e2f876a2ba1a94daba68086def0ab1adbcac4266a"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7276,
+      "sha256": "a84aa15893696beb8dee55cf1fde5cb3b0baf8bb0caab88a2632d4ebb42570f7"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7973,
+      "sha256": "398d7d3aa4283c929dd06c26363ec71628bb068ae14c1ad50eb73676350391a0"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5429,
+      "sha256": "063875a1e0899de89bdfb06f111d1d8ba6b33b7dc6f238566e31c187ae5edd1e"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6073,
+      "sha256": "d2e34cd1a7525b00db55428f8f16e787300ec25a62d25b776237c4c1c65f66db"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3449,
+      "sha256": "41ac86926f7d25780f83ddd7c5af506dc7575c121c4814c4fb3450034c022e91"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5418,
+      "sha256": "e0a43160d7827c8dbedfad23c14ae87cb8e18337b864f641670d2083caa18251"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3269,
+      "sha256": "bd1554e45830b67133ae6259463f90a7ae5bc1ee16c88837e99fd6dc86fa69bd"
+    },
+    {
+      "path": "docs/aec-erp/07-safety-cost-usage/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4438,
+      "sha256": "4e337b6538919b008037321597151663b728a82e686caa2f4461bcc3b5a67801"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1777,
+      "sha256": "ebd4acbbab0828b360fa86a0253f12cd5afe67df55ee37119a4c6b2a62dfde1b"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6548,
+      "sha256": "e4672a345ea61206dd8b3a44b558a44e8e554f43e6b3b73270a1ac68859379a1"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 10157,
+      "sha256": "dcf4cb4c8bc2f10f123747c6f06fa73942e76c5ed4d999f5837c8895d2dd5a6c"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 5770,
+      "sha256": "61a8ba5368cc9210f7313475fd5440160be7ece6c97b76083e93c985a6f96971"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7745,
+      "sha256": "9a3299e8fa8c21051ab1160b9cbfc721ac1779e2ce317d3c59e7db70627b69b7"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4497,
+      "sha256": "90c37fe522d737950f7237e6ac0b183832c1c3baf8d5cde34bfd3fd03e431e46"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6477,
+      "sha256": "069c99855ee3c1fe20dcbf9594ecee88fd5c05eff75585c8dfc0cba4e3b8a200"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3956,
+      "sha256": "a4263a67dae776742b675e7b799cbc9737167bda67d6e00e9a1474f46771165f"
+    },
+    {
+      "path": "docs/aec-erp/08-safety-management-plan/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5074,
+      "sha256": "f49dca2760e121ed892d835594b28dadaf06d0d3767cc3c03883998680e5bd7e"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 2063,
+      "sha256": "40c048b03064d579334fa742091333b949a3e4c0f291c5652b9e490bc9529d2e"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7476,
+      "sha256": "8a93c4a3605154a8d06c5a215d3bdb0b667adc8bc3d16f797dba407c322127c9"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 11896,
+      "sha256": "acc3565359418fd09d6dbf008c356784c59203b9bef9df84dd420100b08bd952"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6719,
+      "sha256": "40c0b491a947fff60e0ab2222686df08d16d19921077a0d215490d6e1683edf0"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7559,
+      "sha256": "c6ef53f053a05f1dc9006f3a0ee5807d6bb0f97d0e13880d413939b22a5fb251"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5461,
+      "sha256": "716b0386f38bf51552b737b531b9daa341aaa8a2e35b2d18d9df956d8713c063"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 7449,
+      "sha256": "bf0344cf04c364a3eeda2c88a5df61a28e8bcc3f9bad6543715407ad9608d079"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3768,
+      "sha256": "72c891aa55f1b48eae82203aaebac07b75e1087b3d3b12dfa9767d41383917fd"
+    },
+    {
+      "path": "docs/aec-erp/09-safety-health-ledger/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4949,
+      "sha256": "c03671af9063c1ce40c5e113b594472b86b24e67a04f8659ae1e4fe5824917bf"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1874,
+      "sha256": "60de9219869ccba69cd57bbe10b917d8050859de4a8982f65adc9121a0c76e1d"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8172,
+      "sha256": "c81a9ce0c25107635afa391bb850f4a24ea94592077220cf2c33539c4756a87c"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 10320,
+      "sha256": "109f8d79e3dde83765f8eb6eb9b2cedafa13435f65822d5f886471a2419b9ea7"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6354,
+      "sha256": "70ed89c4e4ca9a15597017ddec2633e2be6a47227d5ad740e33967ea1f6a5c31"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6537,
+      "sha256": "87699e3a923b0861a21dba2f3053f76095353ad7eb9294d7336c16f78b098a5b"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4613,
+      "sha256": "ce270e05899c9d5d103fedd5e72fe523af263633b2a2c37d269711bc3e456c63"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6813,
+      "sha256": "645d02151cd82544e4164dc32ebcbb7eab3885de6ed6497351efbb0a72ba345a"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3280,
+      "sha256": "70a0929e326c77c34ca15f6b80aa61cd5d39e992bd7050e02d9227b948bc0003"
+    },
+    {
+      "path": "docs/aec-erp/10-webhard/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4689,
+      "sha256": "1dac20fceffc97b3d42a6d739160fb91eeaaaa4ec1c1815a4bfe4e49c7bf80d0"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1622,
+      "sha256": "b3475ff0701baa77d9bdfedea6e145d54fde68ab720fe59ad8afcc78f9edd482"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7583,
+      "sha256": "ef4b49454a1a69a51e06e64d78ffff83c7fa084b6d405843e408376fd9401682"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 10822,
+      "sha256": "e74d423a13c078ff4ce15a465e77fb249a35825ca3a4cd10d0ed80aa5ce3d7c2"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6588,
+      "sha256": "2d01c7c8d1b4e7d1d70bd60fe5a48591257c89a9aa2de9f30a882905b3bc06a8"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7713,
+      "sha256": "cc3b72b1e91b765e2ddf27919abf77c47362b3adb260bde3f65efb7c9d9bd48a"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5073,
+      "sha256": "215086b53cfed9c5d08d63549facf907e8808657cb6e2b6e6704c30188f1ec24"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 7569,
+      "sha256": "fa939c15a12abdb59fd51ffa14cc8a19563abb98adc46b6e99ae018bb0e7e24c"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3808,
+      "sha256": "355480b0e297d7d20a9580dd952340efb5c994b2fa9db7db28c1caa058a8dfda"
+    },
+    {
+      "path": "docs/aec-erp/11-mailbox/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5004,
+      "sha256": "7187544245e79f003c6115dc4bbdeca055bb7f8bb5535dff570ff3b84b46d1d3"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1467,
+      "sha256": "8b0545865b17f21fb60e922318742e7e60b7c04be09955fc731fe8c8a7eda66e"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8128,
+      "sha256": "236c3e86b15d628404e5e0729aba75fafd6e9227a598cc4a0c2c8ce376e1a385"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 13521,
+      "sha256": "46f712e3c81cbadcb4c52d8621a49f634f1e071c7ea19c7964393e4e8f11665d"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7036,
+      "sha256": "e10c422ae4f13a00373daa7af2b9e7300daf88bc6a1e659634e3b07d74e41b8e"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8241,
+      "sha256": "a9abb928cb83e1d118a0f7170fe559029e593a6cf785f9445ae4d83ac2ff65ca"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4332,
+      "sha256": "468a4cb6ce031486fb864baa04ff9b1208faf9b021a484731d90fbdd202dcaaa"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 8612,
+      "sha256": "923a7985ebe97683f67529bcdde4c07981c79032986b783b2aba160aedef5b8e"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3443,
+      "sha256": "de09542893352d85cdcb127cf2b1c625c214d652a5f70e8797f3a1de893a66fd"
+    },
+    {
+      "path": "docs/aec-erp/12-approval-signature-submission/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4938,
+      "sha256": "71bb36e1c46ca33b0cd97eacca7d66241b7272f17d8583b7492c0e59ac1b7abd"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1675,
+      "sha256": "b05392ad6a5eae400ac2dde820853061bf875293761d4a61a3ed3cd05804c0a2"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8604,
+      "sha256": "a9c07afe1955513cba9f3bd99ec91986723fc7809ebc011b63101cf0493e1b54"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 15913,
+      "sha256": "3a404ea129da0849301be848d759b920c0efd54d58c08060dca280522901cace"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7168,
+      "sha256": "91a57e4636c2f759c6cd0a82dbd862aed5c27106b0db214c9e52e6c0fbfaae85"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 9694,
+      "sha256": "174219a1354da5db85c519f5adb97b7288509fcacb926baabd804ad04110947d"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4822,
+      "sha256": "27d12179e1ae456a84cbcfb529f5435d2706d92b3cd20fc94845464628baddd0"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 9479,
+      "sha256": "fc21bf6bc760be9f7d2f1b50131402ff696b242dbd9f3a328a21ba1ddb781978"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4823,
+      "sha256": "cd716c4c55c874046402dc46cd95d51b886cfdc6fc5068ed52c1ec62544594e4"
+    },
+    {
+      "path": "docs/aec-erp/13-admin-template-prompt/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 5310,
+      "sha256": "2e4a7f4cd432a81433de548f030368e9e242258ba9b32e42db97749598661879"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 1460,
+      "sha256": "2993be2ccca7d85b92ecaa4c5eb45aa2c2d0febaf363172e48eda393db4aa188"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/markdown/01_PRODUCT_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 6138,
+      "sha256": "fe4d3ef88db397a520396970f3f5b7544480fec52be7ac4888289c2d3a9376bd"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/markdown/02_TECH_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 8427,
+      "sha256": "9995079a992b2d491964669c8ee1202d2cddc0c7842e508f42c47623acf8d105"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/markdown/05_DESIGN_MARKDOWN.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 4706,
+      "sha256": "67ef756704db6f1102f6c8804c5960679e6c813900547102b386b3c5fb7810ff"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/markdown/07_REVERSE_MAP.md",
+      "category": "feature-markdown",
+      "extension": ".md",
+      "sizeBytes": 7009,
+      "sha256": "408a9e1c254af06f734db10fb5034998b544161d28cc493d0736acb3fc2243d7"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/prompts/03_SERVICE_AI_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 3520,
+      "sha256": "a7e3ad142972eab2a1b9a0a69db82c47b605a23e294de7ad10c1cffdb1e69f53"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/prompts/04_CODEX_IMPLEMENTATION_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 6001,
+      "sha256": "919a0243511c7bfbfd5bd200c76236f7dfedbd064f214e1387728977e5c60299"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/prompts/06_DESIGN_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 2977,
+      "sha256": "a6dfae1b114b859c9d121abbf31b128b1c1be3cd9910dab0f6ea270338f2461c"
+    },
+    {
+      "path": "docs/aec-erp/14-dashboard-statistics/prompts/08_REVERSE_PROMPT.md",
+      "category": "feature-prompt",
+      "extension": ".md",
+      "sizeBytes": 4560,
+      "sha256": "2cf976e67b989bb8cab3be2903f58b78921abde4d761e612f3db26abb27c3d12"
+    },
+    {
+      "path": "docs/aec-erp/FILE_TREE.txt",
+      "category": "root-or-other",
+      "extension": ".txt",
+      "sizeBytes": 6867,
+      "sha256": "71a5bacb3a35b20d07d721a0d9ce14be5ce95cb651a27ec6939815c249884c96"
+    },
+    {
+      "path": "docs/aec-erp/MANIFEST.json",
+      "category": "root-or-other",
+      "extension": ".json",
+      "sizeBytes": 928,
+      "sha256": "228dbebf7ffd59460e806fd83a6406fa530e67c3634359c351c1c5a5ab6f89d8"
+    },
+    {
+      "path": "docs/aec-erp/README.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 2551,
+      "sha256": "2dfe2a7a50444f53b081df3bd660165e26c11bb18198d7ecaa56ca99203e212d"
+    },
+    {
+      "path": "docs/aec-erp/SOURCE_CHAT_SUMMARY.md",
+      "category": "root-or-other",
+      "extension": ".md",
+      "sizeBytes": 2833,
+      "sha256": "64a787a62642b2bbe8c47366f0afd5dcfababaaf1158308fe8c6afb0c4e11736"
+    },
+    {
+      "path": "docs/aec-erp/_html/containment-map.html",
+      "category": "html-index",
+      "extension": ".html",
+      "sizeBytes": 5989,
+      "sha256": "0be9eeef224a5f21408d43643024a2bedf4391ad5886cdde513da064f3af9ab6"
+    },
+    {
+      "path": "docs/aec-erp/_html/implementation-sequence.html",
+      "category": "html-index",
+      "extension": ".html",
+      "sizeBytes": 5106,
+      "sha256": "b6edf3734a0ec46314f608b6be379f29d7f3335df3b1319d6a12c85e7e798b0a"
+    },
+    {
+      "path": "docs/aec-erp/_html/index.html",
+      "category": "html-index",
+      "extension": ".html",
+      "sizeBytes": 5786,
+      "sha256": "c187b320e8e1c1012894015cbb1c08771f37de585a217c22c49ac73207884b6d"
+    },
+    {
+      "path": "docs/aec-erp/_index/AEC_ERP_ALL_IN_ONE.md",
+      "category": "markdown-index",
+      "extension": ".md",
+      "sizeBytes": 941978,
+      "sha256": "28dd81ab0d038485ca49c18e4617fbb566cb8fdeac9766647fb3b4996971f775"
+    },
+    {
+      "path": "docs/aec-erp/_index/AEC_ERP_CONTAINMENT_MAP.md",
+      "category": "markdown-index",
+      "extension": ".md",
+      "sizeBytes": 4161,
+      "sha256": "7dd50a24f1b8c3a6abd29288199f464cdce50ea7da5d5e6c542af03ae4e703cb"
+    },
+    {
+      "path": "docs/aec-erp/_index/AEC_ERP_FILE_LIST.md",
+      "category": "markdown-index",
+      "extension": ".md",
+      "sizeBytes": 27675,
+      "sha256": "092364388375764872372cdf8716bf0b73dbedf16ca20686dad3da9184046ce7"
+    },
+    {
+      "path": "docs/aec-erp/_index/AEC_ERP_IMPLEMENTATION_SEQUENCE.md",
+      "category": "markdown-index",
+      "extension": ".md",
+      "sizeBytes": 3528,
+      "sha256": "cc03b0a3053df6bbbdc425a29dbfbc59401039277f6453bd525197416a3f9b2d"
+    },
+    {
+      "path": "docs/aec-erp/_json/containment_map.json",
+      "category": "json-index",
+      "extension": ".json",
+      "sizeBytes": 9331,
+      "sha256": "7dce66533edbd4d85b7881939e23505e15a1f705f42d9c108d205998083fd9cc"
+    },
+    {
+      "path": "docs/aec-erp/_json/features.json",
+      "category": "json-index",
+      "extension": ".json",
+      "sizeBytes": 8040,
+      "sha256": "2872bdbb1fc1c651c2d51a340a312b539c25bcdf4cf303781a29778aa4fbea44"
+    },
+    {
+      "path": "docs/aec-erp/_json/implementation_sequence.json",
+      "category": "json-index",
+      "extension": ".json",
+      "sizeBytes": 11204,
+      "sha256": "a077c97cce7f08a176278041e48dde0f97f6e2915bbdc258ffcc589f0f42e6ef"
+    },
+    {
+      "path": "docs/aec-erp/_json/reverse_index.json",
+      "category": "json-index",
+      "extension": ".json",
+      "sizeBytes": 20239,
+      "sha256": "8ceba118cd3c54f50b4b92167e654132d36f9d7b686d4f2b15c5c4008b90bce0"
+    }
+  ]
+}
