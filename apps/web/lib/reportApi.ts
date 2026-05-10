@@ -744,7 +744,7 @@ export async function bootstrapDemoSession(
     return preferredSession;
   }
 
-  if (preferredSession && preferredSession.mode !== 'local') {
+  if (preferredSession) {
     const verifiedPreferred = await verifyCachedSession(preferredSession);
     if (verifiedPreferred) {
       return verifiedPreferred;

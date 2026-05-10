@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { ReportWorkspaceScreen } from '@/components/ReportWorkspaceScreen';
 
 export default async function ReportReviewPage({
@@ -17,5 +18,9 @@ export default async function ReportReviewPage({
     }
   })();
 
-  return <ReportWorkspaceScreen reportId={normalizedReportId} initialEntry={entry ?? null} />;
+  return (
+    <Suspense fallback={null}>
+      <ReportWorkspaceScreen reportId={normalizedReportId} initialEntry={entry ?? null} />
+    </Suspense>
+  );
 }

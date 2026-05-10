@@ -758,6 +758,50 @@ def _update_validation_from_review_queue(
     return next_validation
 
 
+def get_report_export_blockers(report: ReportRecord) -> list[str]:
+    review_meta = report.payload.setdefault("reviewMeta", {})
+    review_queue = [
+        _normalize_review_queue_item(item, payload=report.payload)
+        for item in list(review_meta.get("reviewQueue") or [])
+        if isinstance(item, dict)
+    ]
+    review_meta["reviewQueue"] = review_queue
+    validation_result = _update_validation_from_review_queue(
+        dict(report.payload.get("validationResult") or {}),
+        review_queue,
+    )
+    report.payload["validationResult"] = validation_result
+
+    blockers: list[str] = []
+    for item in review_queue:
+        if str(item.get("severity") or "") != "required" or bool(item.get("resolved", False)):
+            continue
+        label = str(item.get("label") or item.get("fieldPath") or "필수 검토 항목").strip()
+        if label:
+            blockers.append(label)
+
+    for message in list(validation_result.get("blockingIssues") or []):
+        text = str(message or "").strip()
+        if text and text not in blockers:
+            blockers.append(text)
+
+    return blockers
+
+
+def require_report_export_ready(report: ReportRecord, *, responsibility_confirmed: bool) -> None:
+    if not responsibility_confirmed:
+        raise HTTPException(status_code=409, detail="책임 확인 후 검토를 완료할 수 있습니다.")
+    blockers = get_report_export_blockers(report)
+    if blockers:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "필수 검토 항목 또는 blocking issue가 남아 있습니다.",
+                "blockers": blockers,
+            },
+        )
+
+
 def apply_ai_draft_to_report(
     report: ReportRecord,
     run: AiRun,
@@ -3171,6 +3215,7 @@ def review_complete(report_id: str, payload: ReviewCompleteRequest, user: User =
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found.")
     require_workspace_access(report.workspace_id, user)
+    require_report_export_ready(report, responsibility_confirmed=payload.responsibility_confirmed)
 
     report.payload["reviewMeta"]["responsibilityConfirmed"] = payload.responsibility_confirmed
     report.payload["reviewMeta"]["reviewCompleted"] = True
@@ -3218,6 +3263,10 @@ def export_pdf(report_id: str, payload: ExportRequest, user: User = Depends(requ
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    require_report_export_ready(
+        report,
+        responsibility_confirmed=bool((report.payload.get("reviewMeta") or {}).get("responsibilityConfirmed")),
+    )
     ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "pdf")
     touch_report(report)
@@ -3237,6 +3286,10 @@ def export_hwpx(report_id: str, payload: ExportRequest, user: User = Depends(req
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    require_report_export_ready(
+        report,
+        responsibility_confirmed=bool((report.payload.get("reviewMeta") or {}).get("responsibilityConfirmed")),
+    )
     ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "hwpx")
     touch_report(report)

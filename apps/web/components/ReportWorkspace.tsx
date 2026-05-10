@@ -1408,13 +1408,10 @@ export default function ReportWorkspace({
         ...unresolvedRequired.slice(0, 5).map((item) => `- ${item.label}`),
         ...blockingIssues.slice(0, 5).map((item) => `- ${item}`),
       ];
-      const proceed = window.confirm(
-        `${unresolvedRequired.length > 0 ? `필수 검토 항목 ${unresolvedRequired.length}개` : '출력 전 확인 항목'}가 남아 있습니다.\n\n${warningLines.join('\n')}\n\n그래도 다운로드를 진행할까요?`,
+      setActionError(
+        `${unresolvedRequired.length > 0 ? `필수 검토 항목 ${unresolvedRequired.length}개` : '출력 전 확인 항목'}가 남아 있습니다.\n\n${warningLines.join('\n')}\n\n필수 검토 항목을 확인한 뒤 다시 다운로드해 주세요.`,
       );
-      if (!proceed) {
-        setActionError('필수 검토 항목을 확인한 뒤 다시 다운로드해 주세요.');
-        return;
-      }
+      return;
     }
 
     const currentSession = await resolveReportSession();
