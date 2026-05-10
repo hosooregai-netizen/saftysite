@@ -1,0 +1,87 @@
+.breadcrumbRow,
+.previewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.crumbButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.crumbButtonActive {
+  background: linear-gradient(180deg, #203648 0%, #1b2c3f 100%);
+  border-color: rgba(33, 55, 74, 0.22);
+  color: #f7fbff;
+}
+
+.folderList {
+  display: grid;
+  gap: 12px;
+}
+
+.folderRow {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folderTitle {
+  display: grid;
+  gap: 4px;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.previewActions {
+  margin-top: 8px;
+}
+
+.emptyState {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9fc 100%);
+}
+
+.gateCard {
+  display: grid;
+  gap: 14px;
+}
+
+.gateTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.16rem;
+  font-weight: 800;
+}
+
+@media (max-width: 860px) {
+  .breadcrumbRow,
+  .previewActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
