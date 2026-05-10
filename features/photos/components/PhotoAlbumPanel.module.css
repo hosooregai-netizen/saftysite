@@ -114,6 +114,19 @@
   margin-top: 16px;
 }
 
+.viewToggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.viewToggleActive {
+  border-color: rgba(27, 43, 68, 0.5) !important;
+  background: #1b2b44 !important;
+  color: #fff !important;
+}
+
 .card {
   position: relative;
   display: grid;
@@ -216,6 +229,121 @@
 .cardActions {
   display: flex;
   justify-content: flex-end;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.listHeader,
+.listRow {
+  display: grid;
+  grid-template-columns: 56px minmax(260px, 1.6fr) minmax(180px, 1fr) 96px minmax(150px, 0.9fr) minmax(190px, auto);
+  gap: 12px;
+  align-items: center;
+  min-width: 920px;
+}
+
+.listHeader {
+  padding: 10px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: #f5f8fc;
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 800;
+}
+
+.listRow {
+  padding: 12px 14px;
+  border: 1px solid var(--erp-line);
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(16, 24, 43, 0.04);
+}
+
+.listRowSelected {
+  border-color: rgba(27, 43, 68, 0.35);
+  background: #f8fbff;
+}
+
+.listCheckbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.listPreviewButton {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.listThumb,
+.listThumbFallback {
+  width: 64px;
+  height: 48px;
+  border-radius: 2px;
+  background: #eef3f8;
+}
+
+.listThumb {
+  object-fit: cover;
+}
+
+.listThumbFallback {
+  display: grid;
+  place-items: center;
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+}
+
+.listFileBlock,
+.listMetaBlock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.listFileBlock strong,
+.listMetaBlock strong,
+.listFileBlock span,
+.listMetaBlock span,
+.listMetaText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listFileBlock strong,
+.listMetaBlock strong {
+  color: var(--erp-dark);
+  font-size: var(--text-body);
+}
+
+.listFileBlock span,
+.listMetaBlock span,
+.listMetaText {
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui);
+}
+
+.listActions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .emptyState {
@@ -344,6 +472,14 @@
 @media (max-width: 720px) {
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  }
+
+  .viewToggle {
+    justify-content: stretch;
+  }
+
+  .viewToggle :global(.app-button) {
+    flex: 1 1 120px;
   }
 
   .workerCompactGrid {
