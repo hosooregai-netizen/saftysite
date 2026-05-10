@@ -1,0 +1,73 @@
+[
+  {
+    "id": "mailbox-state",
+    "feature": "mailbox",
+    "severity": "S1",
+    "title": "메일함 상태 모순 금지",
+    "checks": [
+      "OAuth 성공과 계정 없음 동시 표시 금지",
+      "연결 계정 있음 + 0건은 동기화 필요/empty state로 분리"
+    ]
+  },
+  {
+    "id": "webhard-layout",
+    "feature": "webhard",
+    "severity": "S1",
+    "title": "웹하드 Drive-like 레이아웃 유지",
+    "checks": [
+      "좌측 Drive sidebar",
+      "중앙 file canvas",
+      "ERP card layout 회귀 금지"
+    ]
+  },
+  {
+    "id": "public-share-boundary",
+    "feature": "webhard",
+    "severity": "S0",
+    "title": "Public share root boundary",
+    "checks": [
+      "shared root와 descendants만 접근",
+      "expired/revoked share 데이터 반환 금지"
+    ]
+  },
+  {
+    "id": "report-export-gate",
+    "feature": "report-workspace",
+    "severity": "S0",
+    "title": "보고서 export gate",
+    "checks": [
+      "검토 항목 남으면 export disabled",
+      "책임 확인 전 export disabled"
+    ]
+  },
+  {
+    "id": "billing-idempotency",
+    "feature": "billing-credits",
+    "severity": "S0",
+    "title": "Billing idempotency",
+    "checks": [
+      "Toss confirm/webhook 중복 지급 방지",
+      "같은 report re-export 추가 차감 금지"
+    ]
+  },
+  {
+    "id": "auth-mail-separation",
+    "feature": "auth-workspace",
+    "severity": "S1",
+    "title": "Workspace login과 Gmail connect 분리",
+    "checks": [
+      "/auth/google/callback은 앱 로그인",
+      "/mail/connect/google은 Gmail 연결"
+    ]
+  },
+  {
+    "id": "guest-import",
+    "feature": "account-settings",
+    "severity": "S1",
+    "title": "Guest import 중복 방지",
+    "checks": [
+      "lastImportedWorkspaceId 확인",
+      "중복 import disabled"
+    ]
+  }
+]
