@@ -1,0 +1,363 @@
+.shell {
+  display: grid;
+  grid-template-columns: 248px minmax(360px, 1.15fr) minmax(380px, 1.1fr);
+  gap: 16px;
+}
+
+.headerMeta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.headerActions {
+  align-items: center;
+}
+
+.pane {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+}
+
+.card {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.04rem;
+  font-weight: 800;
+}
+
+.cardMeta {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.folderList,
+.accountList,
+.threadList,
+.attachmentList,
+.historyList {
+  display: grid;
+  gap: 10px;
+}
+
+.folderButton,
+.accountButton,
+.threadButton,
+.draftButton {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfdff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.folderButton:hover,
+.accountButton:hover,
+.threadButton:hover,
+.draftButton:hover {
+  border-color: rgba(145, 158, 171, 0.38);
+  background: #f8fbfd;
+}
+
+.folderButtonActive,
+.accountButtonActive,
+.threadButtonActive,
+.draftButtonActive {
+  border-color: rgba(147, 197, 253, 0.65);
+  background: linear-gradient(180deg, #eef5ff 0%, #f8fbff 100%);
+  color: var(--text);
+}
+
+.folderTop,
+.threadTop,
+.detailTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.folderLabel,
+.threadSubject,
+.accountPrimary {
+  font-weight: 800;
+}
+
+.folderCount,
+.accountMeta,
+.sectionCount {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.accountTop {
+  display: grid;
+  gap: 2px;
+}
+
+.folderMeta,
+.threadMeta,
+.accountMeta,
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.folderButtonActive .muted,
+.accountButtonActive .muted,
+.threadButtonActive .muted,
+.draftButtonActive .muted {
+  color: var(--text-muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.searchField {
+  min-width: 220px;
+  flex: 1;
+}
+
+.statusBadge,
+.contextBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-accent);
+  color: var(--navy);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.bannerError,
+.bannerNotice {
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.bannerError {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 247, 247, 0.98));
+  color: #9f1239;
+}
+
+.bannerNotice {
+  border-color: rgba(74, 222, 128, 0.3);
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.98), rgba(248, 250, 252, 0.98));
+  color: #166534;
+}
+
+.statusBadgeMuted {
+  background: #edf2f7;
+  color: #4a5a6b;
+}
+
+.statusBadgeWarning {
+  background: #fff3d9;
+  color: #8b6115;
+}
+
+.statusBadgeSuccess {
+  background: #dff1e8;
+  color: #2a6d4f;
+}
+
+.emptyState {
+  display: grid;
+  gap: 12px;
+  padding: 24px;
+  border: 1px dashed rgba(145, 158, 171, 0.48);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f8fbfd 100%);
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detailShell {
+  display: grid;
+  gap: 16px;
+}
+
+.detailMessage {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.detailInfo {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bodyFrame {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.bodyFrameCompact {
+  min-height: 220px;
+}
+
+.composerShell {
+  display: grid;
+  gap: 14px;
+}
+
+.fieldStack {
+  display: grid;
+  gap: 8px;
+}
+
+.fieldLabel {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.editorShell {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.editor {
+  min-height: 260px;
+  padding: 16px;
+  outline: none;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+}
+
+.attachmentRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attachmentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.footerMeta {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.historyItem {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.threadRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.threadPreview {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.threadButtonActive .threadPreview {
+  color: rgba(247, 251, 255, 0.78);
+}
+
+@media (max-width: 1240px) {
+  .shell {
+    grid-template-columns: 220px minmax(280px, 1fr) minmax(320px, 1fr);
+  }
+}
+
+@media (max-width: 980px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .footerRow,
+  .cardHeader,
+  .toolbar,
+  .threadRowHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

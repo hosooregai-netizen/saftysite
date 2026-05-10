@@ -5,7 +5,6 @@ import {
   fetchMailProviderStatuses,
   fetchMailThreads,
   startGoogleMailConnect,
-  startNaverWorksMailConnect,
   syncMail,
 } from '@/lib/mail/apiClient';
 import type { MailAccount, MailProviderStatus, MailThread, MailThreadDetail } from '@/types/mail';
@@ -177,22 +176,8 @@ export function useMailboxAccountActions({
       setOauthProvider(null);
     }
   };
-  const handleConnectNaverWorksOauth = async () => {
-    try {
-      handleDisableDemoMode({ silent: true });
-      setError(null);
-      setOauthProvider('naver_works');
-      const response = await startNaverWorksMailConnect();
-      window.location.assign(response.authorizationUrl);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '네이버웍스 로그인 연결에 실패했습니다.');
-      setOauthProvider(null);
-    }
-  };
-
   return {
     handleConnectGoogle,
-    handleConnectNaverWorksOauth,
     handleDisconnectSelectedAccount,
     handleRefreshAccountState,
     handleSync,

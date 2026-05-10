@@ -133,8 +133,6 @@ export function useMailboxAccountState({
     [providerStatuses],
   );
   const googleProviderStatus = providerStatusMap.get('google');
-  const naverProviderStatus = providerStatusMap.get('naver_mail');
-  const naverWorksProviderStatus = providerStatusMap.get('naver_works');
 
   return {
     accountStateReady,
@@ -146,11 +144,6 @@ export function useMailboxAccountState({
     googleProviderStatusTone: buildProviderStatusTone(googleProviderStatus),
     hasMultipleAccounts: selectableAccounts.length > 1,
     hasPersonalAccount: accounts.some((account) => account.scope === 'personal'),
-    naverProviderStatusDetail: buildProviderStatusDetail(naverProviderStatus),
-    naverProviderStatusLabel: buildProviderStatusLabel(naverProviderStatus),
-    naverWorksProviderStatusDetail: buildProviderStatusDetail(naverWorksProviderStatus),
-    naverWorksProviderStatusLabel: buildProviderStatusLabel(naverWorksProviderStatus),
-    naverWorksProviderStatusTone: buildProviderStatusTone(naverWorksProviderStatus),
     providerStatuses,
     selectableAccounts,
     selectedAccount,

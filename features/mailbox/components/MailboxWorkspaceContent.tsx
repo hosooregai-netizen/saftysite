@@ -24,9 +24,6 @@ export function MailboxWorkspaceContent({
   isDemoMode,
   isSendingMail,
   mailSendProgress,
-  naverWorksProviderStatusDetail,
-  naverWorksProviderStatusLabel,
-  naverWorksProviderStatusTone,
   oauthProvider,
   recipientSuggestionIndex,
   recipientSuggestions,
@@ -61,7 +58,6 @@ export function MailboxWorkspaceContent({
   onComposerInput,
   onComposerLink,
   onConnectGoogle,
-  onConnectNaverWorks,
   onFocusRecipient,
   onForward,
   onMoveThreadPage,
@@ -94,12 +90,8 @@ export function MailboxWorkspaceContent({
         googleProviderStatusLabel={googleProviderStatusLabel}
         googleProviderStatusTone={googleProviderStatusTone}
         mode={showMailboxConnectGate ? 'gate' : 'prompt'}
-        naverWorksProviderStatusDetail={naverWorksProviderStatusDetail}
-        naverWorksProviderStatusLabel={naverWorksProviderStatusLabel}
-        naverWorksProviderStatusTone={naverWorksProviderStatusTone}
         oauthProvider={oauthProvider}
         onConnectGoogle={onConnectGoogle}
-        onConnectNaverWorks={onConnectNaverWorks}
         onRefreshAccountState={onRefreshAccountState}
       />
     );

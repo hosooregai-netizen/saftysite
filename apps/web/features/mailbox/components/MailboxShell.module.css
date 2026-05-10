@@ -1,0 +1,823 @@
+.host {
+  min-height: 100vh;
+  background: #f8fafd;
+  color: #1f1f1f;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: auto minmax(320px, 720px) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 64px;
+  padding: 8px 20px;
+  border-bottom: 1px solid #e0e3e7;
+  background: rgba(248, 250, 253, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.topbarLead,
+.topbarActions,
+.topbarStatusRow,
+.threadHeader,
+.threadHeaderMeta,
+.threadMetaRow,
+.viewerHeader,
+.viewerMetaRow,
+.viewerActions,
+.composeHeader,
+.composeHeaderActions,
+.composeFooter,
+.sidebarAccountHeader,
+.onboardingActions,
+.searchFilterRow,
+.threadRowHeader,
+.threadMessageSummary,
+.viewerMessageHeader,
+.viewerAttachmentList,
+.sidebarFooter,
+.sidebarSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbarActions,
+.viewerActions,
+.viewerAttachmentList,
+.onboardingActions,
+.searchFilterRow {
+  flex-wrap: wrap;
+}
+
+.topbarLead {
+  min-width: 0;
+}
+
+.menuButton,
+.topbarIconButton,
+.viewerActionButton,
+.threadStarButton,
+.threadActionButton,
+.composeWindowButton,
+.composeActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+}
+
+.menuButton:hover,
+.topbarIconButton:hover,
+.viewerActionButton:hover,
+.threadStarButton:hover,
+.threadActionButton:hover,
+.composeWindowButton:hover,
+.composeActionButton:hover,
+.navButton:hover,
+.accountButton:hover,
+.threadRow:hover,
+.messageSummaryButton:hover,
+.searchFilterButton:hover {
+  background: #f1f3f4;
+}
+
+.brandLockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brandMark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #dbe7fb 0%, #c7d9fb 100%);
+  color: #0b57d0;
+}
+
+.brandText {
+  display: grid;
+  gap: 2px;
+}
+
+.brandText strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.brandText span,
+.muted,
+.threadMeta,
+.accountEmail,
+.viewerDetailValueMuted,
+.topbarStatusHint,
+.onboardingDescription,
+.searchResultMeta,
+.threadPreview,
+.messageSummaryPreview,
+.emptyDescription,
+.sidebarSectionHint,
+.composeMeta,
+.composeStatus {
+  color: #5f6368;
+}
+
+.brandText span,
+.muted,
+.threadMeta,
+.accountEmail,
+.viewerDetailValueMuted,
+.topbarStatusHint,
+.searchResultMeta,
+.composeMeta,
+.composeStatus {
+  font-size: 0.85rem;
+}
+
+.topbarSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  width: 100%;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #edf2fa;
+}
+
+.topbarSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #1f1f1f;
+  font-size: 0.96rem;
+}
+
+.topbarSearch input:focus {
+  outline: none;
+}
+
+.topbarPrimaryButton,
+.sidebarComposeButton,
+.connectButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #0b57d0;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1a73e8 0%, #0b57d0 100%);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sidebarComposeButton {
+  min-height: 56px;
+  justify-content: flex-start;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.14), 0 1px 3px 1px rgba(60, 64, 67, 0.08);
+}
+
+.topbarSecondaryButton,
+.viewerTextButton,
+.connectSecondaryButton,
+.composeFooterButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d2d7e0;
+  border-radius: 14px;
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.topbarStatusRow {
+  margin-left: auto;
+}
+
+.topbarStatusBadge,
+.threadBadge,
+.accountBadge,
+.searchFilterButton,
+.viewerStatusBadge,
+.composeStatusBadge,
+.onboardingStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef3fd;
+  color: #0b57d0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.statusSuccess {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.statusWarning {
+  background: #fef7e0;
+  color: #8d6200;
+}
+
+.statusMuted {
+  background: #f1f3f4;
+  color: #5f6368;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 256px minmax(360px, 520px) minmax(0, 1fr);
+  min-height: calc(100vh - 64px);
+}
+
+.sidebarPane {
+  border-right: 1px solid #e0e3e7;
+  background: #f8fafd;
+}
+
+.threadPane {
+  min-width: 0;
+  border-right: 1px solid #e0e3e7;
+  background: #fff;
+}
+
+.viewerPane {
+  min-width: 0;
+  background: #fff;
+}
+
+.sidebar {
+  display: grid;
+  gap: 18px;
+  height: 100%;
+  padding: 18px 14px 22px 16px;
+  align-content: start;
+}
+
+.sidebarSection {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebarNav {
+  display: grid;
+  gap: 6px;
+}
+
+.sidebarSectionLabel {
+  padding: 0 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #5f6368;
+}
+
+.navButton,
+.accountButton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #1f1f1f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.navButtonActive,
+.accountButtonActive,
+.searchFilterButtonActive {
+  background: #d3e3fd;
+  color: #0b57d0;
+}
+
+.navLabelWrap,
+.accountLabelWrap {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.navButtonLabel,
+.accountLabel {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.navButtonMeta {
+  margin-left: auto;
+  color: #5f6368;
+  font-size: 0.8rem;
+}
+
+.accountList {
+  display: grid;
+  gap: 8px;
+}
+
+.accountButton {
+  align-items: flex-start;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 18px;
+}
+
+.accountButtonActive {
+  box-shadow: inset 0 0 0 1px rgba(11, 87, 208, 0.08);
+}
+
+.accountMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mainColumn {
+  display: grid;
+  height: 100%;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.paneToolbar {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #e0e3e7;
+  background: #fff;
+}
+
+.threadTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.searchResultTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0b57d0;
+}
+
+.searchFilterButton {
+  border: 0;
+  background: #f1f3f4;
+  color: #5f6368;
+  cursor: pointer;
+}
+
+.threadScroller,
+.viewerScroller {
+  min-height: 0;
+  overflow: auto;
+}
+
+.threadList {
+  display: grid;
+}
+
+.threadRow {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  width: 100%;
+  padding: 12px 20px;
+  border: 0;
+  border-bottom: 1px solid #eef1f4;
+  background: transparent;
+  color: #1f1f1f;
+  text-align: left;
+  cursor: pointer;
+}
+
+.threadRowSelected {
+  background: #c2e7ff;
+}
+
+.threadRowUnread .threadSubject {
+  font-weight: 800;
+}
+
+.unreadDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #0b57d0;
+  margin-top: 8px;
+}
+
+.threadStarButton {
+  margin-top: 2px;
+}
+
+.threadStarActive {
+  color: #d97706;
+}
+
+.threadMain {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.threadSubjectLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.threadSubject {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.threadPreview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.threadBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.threadTrailing {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+  min-width: 72px;
+}
+
+.emptyState,
+.viewerEmpty,
+.onboardingState {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+  justify-items: start;
+  min-height: min(60vh, 520px);
+  padding: 32px;
+}
+
+.emptyTitle,
+.onboardingTitle {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #1f1f1f;
+}
+
+.emptyDescription,
+.onboardingDescription {
+  max-width: 520px;
+  line-height: 1.6;
+}
+
+.viewer {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  min-width: 0;
+}
+
+.viewerHeader {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e0e3e7;
+}
+
+.viewerHeaderText {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.viewerTitle {
+  margin: 0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.viewerMetaStack {
+  display: grid;
+  gap: 4px;
+}
+
+.viewerMetaRow {
+  flex-wrap: wrap;
+}
+
+.viewerConversation {
+  display: grid;
+  gap: 16px;
+  padding: 20px 24px 28px;
+}
+
+.messageCard,
+.messageSummaryButton {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid #e0e3e7;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.messageSummaryButton {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.messageBody {
+  line-height: 1.7;
+}
+
+.messageBody :global(p:first-child) {
+  margin-top: 0;
+}
+
+.messageBody :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.attachmentButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #d2d7e0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.composeFloating {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 36;
+  width: min(540px, calc(100vw - 32px));
+  border: 1px solid #d2d7e0;
+  border-radius: 18px 18px 10px 10px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.composeFloatingMaximized {
+  top: 76px;
+  right: 20px;
+  bottom: 20px;
+  width: min(760px, calc(100vw - 40px));
+}
+
+.composeFloatingMinimized {
+  width: min(320px, calc(100vw - 32px));
+}
+
+.composeBodyHidden {
+  display: none;
+}
+
+.composeHeader {
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e0e3e7;
+  background: #f7fafd;
+}
+
+.composeTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.composeBody {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.composeField {
+  display: grid;
+  gap: 8px;
+}
+
+.composeLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #5f6368;
+}
+
+.composeEditorShell {
+  display: grid;
+  gap: 0;
+  border: 1px solid #e0e3e7;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.composeEditor {
+  min-height: 260px;
+  padding: 16px;
+  outline: none;
+  color: #1f1f1f;
+  line-height: 1.7;
+}
+
+.composeEditor:empty::before {
+  content: attr(data-placeholder);
+  color: #5f6368;
+}
+
+.composeAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.composeAttachmentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d2d7e0;
+  border-radius: 999px;
+  background: #f8fafc;
+}
+
+.composeAttachmentInputLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #d2d7e0;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.composeFooter {
+  justify-content: space-between;
+}
+
+.bannerError,
+.bannerNotice {
+  margin: 0 20px;
+  padding: 10px 14px;
+  border: 1px solid #e0e3e7;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.bannerError {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), rgba(255, 247, 247, 0.98));
+  color: #9f1239;
+}
+
+.bannerNotice {
+  border-color: rgba(74, 222, 128, 0.3);
+  background: linear-gradient(180deg, rgba(240, 253, 244, 0.98), rgba(248, 250, 252, 0.98));
+  color: #166534;
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.sidebarDrawer {
+  position: fixed;
+  inset: 64px auto 0 0;
+  z-index: 29;
+  width: min(88vw, 296px);
+  border-right: 1px solid #e0e3e7;
+  background: #f8fafd;
+}
+
+@media (max-width: 1320px) {
+  .layout {
+    grid-template-columns: 248px minmax(340px, 480px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1080px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topbarStatusRow {
+    margin-left: 0;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebarPane {
+    display: none;
+  }
+
+  .threadPane {
+    border-right: 0;
+  }
+
+  .viewerPane {
+    position: fixed;
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    z-index: 27;
+    width: min(92vw, 420px);
+    border-left: 1px solid #e0e3e7;
+    box-shadow: -12px 0 30px rgba(15, 23, 42, 0.14);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+  }
+
+  .viewerPaneOpen {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    padding-inline: 14px;
+  }
+
+  .paneToolbar,
+  .viewerHeader,
+  .viewerConversation {
+    padding-inline: 16px;
+  }
+
+  .threadRow {
+    grid-template-columns: auto auto minmax(0, 1fr);
+  }
+
+  .threadTrailing {
+    grid-column: 3;
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .composeFloating,
+  .composeFloatingMaximized {
+    top: 72px;
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+}
