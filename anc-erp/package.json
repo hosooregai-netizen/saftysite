@@ -1,0 +1,19 @@
+{
+  "name": "anc-erp-workspace",
+  "private": true,
+  "workspaces": [
+    "client",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "ANC_ERP_DEV_TARGET=server node scripts/dev.mjs",
+    "dev:client": "npm run dev --workspace @anc-erp/client",
+    "build:client": "npm run build --workspace @anc-erp/client",
+    "test:runbook": "../node_modules/.bin/tsx tests/runbook-parity.test.ts",
+    "test:parity-hosts": "../node_modules/.bin/tsx tests/parity-host-shells.test.tsx",
+    "test:client": "../node_modules/.bin/tsx tests/client-app-boot.test.tsx",
+    "test:server": "../apps/api/.venv/bin/python -m unittest discover -s server/tests -p 'test_*.py'",
+    "test": "npm run test:client && npm run test:server"
+  }
+}
