@@ -2,17 +2,27 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSyncExternalStore } from 'react';
 import InstituteWordmark from '@/components/branding/InstituteWordmark';
 import { saasNavItems } from '@/lib/demoData';
+import {
+  canUseWorkspaceServerApis,
+  peekCachedSession,
+  subscribeCachedSession,
+  type DemoSession,
+} from '@/lib/reportApi';
+import { beginGoogleWorkspaceAuth } from '@/lib/sessionAuthFlow';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === '/';
+  const isDriveHost = pathname === '/webhard' || pathname.startsWith('/share/');
+  const isMailboxHost = pathname === '/mailbox' || pathname.startsWith('/mail/connect/');
   const landingNavItems = [
     { href: '#service', label: '서비스 안내' },
     { href: '#process', label: '작성 절차' },
+    { href: '#preview', label: '표준 양식 미리보기' },
     { href: '#pricing', label: '요금 안내' },
-    { href: '/reports', label: '보고서 보기' },
   ] as const;
   const resolveActive = (href: string) => {
     if (href === '/reports') {
@@ -20,6 +30,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     return pathname === href;
   };
+  const session = useSyncExternalStore<DemoSession | null | undefined>(
+    subscribeCachedSession,
+    () => peekCachedSession(),
+    () => undefined,
+  );
+
+  const canUseServerApis = session !== undefined && canUseWorkspaceServerApis(session);
+
+  const renderAccountAction = () => {
+    if (canUseServerApis) {
+      return (
+        <Link href="/account#account" className="erp-button erp-button-secondary">
+          {session?.userName || '계정'}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className="erp-button erp-button-secondary"
+        onClick={() => {
+          void beginGoogleWorkspaceAuth().catch((error) => {
+            window.alert(
+              error instanceof Error ? error.message : '구글 로그인으로 이동하지 못했습니다.',
+            );
+          });
+        }}
+      >
+        Google 로그인
+      </button>
+    );
+  };
+
+  if (isDriveHost || isMailboxHost) {
+    return <div className="drive-host-root">{children}</div>;
+  }
 
   return (
     <div className={`shell-root ${isLanding ? 'shell-root-landing' : ''}`}>
@@ -28,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <InstituteWordmark
             className="topbar-wordmark"
             tone={isLanding ? 'dark' : 'light'}
-            productLine={isLanding ? '기술지도 결과보고서 작성 지원' : 'AI'}
+            productLine={isLanding ? '기술지도 결과보고서 작성 지원' : '업무 지원'}
             showSecondary={!isLanding}
           />
         </Link>
@@ -43,9 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 ))}
               </nav>
               <div className="topbar-actions">
-                <Link href="/reports" className="erp-button erp-button-secondary">
-                  샘플 보고서 보기
-                </Link>
+                {renderAccountAction()}
                 <Link href="/reports/new" className="erp-button erp-button-primary">
                   보고서 작성 시작
                 </Link>
@@ -53,6 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </>
           ) : (
             <div className="topbar-actions">
+              {renderAccountAction()}
               <Link href="/reports/new" className="erp-button erp-button-primary">
                 새 보고서 시작
               </Link>

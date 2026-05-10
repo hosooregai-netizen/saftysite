@@ -15,6 +15,41 @@ const requirementsPath = path.join(apiDir, 'requirements.txt');
 const hashPath = path.join(venvDir, '.requirements.sha256');
 const pythonCommand = process.env.SAFTYSITE_API_PYTHON || (isWindows ? 'python' : 'python3');
 
+function loadDotEnvFile(filename) {
+  const filePath = path.join(repoRoot, filename);
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const source = readFileSync(filePath, 'utf8');
+  for (const line of source.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    if (!key || process.env[key] !== undefined) {
+      continue;
+    }
+
+    let value = trimmed.slice(separatorIndex + 1);
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
+
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -130,6 +165,9 @@ async function resolvePort() {
 }
 
 async function main() {
+  loadDotEnvFile('.env');
+  loadDotEnvFile('.env.local');
+
   const installOnly = process.argv.includes('--install-only');
   const checkOnly = process.argv.includes('--check');
   await installRequirementsIfNeeded();
