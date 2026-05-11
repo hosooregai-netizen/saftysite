@@ -327,8 +327,8 @@ export function useSiteReportListState(
       .map((session) => mapInspectionSessionToReportListItem(session, currentSite));
 
     return mergeReportIndexItems(
-      adminLegacyState.items,
       mergeReportIndexItems(reportItems, localSessionItems),
+      adminLegacyState.items,
     );
   }, [adminLegacyState.items, currentSite, isAdminView, reportItems, sessions]);
   const effectiveReportIndexStatus = useMemo(() => {

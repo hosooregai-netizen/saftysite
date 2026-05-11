@@ -109,7 +109,7 @@ export const ERP_FEATURE_CONTRACTS = {
       'POST /auth/token',
       'GET /assignments/me/sites',
       'GET /reports',
-      'POST /api/me/schedules/next',
+      'PATCH /api/me/schedules/:id',
       'GET /reports/site/:id/technical-guidance-seed',
     ],
     criticalActions: ['모바일 보고서 목록 로그인', '보고서 목록 조회', '새 보고서 생성', '모바일 작성 화면 진입'],

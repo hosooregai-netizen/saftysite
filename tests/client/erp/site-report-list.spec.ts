@@ -292,12 +292,27 @@ async function installDelayedAssignedSitesRoute(
       'GET /assignments/me/sites',
       (requestCounts.get('GET /assignments/me/sites') || 0) + 1,
     );
-    await new Promise((resolve) => setTimeout(resolve, 850));
+    await new Promise((resolve) => setTimeout(resolve, 2500));
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(responseBody),
     });
+  });
+}
+
+async function installDelayedSiteDetailRoute(page: Page) {
+  let intercepted = false;
+
+  await page.route(new RegExp(`/api/(?:safety|v1)/sites/${SITE_ID}(?:\\?.*)?$`), async (route) => {
+    if (intercepted) {
+      await route.fallback();
+      return;
+    }
+
+    intercepted = true;
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    await route.fallback();
   });
 }
 
@@ -335,6 +350,7 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
       requestCounts,
       clone(harness.helpers.assignedSitesForUser(USER_ID)),
     );
+    await installDelayedSiteDetailRoute(page);
 
     const assignmentsBeforeReload = requestCounts.get('GET /assignments/me/sites') || 0;
 
