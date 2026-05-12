@@ -1,0 +1,9 @@
+# 07. Test Plan — 공사개요 및 연락망/총괄현황
+
+```text
+test_04_14_project_summary_contact_book_loads
+test_04_14_project_summary_contact_book_requires_project_scope
+test_04_14_project_summary_contact_book_owner_specific_isolation
+test_04_14_project_summary_contact_book_status_transition
+test_04_14_project_summary_contact_book_reverse_map_complete
+```

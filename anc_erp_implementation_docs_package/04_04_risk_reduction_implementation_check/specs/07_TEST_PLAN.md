@@ -1,0 +1,9 @@
+# 07. Test Plan — 위험성 감소대책 이행확인
+
+```text
+test_04_04_risk_reduction_implementation_check_loads
+test_04_04_risk_reduction_implementation_check_requires_project_scope
+test_04_04_risk_reduction_implementation_check_owner_specific_isolation
+test_04_04_risk_reduction_implementation_check_status_transition
+test_04_04_risk_reduction_implementation_check_reverse_map_complete
+```

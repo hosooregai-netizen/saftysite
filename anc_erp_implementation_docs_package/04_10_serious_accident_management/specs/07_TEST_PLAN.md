@@ -1,0 +1,9 @@
+# 07. Test Plan — 중대재해 관리
+
+```text
+test_04_10_serious_accident_management_loads
+test_04_10_serious_accident_management_requires_project_scope
+test_04_10_serious_accident_management_owner_specific_isolation
+test_04_10_serious_accident_management_status_transition
+test_04_10_serious_accident_management_reverse_map_complete
+```

@@ -1,0 +1,9 @@
+# 07. Test Plan — 프로젝트/현장 원장 관리
+
+```text
+test_01_project_field_registry_loads
+test_01_project_field_registry_requires_project_scope
+test_01_project_field_registry_owner_specific_isolation
+test_01_project_field_registry_status_transition
+test_01_project_field_registry_reverse_map_complete
+```

@@ -1,0 +1,29 @@
+# 09. Seed Data — 공사안전보건대장 이행여부 확인서
+
+        ```json
+        {
+  "projectId": "project_leeum_elevator_2026",
+  "projectName": "리움미술관 승강기 교체공사",
+  "owners": [
+    "삼성문화재단",
+    "삼성생명공익재단"
+  ],
+  "contractor": "현대엘리베이터(주)",
+  "engineer": "A&C기술사사무소",
+  "constructionAmount": 9130000000,
+  "contractAmount": 11000000,
+  "contractSplit": {
+    "삼성문화재단": 60,
+    "삼성생명공익재단": 40
+  },
+  "inspectionRounds": 10,
+  "round1": {
+    "documentNo": "제2026-01호",
+    "inspectionDate": "2026-01-23"
+  },
+  "safetyCost": {
+    "삼성문화재단": 38.2,
+    "삼성생명공익재단": 40.5
+  }
+}
+        ```

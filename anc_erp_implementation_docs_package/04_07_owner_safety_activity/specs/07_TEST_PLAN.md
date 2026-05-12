@@ -1,0 +1,9 @@
+# 07. Test Plan — 발주자 참여 현장 안전보건활동
+
+```text
+test_04_07_owner_safety_activity_loads
+test_04_07_owner_safety_activity_requires_project_scope
+test_04_07_owner_safety_activity_owner_specific_isolation
+test_04_07_owner_safety_activity_status_transition
+test_04_07_owner_safety_activity_reverse_map_complete
+```

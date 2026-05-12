@@ -1,0 +1,2 @@
+api: GET /api/v1/submissions/{submissionId}
+models: ApprovalWorkflowInstance, SignatureRequest, Submission, SubmissionEvent

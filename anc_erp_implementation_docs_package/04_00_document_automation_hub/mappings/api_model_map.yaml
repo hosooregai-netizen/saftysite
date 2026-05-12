@@ -1,0 +1,2 @@
+api: GET /api/v1/document-bundles/{bundleId}
+models: DocumentBundle, StandardFormDefinition, StandardFormInstance

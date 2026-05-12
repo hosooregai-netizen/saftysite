@@ -1,0 +1,2 @@
+api: GET /api/v1/serious-accident-management-forms/{formId}
+models: SeriousAccidentManagementForm

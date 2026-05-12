@@ -1,0 +1,9 @@
+# 07. Test Plan — 공사일정 첨부/공정표 첨부
+
+```text
+test_04_12_work_schedule_attachment_loads
+test_04_12_work_schedule_attachment_requires_project_scope
+test_04_12_work_schedule_attachment_owner_specific_isolation
+test_04_12_work_schedule_attachment_status_transition
+test_04_12_work_schedule_attachment_reverse_map_complete
+```

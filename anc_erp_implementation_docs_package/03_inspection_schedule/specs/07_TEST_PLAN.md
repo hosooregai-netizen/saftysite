@@ -1,0 +1,9 @@
+# 07. Test Plan — 점검회차/일정 관리
+
+```text
+test_03_inspection_schedule_loads
+test_03_inspection_schedule_requires_project_scope
+test_03_inspection_schedule_owner_specific_isolation
+test_03_inspection_schedule_status_transition
+test_03_inspection_schedule_reverse_map_complete
+```

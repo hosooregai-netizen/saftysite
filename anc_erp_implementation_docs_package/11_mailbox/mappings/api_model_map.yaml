@@ -1,0 +1,2 @@
+api: GET /api/v1/mail/folders/{folderId}/threads
+models: MailAccount, MailThread, MailMessage, MailAttachment, MailDraft

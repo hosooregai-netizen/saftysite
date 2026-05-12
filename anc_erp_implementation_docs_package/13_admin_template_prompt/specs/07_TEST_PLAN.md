@@ -1,0 +1,9 @@
+# 07. Test Plan — 관리자/템플릿/프롬프트
+
+```text
+test_13_admin_template_prompt_loads
+test_13_admin_template_prompt_requires_project_scope
+test_13_admin_template_prompt_owner_specific_isolation
+test_13_admin_template_prompt_status_transition
+test_13_admin_template_prompt_reverse_map_complete
+```

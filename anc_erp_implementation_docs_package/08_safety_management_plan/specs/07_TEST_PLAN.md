@@ -1,0 +1,9 @@
+# 07. Test Plan — 안전관리계획서 자동화
+
+```text
+test_08_safety_management_plan_loads
+test_08_safety_management_plan_requires_project_scope
+test_08_safety_management_plan_owner_specific_isolation
+test_08_safety_management_plan_status_transition
+test_08_safety_management_plan_reverse_map_complete
+```

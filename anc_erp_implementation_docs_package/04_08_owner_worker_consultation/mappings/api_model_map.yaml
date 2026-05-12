@@ -1,0 +1,2 @@
+api: GET /api/v1/worker-consultation-forms/{formId}
+models: WorkerConsultationForm

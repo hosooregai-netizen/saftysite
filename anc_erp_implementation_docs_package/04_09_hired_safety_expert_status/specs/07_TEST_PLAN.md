@@ -1,0 +1,9 @@
+# 07. Test Plan — 발주자가 고용한 안전보건 전문가 현황
+
+```text
+test_04_09_hired_safety_expert_status_loads
+test_04_09_hired_safety_expert_status_requires_project_scope
+test_04_09_hired_safety_expert_status_owner_specific_isolation
+test_04_09_hired_safety_expert_status_status_transition
+test_04_09_hired_safety_expert_status_reverse_map_complete
+```
