@@ -98,5 +98,40 @@
     "feature": "auth-workspace",
     "label": "09_DESIGN_IMPLEMENTATION_PROMPT.md",
     "path": "docs/safety-features/auth-workspace/prompts/09_DESIGN_IMPLEMENTATION_PROMPT.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "SERVICE_IMPROVEMENT_18_PROMPT.md",
+    "path": "docs/service-improvements/18-report-ai-update/SERVICE_IMPROVEMENT_18_PROMPT.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "01_READ_AND_PLAN.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/01_READ_AND_PLAN.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "02_IMPLEMENT_VISION_PHOTO_EXTRACTOR.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/02_IMPLEMENT_VISION_PHOTO_EXTRACTOR.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "03_IMPROVE_STANDARD_RISK_LIBRARY.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/03_IMPROVE_STANDARD_RISK_LIBRARY.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "04_IMPROVE_STANDARD_REPORT_COMPOSER.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/04_IMPROVE_STANDARD_REPORT_COMPOSER.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "05_UPDATE_REPORT_WORKSPACE_UI.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/05_UPDATE_REPORT_WORKSPACE_UI.md"
+  },
+  {
+    "feature": "report-ai-standardization",
+    "label": "06_QA_AND_REGRESSION.md",
+    "path": "docs/safety-features/report-ai-standardization/07-prompts/06_QA_AND_REGRESSION.md"
   }
 ]

@@ -261,6 +261,177 @@
   border-color: rgba(50, 80, 106, 0.14);
 }
 
+.aiStatusPanel {
+  display: grid;
+  gap: 18px;
+}
+
+.aiStatusHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.aiMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  gap: 10px;
+}
+
+.aiMetricGrid div {
+  display: grid;
+  gap: 4px;
+  min-width: 86px;
+  padding: 12px 14px;
+  border: 1px solid rgba(37, 59, 79, 0.1);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbfd 0%, #eef5f8 100%);
+}
+
+.aiMetricGrid span,
+.aiObservationRole,
+.observationDrawerGrid span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.aiMetricGrid strong {
+  color: var(--text);
+  font-size: 1.4rem;
+}
+
+.aiObservationList {
+  display: grid;
+  gap: 10px;
+}
+
+.aiObservationCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.aiObservationCard strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+}
+
+.aiObservationCard p {
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.aiObservationMeta {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.aiEmptyState {
+  padding: 16px 18px;
+  border: 1px dashed rgba(37, 59, 79, 0.22);
+  border-radius: 18px;
+  color: var(--text-muted);
+  background: #fbfdff;
+}
+
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.aiBadgeFilled {
+  background: #e8f2fb;
+  color: #225174;
+}
+
+.aiBadgeStandard {
+  background: #edf5e9;
+  color: #315d31;
+}
+
+.aiBadgeReview {
+  background: #fff3df;
+  color: #8a4b00;
+}
+
+.planFieldStack {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.observationDrawer {
+  width: min(860px, 100%);
+  max-height: min(86vh, 920px);
+  overflow: auto;
+}
+
+.observationDrawerGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.observationDrawerGrid div,
+.observationDetailSection {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #f8fbfd;
+}
+
+.observationDrawerGrid strong,
+.observationDetailSection strong {
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.aiChipList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aiEvidenceChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #eef4f8;
+  color: var(--navy);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.observationReasonList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
 .reviewSummaryCopy {
   display: grid;
   gap: 4px;
@@ -847,6 +1018,20 @@
   }
 
   .reviewMetaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aiStatusHeader,
+  .aiObservationCard {
+    grid-template-columns: 1fr;
+  }
+
+  .aiStatusHeader {
+    display: grid;
+  }
+
+  .aiMetricGrid,
+  .observationDrawerGrid {
     grid-template-columns: 1fr;
   }
 }

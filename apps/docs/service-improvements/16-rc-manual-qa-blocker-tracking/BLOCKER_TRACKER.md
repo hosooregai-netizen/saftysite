@@ -10,6 +10,7 @@
 | --- | --- | --- | --- | --- |
 | BLK-BILLING-TOSS-CREDENTIALS | S0 | billing-credits | `TOSS_PAYMENTS_SECRET_KEY` and `TOSS_PAYMENTS_API_BASE_URL` are missing from local preflight. | Provide Toss test credentials, then rerun checkout confirm/webhook idempotency checks. |
 | BLK-EXTERNAL-GMAIL-LIVE-QA | S2 | mailbox | Mailbox compose validation and access_denied error display passed; Google OAuth configuration, redirect allow-list, `/mailbox` CTA, and `accounts.google.com` handoff passed. User approval, live sync, and actual Gmail test send were not completed. | Run live Google approval, sync/backfill, reconnect/error-state, and test-send QA with a user-controlled browser session. |
+| BLK-REPORT-AI-LIVE-VISION-QA | S2 | report-ai-standardization | `OPENAI_API_KEY` is not present, so fallback/mock QA passed but real OpenAI Vision image analysis was not run. | Provide an OpenAI key, set `AI_VISION_ENABLED=true`, then verify ladder/rebar/opening images through `/reports/new` and `/reports/{reportId}`. |
 
 ## Closed In This Patch
 
@@ -38,3 +39,4 @@
 - Mailbox compose browser validation and access_denied error display: pass.
 - Photo album browser QA for grid/list/filter/search/detail drawer: pass.
 - Headquarters/sites browser QA for CRUD modal validation and report/photo/mail quick actions: pass.
+- Report AI fallback/mock standardization QA: pass for unit tests, deterministic writer quality checks, frontend build, backend compile, and final QA script.

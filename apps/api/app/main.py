@@ -86,6 +86,7 @@ from .models import (
     BillingConfirmRequest,
     BillingCheckoutRequest,
     ClaimAnonymousRequest,
+    ComposeStandardDraftRequest,
     CreateReportRequest,
     CreateWorkspaceRequest,
     DriveItem,
@@ -100,6 +101,7 @@ from .models import (
     ExportDisclaimerAcceptance,
     GenerateDraftFromGuidedPhotosRequest,
     GenerateDraftFromPhotosRequest,
+    GeneratePhotoObservationsRequest,
     GuestWorkspaceDriveItemInput,
     GuestWorkspaceDriveShareInput,
     GuestWorkspaceMailboxDraftInput,
@@ -131,7 +133,12 @@ from .models import (
     WorkspaceGroupUpdateRequest,
     utcnow,
 )
-from .services.ai_pipeline import build_draft_from_guided_photos, build_draft_from_photos
+from .services.ai_pipeline import (
+    build_draft_from_guided_photos,
+    build_draft_from_photos,
+    build_photo_observations_response,
+    compose_standard_draft_from_observations,
+)
 from .services.credits import add_ledger_entry, grant_workspace_trial, ledger_balance, list_ledger_entries
 from .store import store
 
@@ -3195,6 +3202,61 @@ def draft_from_guided_photos(
     )
     touch_report(report)
     return {"aiRun": run.model_dump(), "report": serialize_report(report, user)}
+
+
+@app.post("/api/v1/reports/{report_id}/ai/photo-observations")
+def create_ai_photo_observations(
+    report_id: str,
+    payload: GeneratePhotoObservationsRequest,
+    user: User = Depends(require_user),
+) -> dict[str, object]:
+    report = store.reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    require_workspace_access(report.workspace_id, user)
+
+    photo_asset_ids = payload.photo_asset_ids or [
+        *list(report.payload.get("doc3PhotoCandidates") or []),
+        *list(report.payload.get("doc7PhotoCandidates") or []),
+    ]
+    selected_photos = [
+        store.photos[photo_id].model_dump()
+        for photo_id in photo_asset_ids
+        if photo_id in store.photos
+    ]
+    if not selected_photos:
+        raise HTTPException(status_code=400, detail="No valid photo assets supplied.")
+
+    return build_photo_observations_response(
+        report_id,
+        selected_photos,
+        report_meta=report.payload.get("reportMeta", {}),
+    )
+
+
+@app.post("/api/v1/reports/{report_id}/ai/compose-standard-draft")
+def compose_ai_standard_draft(
+    report_id: str,
+    payload: ComposeStandardDraftRequest,
+    user: User = Depends(require_user),
+) -> dict[str, object]:
+    report = store.reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    require_workspace_access(report.workspace_id, user)
+    if not payload.photo_observations:
+        raise HTTPException(status_code=400, detail="Photo observations are required.")
+
+    run = AiRun(id=store.new_id("airun"), report_id=report_id, status="succeeded")
+    draft = compose_standard_draft_from_observations(
+        report_id,
+        report_meta=report.payload.get("reportMeta", {}),
+        photo_observations=payload.photo_observations,
+        photo_evidence=payload.photo_evidence,
+    )
+    run.payload = draft
+    store.ai_runs[run.id] = run
+    return {"aiRun": run.model_dump(), "draft": draft}
 
 
 @app.get("/api/v1/reports/{report_id}/ai-runs/{run_id}")

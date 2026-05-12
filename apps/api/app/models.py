@@ -227,6 +227,15 @@ class GenerateDraftFromGuidedPhotosRequest(BaseModel):
     doc7_photo_ids: list[str]
 
 
+class GeneratePhotoObservationsRequest(BaseModel):
+    photo_asset_ids: list[str] = Field(default_factory=list)
+
+
+class ComposeStandardDraftRequest(BaseModel):
+    photo_observations: list[dict[str, Any]] = Field(default_factory=list)
+    photo_evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class ReviewCompleteRequest(BaseModel):
     responsibility_confirmed: bool = True
 

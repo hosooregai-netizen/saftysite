@@ -157,7 +157,35 @@ class StandardRiskLibraryTests(unittest.TestCase):
         self.assertIsNone(result["ruleKey"])
         self.assertTrue(result["needsHumanReview"])
         self.assertTrue(result["fallbackReason"])
-        self.assertEqual(result["standardPreventiveMeasure"], "")
+        self.assertIn("확인 필요", result["standardPreventiveMeasure"])
+
+    def test_visual_object_and_causative_agent_key_match_rebar_rule(self) -> None:
+        observation = {
+            "id": "obs-rebar",
+            "photoRole": "step2_hazard",
+            "confidence": 0.82,
+            "visualObjects": [
+                {"label": "rebar", "category": "material", "confidence": 0.88},
+                {"label": "돌출 철근", "category": "hazard", "confidence": 0.9},
+            ],
+            "observedProcessStructured": {
+                "majorProcess": "골조공사",
+                "detailProcess": "철근 배근 및 돌출부 관리",
+            },
+            "observedRiskStructured": {
+                "accidentType": "절단/베임/찔림",
+                "causativeAgentKey": "rebar",
+                "causativeAgent": "돌출 철근",
+                "hazardSummary": "철근 돌출부 접촉에 따른 찔림 위험",
+                "recommendedActionKey": "",
+            },
+        }
+
+        result = match_observation_to_risk_rule(observation)
+
+        self.assertEqual(result["ruleKey"], "REBAR_IMPALEMENT_PREVENTION")
+        self.assertIn("causativeAgentKey", result["matchedBy"])
+        self.assertIn("visualObject", result["matchedBy"])
 
     def test_recommend_future_process_rules_uses_progression_map(self) -> None:
         overview_observation = {

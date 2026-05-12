@@ -273,5 +273,48 @@
       "guest claim/import ownership 유지"
     ],
     "risk": "workspace-access"
+  },
+  {
+    "id": "report-ai-standardization",
+    "label": "보고서 AI 표준화",
+    "description": "사진 기반 Vision/fallback 관찰카드와 표준 위험 라이브러리로 보고서 section 4/5/6 초안을 채웁니다.",
+    "routes": [
+      "/reports/new",
+      "/reports/{reportId}"
+    ],
+    "sourceFiles": [
+      "apps/api/app/services/vision_photo_extractor.py",
+      "apps/api/app/services/photo_observation_cards.py",
+      "apps/api/app/services/standard_risk_library.py",
+      "apps/api/app/services/standard_report_composer.py",
+      "apps/api/app/services/ai_pipeline.py",
+      "apps/web/components/ReportWorkspace.tsx"
+    ],
+    "specs": [
+      "docs/safety-features/report-ai-standardization/README.md",
+      "docs/safety-features/report-ai-standardization/01-data-contract/photo_observation_schema.md",
+      "docs/safety-features/report-ai-standardization/02-photo-ai/vision_extraction_plan.md",
+      "docs/safety-features/report-ai-standardization/03-risk-library/standard_risk_library_improvement.md",
+      "docs/safety-features/report-ai-standardization/04-report-composer/section_composer_improvement.md",
+      "docs/safety-features/report-ai-standardization/05-ui-ux/ai_fill_status_ui.md",
+      "docs/service-improvements/18-report-ai-update/README.md"
+    ],
+    "prompts": [
+      "docs/service-improvements/18-report-ai-update/SERVICE_IMPROVEMENT_18_PROMPT.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/01_READ_AND_PLAN.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/02_IMPLEMENT_VISION_PHOTO_EXTRACTOR.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/03_IMPROVE_STANDARD_RISK_LIBRARY.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/04_IMPROVE_STANDARD_REPORT_COMPOSER.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/05_UPDATE_REPORT_WORKSPACE_UI.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/06_QA_AND_REGRESSION.md"
+    ],
+    "qaGates": [
+      "사다리 hazard 사진은 LADDER_FALL_PREVENTION과 section 4 지적사항을 생성",
+      "철근/개구부 사진은 보호캡/덮개/난간 대책 후보를 생성",
+      "hazard context만 있어도 section 5가 비지 않음",
+      "section 6 교육/지원사항 초안이 최소 1개 생성",
+      "AI fill status, confidence badge, review reason 표시"
+    ],
+    "risk": "ai-report-standardization"
   }
 ]

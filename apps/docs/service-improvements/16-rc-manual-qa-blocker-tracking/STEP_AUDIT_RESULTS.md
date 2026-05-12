@@ -1,7 +1,7 @@
 # Step Audit Results
 
 - Audit date: 2026-05-10
-- Scope: `apps/docs/service-improvements` 01-16 vs. current source, build logs, route smoke, targeted API smoke, and external QA preflight.
+- Scope: `apps/docs/service-improvements` 01-18 vs. current source, build logs, route smoke, targeted API smoke, and external QA preflight.
 - Status vocabulary: `not-started`, `applied`, `build-pass`, `failed`, `done`.
 - Source of truth: source code first, then Markdown specs/prompts, then Control Center data.
 
@@ -18,6 +18,7 @@
 - Public share browser QA: valid share route rendered shared content, revoked/invalid routes rendered unavailable-state copy, descendant access returned `200`, outside/revoked/expired access returned `404`, and public payload does not expose `headquarter_id` or `site_id`.
 - Report export browser QA: HWPX and PDF download endpoints returned `200`, attachment headers, and valid file signatures from a browser context.
 - Toss billing remains intentionally excluded from this non-Toss pass; `TOSS_PAYMENTS_SECRET_KEY` and `TOSS_PAYMENTS_API_BASE_URL` are still missing.
+- Report AI Standardization: backend unit tests pass for Vision fallback, ladder/rebar/opening-style rule matching, deterministic writer quality, hazard-only section 5/6 composition, review queue/provenance; frontend build passes with AI fill status UI. Live OpenAI Vision QA remains pending because `OPENAI_API_KEY` is not present.
 
 ## Step Matrix
 
@@ -39,6 +40,7 @@
 | 14 Account Settings / Guest Import / Billing Entry UX | done | Workspace Google login no longer auto-marks Gmail pending connect. | No automated blocker remains. |
 | 15 Final Clean Build / Route Smoke QA | done | Final QA script baseline passed; remaining QA rerun passed the current 19-route smoke list plus `/reports/demo-review`. | No build/route gap. |
 | 16 RC Manual QA / Blocker Tracking | done | Audit, blocker tracker, route smoke results, and release decision were regenerated. | Release remains Hold only because Toss credentials are unavailable. |
+| 18 Report AI Update / AI Standardization | build-pass | Added Vision/fallback observation extraction, additive PhotoObservationCard contract, risk-library rules for ladder/rebar/opening/compressor/housekeeping/material/grinder, deterministic section 4/5/6 writer helpers, risk-specific review reasons, thin AI endpoints, ReportWorkspace AI status UI, backend tests, frontend build, backend compile, and final QA script pass. | Live OpenAI Vision image QA is pending until `OPENAI_API_KEY` and `AI_VISION_ENABLED=true` are provided. |
 
 ## External QA Disposition
 
@@ -46,4 +48,5 @@
 - Public share live browser token: pass.
 - Report PDF/HWPX browser export: pass.
 - Toss billing: intentionally excluded from this pass and still blocked by missing `TOSS_PAYMENTS_SECRET_KEY` and `TOSS_PAYMENTS_API_BASE_URL`.
+- Report AI live Vision: fallback/mock QA passed; real OpenAI Vision QA remains pending until credentials are supplied.
 - Control Center: statuses are updated in `apps/docs/control-center/data/service_improvements.json` and embedded fallback data in `apps/docs/control-center/index.html`.

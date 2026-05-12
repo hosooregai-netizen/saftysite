@@ -110,5 +110,12 @@
     "description": "수동 route smoke, blocker, release decision",
     "overlay": "service_improvement_16_rc_manual_qa_blocker_tracking_overlay.zip",
     "status": "done"
+  },
+  {
+    "step": "18",
+    "title": "Report AI Update / AI Standardization",
+    "description": "Vision extraction, PhotoObservationCard, risk library match, section 4/5/6 composer, AI fill status UI",
+    "overlay": "docs/service-improvements/18-report-ai-update",
+    "status": "build-pass"
   }
 ]

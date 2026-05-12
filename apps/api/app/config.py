@@ -23,6 +23,24 @@ APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:3000")
 TOSS_PAYMENTS_API_BASE_URL = os.getenv("TOSS_PAYMENTS_API_BASE_URL", "https://api.tosspayments.com").strip()
 TOSS_PAYMENTS_SECRET_KEY = os.getenv("TOSS_PAYMENTS_SECRET_KEY", "").strip()
 
+OPENAI_API_KEY = (
+    os.getenv("OPENAI_API_KEY", "").strip()
+    or os.getenv("OPENAI_API_KEY_CLIENT", "").strip()
+)
+OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
+AI_VISION_ENABLED = os.getenv("AI_VISION_ENABLED", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+AI_VISION_FALLBACK_ENABLED = os.getenv("AI_VISION_FALLBACK_ENABLED", "true").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+
 GOOGLE_MAIL_CLIENT_ID = os.getenv("GOOGLE_MAIL_CLIENT_ID", "").strip()
 GOOGLE_MAIL_CLIENT_SECRET = os.getenv("GOOGLE_MAIL_CLIENT_SECRET", "").strip()
 MAIL_ACCOUNT_TOKEN_SECRET = os.getenv(

@@ -38,3 +38,4 @@
 - Gmail send negative: forced Gmail API failure writes no local message/thread.
 - Gmail OAuth handoff: provider status `200`, redirect allowed, `/mailbox` CTA visible, no success/no-account contradiction, and handoff host is `accounts.google.com`.
 - Report export browser: HWPX and PDF returned `200`, attachment headers, and valid file signatures.
+- Report AI standardization: backend unit tests passed for fallback Vision extraction, ladder/rebar rule matching, hazard-only section 5/6 composition, review queue/provenance; `/reports/new` and `/reports/{knownReportId}` routes build successfully with AI fill status UI. Live OpenAI Vision QA remains pending.
