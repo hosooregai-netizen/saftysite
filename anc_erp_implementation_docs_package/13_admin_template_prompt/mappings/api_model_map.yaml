@@ -1,0 +1,2 @@
+api: GET /api/v1/admin/prompt-templates
+models: DocumentTemplate, PromptTemplate, ChecklistTemplate, LegalTextTemplate, AdminAuditLog

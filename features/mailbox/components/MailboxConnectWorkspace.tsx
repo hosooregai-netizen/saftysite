@@ -10,12 +10,8 @@ interface MailboxConnectWorkspaceProps {
   googleProviderStatusLabel: string;
   googleProviderStatusTone: MailboxStatusTone;
   mode: 'gate' | 'prompt';
-  naverWorksProviderStatusDetail: string;
-  naverWorksProviderStatusLabel: string;
-  naverWorksProviderStatusTone: MailboxStatusTone;
   oauthProvider: string | null;
   onConnectGoogle: () => void;
-  onConnectNaverWorks: () => void;
   onRefreshAccountState: () => void;
 }
 
@@ -36,12 +32,8 @@ export function MailboxConnectWorkspace({
   googleProviderStatusLabel,
   googleProviderStatusTone,
   mode,
-  naverWorksProviderStatusDetail,
-  naverWorksProviderStatusLabel,
-  naverWorksProviderStatusTone,
   oauthProvider,
   onConnectGoogle,
-  onConnectNaverWorks,
   onRefreshAccountState,
 }: MailboxConnectWorkspaceProps) {
   const isPrompt = mode === 'prompt';
@@ -60,7 +52,7 @@ export function MailboxConnectWorkspace({
             </strong>
             <span className={localStyles.panelDescription}>
               {isPrompt
-                ? '현재는 공용 메일만 연결되어 있습니다. 개인 지메일이나 네이버웍스 계정을 추가로 연결하면 현재 사용자 기준의 개인 수신과 발송 흐름까지 함께 사용할 수 있습니다.'
+                ? '현재는 공용 메일만 연결되어 있습니다. 개인 지메일 계정을 추가로 연결하면 현재 사용자 기준의 개인 수신과 발송 흐름까지 함께 사용할 수 있습니다.'
                 : '메일 계정을 연결하면 현재 로그인한 사용자 기준의 받은 메일, 보낸 메일, 보고서 발송 흐름을 한 화면에서 이어서 사용할 수 있습니다.'}
             </span>
           </div>
@@ -84,36 +76,6 @@ export function MailboxConnectWorkspace({
             <span role="columnheader">상태</span>
             <span role="columnheader">안내</span>
             <span role="columnheader">처리</span>
-          </div>
-
-          <div className={localStyles.connectListRow} role="row">
-            <div className={localStyles.connectProviderCell} role="cell">
-              <span className={styles.tablePrimary}>네이버웍스</span>
-              <span className={localStyles.threadMeta}>NAVER WORKS</span>
-            </div>
-            <div role="cell">
-              <span className={connectStatusClass(naverWorksProviderStatusTone)}>
-                {naverWorksProviderStatusLabel}
-              </span>
-            </div>
-            <div role="cell">
-              <span className={localStyles.accountMeta}>
-                {naverWorksProviderStatusDetail ||
-                  (isPrompt
-                    ? '현재 사용자에게 연결할 네이버웍스 메일 계정을 추가합니다.'
-                    : '네이버웍스 조직 계정을 연결해 보고서 메일 발송 흐름에 사용합니다.')}
-              </span>
-            </div>
-            <div className={localStyles.connectActionCell} role="cell">
-              <button
-                type="button"
-                className={`app-button app-button-primary ${localStyles.primaryActionButton}`}
-                onClick={onConnectNaverWorks}
-                disabled={oauthProvider === 'naver_works'}
-              >
-                {oauthProvider === 'naver_works' ? '이동 중..' : '네이버웍스 로그인'}
-              </button>
-            </div>
           </div>
 
           <div className={localStyles.connectListRow} role="row">

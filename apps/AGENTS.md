@@ -1,287 +1,69 @@
 # AGENTS.md
 
-이 프로젝트는 건설재해예방전문지도기관 기술지도 결과보고서 자동작성 서비스다.
-
-## 핵심 원칙
+## Project
 
-- AI는 사실정보를 생성하지 않는다.
-- 현장명, 주소, 공사기간, 공사금액, 담당자, 지도일, 회차, 총회차는 DB 또는 사용자 입력값만 사용한다.
-- AI는 사진 기반 관찰값을 JSON으로 만든다.
-- 보고서 문장은 표준 위험 라이브러리와 템플릿으로 생성한다.
-- 표준보고서는 다음 1~6번 섹션 구조를 따른다.
-  - 1. 기술지도 대상사업장
-  - 2. 기술지도 개요
-  - 3. 이전 기술지도 사항 이행여부
-  - 4. 현재 공정 내 현존하는 위험성 제거
-  - 5. 향후 진행공정에 대한 유해·위험 요인 파악 및 대책
-  - 6. 사업장 지원 사항 등 기타 사항
-- 기존 guided photo flow와 HWPX/PDF 생성 기능을 깨지 않는다.
-- 한 번에 대규모 리팩터링하지 않는다.
-- 각 작업은 작은 Step 단위로 구현하고 테스트한다.
-- 기존 API 응답 shape를 깨뜨리지 않는다.
-- local mode가 있다면 계속 동작하게 유지한다.
-
-## 자동작성 원칙
-
-- 사실은 DB가 채운다.
-- 관찰은 AI가 만든다.
-- 문장은 표준 위험 라이브러리가 만든다.
-- 최종 확정은 사용자가 한다.
-
-## 작업 방식
-
-- 복잡한 작업은 먼저 `/plan`으로 계획만 세운다.
-- 구현은 한 Step씩 진행한다.
-- 변경 후 가능한 타입체크, 테스트, 빌드를 실행한다.
-- 변경 파일과 테스트 결과를 요약한다.
-- 기존 guided photo flow와 HWPX/PDF 생성 기능이 유지되는지 함께 확인한다.
-
-## 금지
-
-- AI가 현장명, 주소, 공사기간, 공사금액, 담당자, 지도일, 회차를 임의 생성하는 것
-- AI 결과를 곧바로 보고서 최종 문장으로 넣는 것
-- 기존 HWPX/PDF 라우트를 대규모로 갈아엎는 것
-- 프론트와 백엔드를 한 번에 과도하게 변경하는 것
-
-## Project purpose
-
-This repository builds a SaaS-style workflow for construction safety technical guidance reports. The product should generate a standard technical guidance report draft from site data, schedule data, previous report data, and minimal photos, then allow the user to review and export HWPX/PDF.
-
-## Core product rule
-
-Facts come from data, observations come from AI, final report sentences come from standard rules/templates, and the user makes the final confirmation.
-
-## Standard report sections
-
-The target document is the standard technical guidance result report. Keep the service aligned to these six sections.
-
-1. 기술지도 대상사업장
-2. 기술지도 개요
-3. 이전 기술지도 사항 이행여부
-4. 현재 공정 내 현존하는 위험성 제거
-5. 향후 진행공정에 대한 유해·위험 요인 파악 및 대책
-6. 사업장 지원 사항 등 기타 사항
+This repository is for the 대한안전산업연구원 safety-report SaaS workspace.
 
-Refer to:
+Core product areas:
 
-- `docs/technical-guidance-auto-report/reference/standard_report_structure.md`
-- `docs/technical-guidance-auto-report/00_index.md`
+- report-workspace: 새 보고서 작성, guided upload, AI draft, review queue, export gate
+- report-list: 보고서 목록, status filters, export history
+- headquarters-sites: 사업장/현장 ERP directory
+- photo-album: 현장 사진첩
+- webhard: Drive-like file manager and public share
+- mailbox: Gmail/Naver-like three-pane mailbox
+- account-settings: workspace login, guest import, billing entry
+- billing-credits: checkout, credit ledger, report export billing
+- auth-workspace: workspace auth, anonymous claim, guest import
 
-## Important architecture to inspect before implementation
+## Source of truth
 
-The current project may use some or all of these paths. Inspect the repository and adapt with the smallest safe change.
-
-- Backend API: `apps/api/app`
-- Main backend route file: `apps/api/app/main.py`
-- Backend models/schemas: `apps/api/app/models.py`
-- Backend AI pipeline: `apps/api/app/services/ai_pipeline.py`
-- Frontend report API helpers: `apps/web/lib/reportApi.ts`
-- Report workspace UI: `apps/web/components/ReportWorkspace.tsx`
-- Report payload to inspection session mapper: `apps/web/lib/reportSessionMapper.ts`
-- HWPX/PDF routes: `apps/web/app/api/documents/inspection`
+Use this hierarchy:
 
-Search the repo for these symbols before editing:
+1. Actual source code
+2. Markdown specs and prompts under `docs/safety-features/`
+3. Service improvement docs under `docs/service-improvements/`
+4. Reverse-map JSON under `docs/control-center/data/*.json`
+5. HTML Control Center under `docs/control-center/index.html`
 
-- `default_photo_step_buckets`
-- `build_draft_from_guided_photos`
-- `apply_ai_draft_to_report`
-- `upload_guided_step_one`
-- `upload_guided_step_two`
-- `draft_from_guided_photos`
-- `buildWorkspaceDraft`
-- `buildStandardWarnings`
-- `mapReportPayloadToInspectionSession`
-- `ReportPayload`
-- `sectionDrafts`
-- `findingCandidates`
-- `validationResult`
+The HTML Control Center is not the source of truth. It is a navigation, prompt selection, QA, and blocker tracking interface.
 
-## Do not let AI generate factual fields
+## Work mode
 
-Never use AI to invent, overwrite, or silently correct factual/administrative fields.
+Always work feature-by-feature.
 
-AI must not generate these fields:
+Do not modify unrelated features in the same task.
 
-- site name / 현장명
-- business management number / 사업장관리번호 또는 사업개시번호
-- construction period / 공사기간
-- construction amount / 공사금액
-- site manager / 책임자 또는 현장책임자
-- contact information / 연락처, 이메일
-- site address / 주소
-- head office company information / 본사 회사명, 법인등록번호, 사업자등록번호, 면허번호, 본사 주소
-- guidance agency name / 지도기관명
-- visit date / 기술지도실시일
-- visit count / 회차, 총회차
-- inspector identity / 담당 요원
-- progress rate / 공정률
-- notification method / 통보방법
-- previous guidance implementation result as a final answer / 이전 기술지도 최종 이행여부
+Preferred order:
 
-These values must come from DB, schedule data, organization settings, previous reports, or explicit user input.
+1. source recovery / clean build
+2. mailbox
+3. webhard
+4. report-workspace
+5. report-list
+6. photo-album
+7. headquarters-sites
+8. account-settings
+9. billing-credits / auth-workspace
+10. final QA
 
-## AI output rule
+## Do not touch
 
-AI should first produce structured observation data, not final report prose.
+Never modify:
 
-AI photo analysis should output a `PhotoObservationCard`-style object with fields such as:
+- `apps/web/.next`
+- `apps/api/.venv`
+- `__MACOSX`
+- generated cache files unless explicitly requested
+- unrelated feature files
 
-- photo role
-- observed major process
-- observed detail process
-- observed hazardous location
-- accident type
-- causative agent
-- hazard summary
-- risk level
-- confidence
-- evidence photo IDs
-- review requirement
+Do not add production dependencies without explicit approval.
 
-Final report sentences should be generated by `StandardRiskRule` or equivalent standard templates.
+## Required checks
 
-## Minimal photo flow
+After modifying frontend code:
 
-The MVP should support report draft creation with at least two photos:
-
-1. `current_process_photo` or existing-compatible `step1_overview`
-   - Purpose: current process / site overview / future process hint
-2. `current_hazard_photo` or existing-compatible `step2_hazard`
-   - Purpose: current hazardous factor for section 4
-
-Optional photos:
-
-- `previous_guidance_check_photo` or `step3_followup`
-- `education_support_photo` or `step4_support`
-- `site_overview_photo`
-
-Keep backward compatibility with existing guided photo buckets. If existing names are `step1_overview` and `step2_hazard`, preserve them and add aliases/metadata rather than breaking the API.
-
-## Standard risk library rule
-
-AI may identify a risk, but final report text must come from a standard risk library or template.
-
-The standard risk library should provide at least:
-
-- rule ID/key
-- major process
-- detail process
-- accident type
-- causative agent
-- hazard keywords
-- standard hazard text
-- standard guidance text for section 4
-- standard preventive measure text for section 5
-- default risk level
-- review rules
-
-If no risk rule matches, keep the item as `needsReview: true` and do not pretend that a reliable standard sentence exists.
-
-## Report composition rules
-
-### Section 1. 기술지도 대상사업장
-
-Data-only section. Fill from DB/user input. AI must not generate.
-
-### Section 2. 기술지도 개요
-
-Mostly data/user-input section. AI must not generate progress rate, visit date, visit count, inspector, or notification method.
-
-### Section 3. 이전 기술지도 사항 이행여부
-
-Use previous report data plus optional follow-up photos. AI may suggest implementation status, but user must confirm the final result.
-
-### Section 4. 현재 공정 내 현존하는 위험성 제거
-
-Use current hazard photo observation plus standard risk library.
-
-Required row fields:
-
-- 유해·위험장소
-- 유해·위험요인
-- 지적사항
-- 비고
-
-`지적사항` should come from standard risk rule text, not free-form AI prose.
-
-### Section 5. 향후 진행공정에 대한 유해·위험 요인 파악 및 대책
-
-Use current process photo observation, schedule/process hints, and standard risk library.
-
-Required row fields:
-
-- 진행공정
-- 유해·위험요인
-- 유해·위험요인을 제거하기 위한 예방대책
-- 비고
-
-`예방대책` should come from standard risk rule text, not free-form AI prose.
-
-### Section 6. 사업장 지원 사항 등 기타 사항
-
-Use education/support photo, user input, and section 4/5 risk topics. Attendance count and education material names must come from user input or DB.
-
-## Review queue rule
-
-Create a dynamic review queue for uncertain or missing values.
-
-Review queue should include:
-
-- missing progress rate
-- missing notification method
-- low-confidence hazardous location
-- low-confidence process classification
-- unmatched standard risk rule
-- previous guidance implementation status
-- any AI-generated observation that affects final report text
-
-User edits must override regenerated AI output.
-
-## Implementation constraints
-
-- Do not rewrite the app from scratch.
-- Do not remove existing endpoints or fields unless explicitly requested.
-- Preserve existing `ReportPayload` shape where possible.
-- Add optional fields for new data such as `photoObservations`, `riskLibraryMatches`, `fieldProvenance`, and `reviewQueue`.
-- Keep local/mock mode working if present.
-- Keep HWPX/PDF generation working.
-- Avoid large DB migrations in MVP. Prefer optional metadata fields or code constants unless a migration is clearly necessary.
-- If a shared type/schema package exists, update it with the smallest safe change.
-
-## Suggested implementation order
-
-1. Read `AGENTS.md` and `docs/technical-guidance-auto-report`.
-2. Plan only. Do not edit files.
-3. Reduce to MVP.
-4. Add `PhotoObservationCard` schema/type.
-5. Adjust minimal photo buckets while keeping backward compatibility.
-6. Add standard risk library and matcher.
-7. Compose section 4 from observation cards and risk rules.
-8. Compose section 5 from observation cards and risk rules.
-9. Add review queue and validation.
-10. Connect section drafts to existing HWPX/PDF payload mapping.
-11. Run tests/typechecks/builds available in the repo.
-
-## Testing expectations
-
-After each implementation step, run the narrowest available checks.
-
-Examples:
-
-- backend unit tests if present
-- frontend typecheck if present
-- frontend build if feasible
-- API contract tests if present
-- mapper/payload snapshot tests if present
-
-If dependencies are missing or full build cannot run, explain what was not verified and run the closest possible check.
-
-## Communication expectations
-
-After each task, summarize:
-
-1. Files changed
-2. What behavior changed
-3. Tests/checks run
-4. Results
-5. Remaining risks or TODOs
+```bash
+rm -rf apps/web/.next
+cd apps/web
+npm run build

@@ -86,6 +86,7 @@ from .models import (
     BillingConfirmRequest,
     BillingCheckoutRequest,
     ClaimAnonymousRequest,
+    ComposeStandardDraftRequest,
     CreateReportRequest,
     CreateWorkspaceRequest,
     DriveItem,
@@ -100,6 +101,7 @@ from .models import (
     ExportDisclaimerAcceptance,
     GenerateDraftFromGuidedPhotosRequest,
     GenerateDraftFromPhotosRequest,
+    GeneratePhotoObservationsRequest,
     GuestWorkspaceDriveItemInput,
     GuestWorkspaceDriveShareInput,
     GuestWorkspaceMailboxDraftInput,
@@ -131,7 +133,12 @@ from .models import (
     WorkspaceGroupUpdateRequest,
     utcnow,
 )
-from .services.ai_pipeline import build_draft_from_guided_photos, build_draft_from_photos
+from .services.ai_pipeline import (
+    build_draft_from_guided_photos,
+    build_draft_from_photos,
+    build_photo_observations_response,
+    compose_standard_draft_from_observations,
+)
 from .services.credits import add_ledger_entry, grant_workspace_trial, ledger_balance, list_ledger_entries
 from .store import store
 
@@ -756,6 +763,50 @@ def _update_validation_from_review_queue(
     )
     next_validation["valid"] = len(blocking_issues) == 0
     return next_validation
+
+
+def get_report_export_blockers(report: ReportRecord) -> list[str]:
+    review_meta = report.payload.setdefault("reviewMeta", {})
+    review_queue = [
+        _normalize_review_queue_item(item, payload=report.payload)
+        for item in list(review_meta.get("reviewQueue") or [])
+        if isinstance(item, dict)
+    ]
+    review_meta["reviewQueue"] = review_queue
+    validation_result = _update_validation_from_review_queue(
+        dict(report.payload.get("validationResult") or {}),
+        review_queue,
+    )
+    report.payload["validationResult"] = validation_result
+
+    blockers: list[str] = []
+    for item in review_queue:
+        if str(item.get("severity") or "") != "required" or bool(item.get("resolved", False)):
+            continue
+        label = str(item.get("label") or item.get("fieldPath") or "필수 검토 항목").strip()
+        if label:
+            blockers.append(label)
+
+    for message in list(validation_result.get("blockingIssues") or []):
+        text = str(message or "").strip()
+        if text and text not in blockers:
+            blockers.append(text)
+
+    return blockers
+
+
+def require_report_export_ready(report: ReportRecord, *, responsibility_confirmed: bool) -> None:
+    if not responsibility_confirmed:
+        raise HTTPException(status_code=409, detail="책임 확인 후 검토를 완료할 수 있습니다.")
+    blockers = get_report_export_blockers(report)
+    if blockers:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "필수 검토 항목 또는 blocking issue가 남아 있습니다.",
+                "blockers": blockers,
+            },
+        )
 
 
 def apply_ai_draft_to_report(
@@ -3153,6 +3204,61 @@ def draft_from_guided_photos(
     return {"aiRun": run.model_dump(), "report": serialize_report(report, user)}
 
 
+@app.post("/api/v1/reports/{report_id}/ai/photo-observations")
+def create_ai_photo_observations(
+    report_id: str,
+    payload: GeneratePhotoObservationsRequest,
+    user: User = Depends(require_user),
+) -> dict[str, object]:
+    report = store.reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    require_workspace_access(report.workspace_id, user)
+
+    photo_asset_ids = payload.photo_asset_ids or [
+        *list(report.payload.get("doc3PhotoCandidates") or []),
+        *list(report.payload.get("doc7PhotoCandidates") or []),
+    ]
+    selected_photos = [
+        store.photos[photo_id].model_dump()
+        for photo_id in photo_asset_ids
+        if photo_id in store.photos
+    ]
+    if not selected_photos:
+        raise HTTPException(status_code=400, detail="No valid photo assets supplied.")
+
+    return build_photo_observations_response(
+        report_id,
+        selected_photos,
+        report_meta=report.payload.get("reportMeta", {}),
+    )
+
+
+@app.post("/api/v1/reports/{report_id}/ai/compose-standard-draft")
+def compose_ai_standard_draft(
+    report_id: str,
+    payload: ComposeStandardDraftRequest,
+    user: User = Depends(require_user),
+) -> dict[str, object]:
+    report = store.reports.get(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found.")
+    require_workspace_access(report.workspace_id, user)
+    if not payload.photo_observations:
+        raise HTTPException(status_code=400, detail="Photo observations are required.")
+
+    run = AiRun(id=store.new_id("airun"), report_id=report_id, status="succeeded")
+    draft = compose_standard_draft_from_observations(
+        report_id,
+        report_meta=report.payload.get("reportMeta", {}),
+        photo_observations=payload.photo_observations,
+        photo_evidence=payload.photo_evidence,
+    )
+    run.payload = draft
+    store.ai_runs[run.id] = run
+    return {"aiRun": run.model_dump(), "draft": draft}
+
+
 @app.get("/api/v1/reports/{report_id}/ai-runs/{run_id}")
 def get_ai_run(report_id: str, run_id: str, user: User = Depends(require_user)) -> dict[str, object]:
     report = store.reports.get(report_id)
@@ -3171,6 +3277,7 @@ def review_complete(report_id: str, payload: ReviewCompleteRequest, user: User =
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found.")
     require_workspace_access(report.workspace_id, user)
+    require_report_export_ready(report, responsibility_confirmed=payload.responsibility_confirmed)
 
     report.payload["reviewMeta"]["responsibilityConfirmed"] = payload.responsibility_confirmed
     report.payload["reviewMeta"]["reviewCompleted"] = True
@@ -3218,6 +3325,10 @@ def export_pdf(report_id: str, payload: ExportRequest, user: User = Depends(requ
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    require_report_export_ready(
+        report,
+        responsibility_confirmed=bool((report.payload.get("reviewMeta") or {}).get("responsibilityConfirmed")),
+    )
     ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "pdf")
     touch_report(report)
@@ -3237,6 +3348,10 @@ def export_hwpx(report_id: str, payload: ExportRequest, user: User = Depends(req
     require_workspace_access(report.workspace_id, user)
     if not report.review_completed or not payload.confirm_reviewed:
         raise HTTPException(status_code=409, detail="Review completion is required before export.")
+    require_report_export_ready(
+        report,
+        responsibility_confirmed=bool((report.payload.get("reviewMeta") or {}).get("responsibilityConfirmed")),
+    )
     ensure_export_disclaimer_acceptance(report, user, payload)
     export = create_export(report, "hwpx")
     touch_report(report)

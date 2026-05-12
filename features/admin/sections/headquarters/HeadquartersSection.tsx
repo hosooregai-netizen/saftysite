@@ -140,6 +140,15 @@ function validateHeadquarterSubmit(
 
 interface HeadquartersSectionProps {
   busy: boolean;
+  buildHeadquarterPhotoAlbumHref?: (headquarterId: string) => string;
+  buildHeadquartersHref?: (input: {
+    editSiteId?: string | null;
+    headquarterId?: string | null;
+    siteId?: string | null;
+    siteStatus?: string | null;
+  }) => string;
+  buildSiteEditHref?: (headquarterId: string, siteId: string) => string;
+  buildSitePhotoHref?: (site: SafetySite) => string;
   canDelete: boolean;
   currentUserId: string;
   selectedHeadquarterId: string | null;
@@ -163,6 +172,10 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const HEADQUARTER_LIST_CACHE_KEY_PREFIX = 'headquarters:list:v2:';
   const {
     busy,
+    buildHeadquarterPhotoAlbumHref,
+    buildHeadquartersHref,
+    buildSiteEditHref,
+    buildSitePhotoHref,
     canDelete,
     currentUserId,
     selectedHeadquarterId,
@@ -184,6 +197,22 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
   const searchParams = useSearchParams();
   const siteStatusParam = searchParams.get('siteStatus');
   const autoEditSiteId = searchParams.get('editSiteId');
+  const buildSectionHref = useMemo(
+    () => (input: {
+      editSiteId?: string | null;
+      headquarterId?: string | null;
+      siteId?: string | null;
+      siteStatus?: string | null;
+    }) =>
+      buildHeadquartersHref?.(input) ??
+      getAdminSectionHref('headquarters', {
+        editSiteId: input.editSiteId,
+        headquarterId: input.headquarterId,
+        siteId: input.siteId,
+        siteStatus: input.siteStatus,
+      }),
+    [buildHeadquartersHref],
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHeadquarter, setSelectedHeadquarter] =
     useState<import('@/types/controller').SafetyHeadquarter | null>(null);
@@ -374,7 +403,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
 
         if (restoredHeadquarterId) {
           router.replace(
-            getAdminSectionHref('headquarters', {
+            buildSectionHref({
               editSiteId: autoEditSiteId,
               headquarterId: restoredHeadquarterId,
               siteId: selectedSiteId,
@@ -385,7 +414,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         }
 
         router.replace(
-          getAdminSectionHref('headquarters', {
+          buildSectionHref({
             editSiteId: autoEditSiteId,
             siteStatus: siteStatusParam,
           }),
@@ -396,7 +425,7 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
         if (cancelled) return;
         console.error('Failed to restore headquarters site context', error);
         router.replace(
-          getAdminSectionHref('headquarters', {
+          buildSectionHref({
             editSiteId: autoEditSiteId,
             siteStatus: siteStatusParam,
           }),
@@ -407,7 +436,14 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, [autoEditSiteId, router, selectedHeadquarterId, selectedSiteId, siteStatusParam]);
+  }, [
+    autoEditSiteId,
+    buildSectionHref,
+    router,
+    selectedHeadquarterId,
+    selectedSiteId,
+    siteStatusParam,
+  ]);
 
   useEffect(() => {
     if (cachedResponse.isFresh && cachedResponse.value) {
@@ -757,8 +793,15 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
             onQueryChange={state.setQueryInput}
             onQuerySubmit={state.submitQuery}
             onSortChange={state.setSort}
+            photoAlbumHrefBuilder={(item) =>
+              buildHeadquarterPhotoAlbumHref?.(item.id) ??
+              getAdminSectionHref('photos', {
+                headquarterId: item.id,
+              })
+            }
             query={state.queryInput}
             sort={state.sort}
+            titleActionHref={buildSectionHref({ siteStatus: 'all' })}
             totalCount={total}
             totalPages={totalPages}
           />
@@ -780,13 +823,23 @@ export function HeadquartersSection(props: HeadquartersSectionProps) {
           onUpdate={handleUpdateSite}
           showHeader
           title={siteStatusTitle}
-          titleActionHref={getAdminSectionHref('headquarters')}
+          titleActionHref={buildSectionHref({})}
           titleActionLabel="건설사 목록 보기"
         />
       ) : resolvedSelectedSite ? (
         <SiteManagementMainPanel
           headquarter={resolvedSelectedHeadquarter}
+          photoHref={
+            buildSitePhotoHref?.(resolvedSelectedSite) ??
+            getAdminSectionHref('photos', {
+              headquarterId: resolvedSelectedSite.headquarter_id,
+              siteId: resolvedSelectedSite.id,
+            })
+          }
           site={resolvedSelectedSite}
+          siteEditHref={
+            buildSiteEditHref?.(resolvedSelectedSite.headquarter_id, resolvedSelectedSite.id)
+          }
         />
       ) : (
         <>

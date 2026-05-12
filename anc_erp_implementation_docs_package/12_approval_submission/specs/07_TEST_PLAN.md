@@ -1,0 +1,9 @@
+# 07. Test Plan — 결재/서명/제출
+
+```text
+test_12_approval_submission_loads
+test_12_approval_submission_requires_project_scope
+test_12_approval_submission_owner_specific_isolation
+test_12_approval_submission_status_transition
+test_12_approval_submission_reverse_map_complete
+```

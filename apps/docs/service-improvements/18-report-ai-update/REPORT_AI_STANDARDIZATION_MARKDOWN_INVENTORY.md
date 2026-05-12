@@ -1,0 +1,25 @@
+# Report AI Standardization Markdown Inventory
+
+- `README_REPORT_AI_STANDARDIZATION_PACK.md`
+- `docs/safety-features/report-ai-standardization/00-current-diagnosis/app_zip_benchmark_analysis.md`
+- `docs/safety-features/report-ai-standardization/00-current-diagnosis/current_ai_pipeline_analysis.md`
+- `docs/safety-features/report-ai-standardization/00-current-diagnosis/gap_matrix.md`
+- `docs/safety-features/report-ai-standardization/01-data-contract/photo_observation_schema.md`
+- `docs/safety-features/report-ai-standardization/01-data-contract/standard_report_field_mapping.md`
+- `docs/safety-features/report-ai-standardization/02-photo-ai/photo_role_classification.md`
+- `docs/safety-features/report-ai-standardization/02-photo-ai/vision_extraction_plan.md`
+- `docs/safety-features/report-ai-standardization/03-risk-library/standard_risk_library_improvement.md`
+- `docs/safety-features/report-ai-standardization/04-report-composer/section_5_6_mapping.md`
+- `docs/safety-features/report-ai-standardization/04-report-composer/section_composer_improvement.md`
+- `docs/safety-features/report-ai-standardization/05-ui-ux/ai_fill_status_ui.md`
+- `docs/safety-features/report-ai-standardization/06-api-backend/ai_api_contract.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/01_READ_AND_PLAN.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/02_IMPLEMENT_VISION_PHOTO_EXTRACTOR.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/03_IMPROVE_STANDARD_RISK_LIBRARY.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/04_IMPROVE_STANDARD_REPORT_COMPOSER.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/05_UPDATE_REPORT_WORKSPACE_UI.md`
+- `docs/safety-features/report-ai-standardization/07-prompts/06_QA_AND_REGRESSION.md`
+- `docs/safety-features/report-ai-standardization/08-tests/acceptance_criteria.md`
+- `docs/safety-features/report-ai-standardization/README.md`
+- `docs/service-improvements/17-report-ai-standardization/README.md`
+- `docs/service-improvements/17-report-ai-standardization/SERVICE_IMPROVEMENT_17_PROMPT.md`

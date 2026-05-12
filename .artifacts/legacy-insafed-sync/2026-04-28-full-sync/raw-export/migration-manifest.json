@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-04-28T03:04:33+00:00",
+  "finishedAt": "2026-04-28T03:11:07+00:00",
+  "counts": {
+    "headquarters": 1218,
+    "reports": 0,
+    "sites": 1534
+  },
+  "paths": {
+    "headquarters": "headquarters.jsonl",
+    "sites": "sites.jsonl",
+    "schedules": null,
+    "reports": "reports/metadata.jsonl",
+    "failures": "failures.jsonl"
+  }
+}

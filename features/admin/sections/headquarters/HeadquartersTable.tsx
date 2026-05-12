@@ -24,9 +24,11 @@ interface HeadquartersTableProps {
   onQueryChange: (value: string) => void;
   onQuerySubmit: () => void;
   onSortChange: (value: TableSortState) => void;
+  photoAlbumHrefBuilder?: (item: SafetyHeadquarter) => string;
   query: string;
   sort: TableSortState;
   showHeader?: boolean;
+  titleActionHref?: string;
   totalCount: number;
   totalPages: number;
 }
@@ -57,12 +59,16 @@ export function HeadquartersTable({
   onQueryChange,
   onQuerySubmit,
   onSortChange,
+  photoAlbumHrefBuilder,
   query,
   sort,
   showHeader = true,
+  titleActionHref,
   totalCount,
   totalPages,
 }: HeadquartersTableProps) {
+  const resolvedTitleActionHref = titleActionHref ?? getAdminSectionHref('headquarters', { siteStatus: 'all' });
+
   return (
     <>
       <div className={styles.sectionHeader}>
@@ -70,10 +76,7 @@ export function HeadquartersTable({
           <div className={styles.sectionHeaderTitleBlock}>
             <div className={styles.sectionTitleRow}>
               <h2 className={styles.sectionTitle}>건설사 목록</h2>
-              <Link
-                href={getAdminSectionHref('headquarters', { siteStatus: 'all' })}
-                className={styles.sectionTitleInlineAction}
-              >
+              <Link href={resolvedTitleActionHref} className={styles.sectionTitleInlineAction}>
                 현장 목록 보기
               </Link>
             </div>
@@ -222,9 +225,11 @@ export function HeadquartersTable({
                                 },
                                 {
                                   label: '사진첩 보기',
-                                  href: getAdminSectionHref('photos', {
-                                    headquarterId: item.id,
-                                  }),
+                                  href:
+                                    photoAlbumHrefBuilder?.(item) ??
+                                    getAdminSectionHref('photos', {
+                                      headquarterId: item.id,
+                                    }),
                                 },
                                 {
                                   label: '수정',

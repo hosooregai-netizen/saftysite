@@ -1,0 +1,102 @@
+[
+  {
+    "route": "/",
+    "feature": "home",
+    "expected": "app entry/home 표시"
+  },
+  {
+    "route": "/dashboard",
+    "feature": "dashboard",
+    "expected": "dashboard 또는 entry route 표시"
+  },
+  {
+    "route": "/pricing",
+    "feature": "billing-credits",
+    "expected": "pricing/billing 안내 표시"
+  },
+  {
+    "route": "/reports/new",
+    "feature": "report-workspace",
+    "expected": "새 보고서 작성 checklist 표시"
+  },
+  {
+    "route": "/reports",
+    "feature": "report-list",
+    "expected": "보고서 검색/필터/출력 이력 표시"
+  },
+  {
+    "route": "/reports/{knownReportId}",
+    "feature": "report-workspace",
+    "expected": "review/export gate 표시"
+  },
+  {
+    "route": "/headquarters",
+    "feature": "headquarters-sites",
+    "expected": "사업장 기준정보 화면"
+  },
+  {
+    "route": "/sites",
+    "feature": "headquarters-sites",
+    "expected": "현장 기준정보 화면"
+  },
+  {
+    "route": "/photo-album",
+    "feature": "photo-album",
+    "expected": "사진첩 grid/list/filter 표시"
+  },
+  {
+    "route": "/webhard",
+    "feature": "webhard",
+    "expected": "Drive-like file manager 표시"
+  },
+  {
+    "route": "/share/{validToken}",
+    "feature": "webhard",
+    "expected": "public share viewer 표시"
+  },
+  {
+    "route": "/share/{invalidToken}",
+    "feature": "webhard",
+    "expected": "invalid/expired/revoked state 표시"
+  },
+  {
+    "route": "/mailbox",
+    "feature": "mailbox",
+    "expected": "메일함 state 일관성 유지"
+  },
+  {
+    "route": "/mail/connect/google?error=access_denied",
+    "feature": "mailbox",
+    "expected": "Gmail connect 오류 state 표시"
+  },
+  {
+    "route": "/account",
+    "feature": "account-settings",
+    "expected": "계정/session/guest import/billing entry 표시"
+  },
+  {
+    "route": "/auth/google/callback?error=access_denied",
+    "feature": "auth-workspace",
+    "expected": "Workspace auth 오류 state 표시"
+  },
+  {
+    "route": "/billing/checkout",
+    "feature": "billing-credits",
+    "expected": "checkout 또는 auth-required state 표시"
+  },
+  {
+    "route": "/billing/success",
+    "feature": "billing-credits",
+    "expected": "confirm/success state 표시"
+  },
+  {
+    "route": "/billing/fail",
+    "feature": "billing-credits",
+    "expected": "failure state 표시"
+  },
+  {
+    "route": "/credits",
+    "feature": "billing-credits",
+    "expected": "credit state 또는 login required"
+  }
+]

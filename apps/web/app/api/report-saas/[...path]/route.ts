@@ -129,3 +129,10 @@ export async function PATCH(
 ): Promise<Response> {
   return proxyRequest(request, context);
 }
+
+export async function DELETE(
+  request: Request,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<Response> {
+  return proxyRequest(request, context);
+}

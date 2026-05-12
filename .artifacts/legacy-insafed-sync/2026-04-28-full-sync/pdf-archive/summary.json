@@ -1,0 +1,12 @@
+{
+  "metadata_path": "/Users/mac_mini/Documents/GitHub/saftysite-real/.artifacts/legacy-insafed-sync/2026-04-28-full-sync/working-export/admin/reports/metadata.jsonl",
+  "pdf_dir": "/Users/mac_mini/Documents/GitHub/saftysite-real/.artifacts/legacy-insafed-sync/2026-04-28-full-sync/raw-export/admin/reports/pdf",
+  "archive_root": "/Users/mac_mini/Documents/GitHub/saftysite-real/.artifacts/legacy-insafed-sync/2026-04-28-full-sync/raw-export/admin/reports/pdf",
+  "cutoff": null,
+  "selected_count": 165,
+  "skipped_missing": 9693,
+  "skipped_empty": 0,
+  "out_metadata_path": "/Users/mac_mini/Documents/GitHub/saftysite-real/.artifacts/legacy-insafed-sync/2026-04-28-full-sync/pdf-archive/metadata.filesystem-transfer.jsonl",
+  "transfer_list_path": "/Users/mac_mini/Documents/GitHub/saftysite-real/.artifacts/legacy-insafed-sync/2026-04-28-full-sync/pdf-archive/transfer-files.txt",
+  "target": null
+}

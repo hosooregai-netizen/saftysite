@@ -1,0 +1,9 @@
+# 07. Test Plan — 기술용역계약서 표준서식
+
+```text
+test_04_13_technical_service_contract_loads
+test_04_13_technical_service_contract_requires_project_scope
+test_04_13_technical_service_contract_owner_specific_isolation
+test_04_13_technical_service_contract_status_transition
+test_04_13_technical_service_contract_reverse_map_complete
+```

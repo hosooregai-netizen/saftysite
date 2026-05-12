@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import AppProviders from '@/components/providers/AppProviders';
 import { AppShell } from '@/components/AppShell';
 import { Cormorant_Garamond, Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
@@ -16,8 +17,9 @@ const bodyFont = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: '기술지도 표준보고서',
-  description: '기술지도 보고서 작성',
+  title: '대한안전산업연구원 AI | 기술지도 결과보고서 자동작성 서비스',
+  description:
+    '개인 지도사와 소규모 지도기관을 위한 기술지도 결과보고서 초안 작성·검토·출력 서비스',
 };
 
 export default function RootLayout({
@@ -28,7 +30,9 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${displayFont.variable} ${bodyFont.variable}`}>
-        <AppShell>{children}</AppShell>
+        <AppProviders>
+          <AppShell>{children}</AppShell>
+        </AppProviders>
       </body>
     </html>
   );

@@ -1,0 +1,9 @@
+# 07. Test Plan — 추가 유해·위험요인 점검리스트
+
+```text
+test_04_05_additional_hazard_checklist_loads
+test_04_05_additional_hazard_checklist_requires_project_scope
+test_04_05_additional_hazard_checklist_owner_specific_isolation
+test_04_05_additional_hazard_checklist_status_transition
+test_04_05_additional_hazard_checklist_reverse_map_complete
+```

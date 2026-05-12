@@ -30,6 +30,11 @@ import { getSiteManagementMissingFields } from '../sites/siteSectionHelpers';
 interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
+  badWorkplaceHref?: string;
+  mailHref?: string;
+  photoHref?: string;
+  quarterlyHref?: string;
+  reportHref?: string;
   siteEditHref?: string;
   /** When false, hides the controller "현장 정보 수정" link (e.g. worker site hub). Default true. */
   showSiteEditAction?: boolean;
@@ -74,7 +79,12 @@ function renderContactList(
 }
 
 export function SiteManagementMainPanel({
+  badWorkplaceHref,
   headquarter,
+  mailHref,
+  photoHref,
+  quarterlyHref,
+  reportHref,
   site,
   siteEditHref,
   showSiteEditAction = true,
@@ -113,10 +123,14 @@ export function SiteManagementMainPanel({
     editSiteId: site.id,
     headquarterId: site.headquarter_id,
   });
-  const reportHref = buildSiteReportsHref(site.id);
-  const quarterlyHref = buildSiteQuarterlyListHref(site.id);
-  const badWorkplaceHref = buildSiteBadWorkplaceHref(site.id, getCurrentReportMonth());
-  const photoHref = buildSitePhotoAlbumHref(site.id);
+  const resolvedReportHref = reportHref ?? buildSiteReportsHref(site.id);
+  const resolvedQuarterlyHref = quarterlyHref ?? buildSiteQuarterlyListHref(site.id);
+  const resolvedBadWorkplaceHref =
+    badWorkplaceHref ?? buildSiteBadWorkplaceHref(site.id, getCurrentReportMonth());
+  const resolvedPhotoHref = photoHref ?? buildSitePhotoAlbumHref(site.id);
+  const resolvedMailHref =
+    mailHref ??
+    `/mailbox?headquarterId=${encodeURIComponent(site.headquarter_id)}&siteId=${encodeURIComponent(site.id)}`;
 
   return (
     <section className={styles.sectionCard}>
@@ -228,21 +242,25 @@ export function SiteManagementMainPanel({
         </div>
 
         <div className={styles.siteMainActionGrid}>
-          <Link href={reportHref} className={styles.metricLinkCard}>
+          <Link href={resolvedReportHref} className={styles.metricLinkCard}>
             <strong className={styles.metricLinkValue}>기술지도 보고서 목록</strong>
             <span className={styles.metricLinkMeta}>기술지도 보고서 목록으로 이동</span>
           </Link>
-          <Link href={quarterlyHref} className={styles.metricLinkCard}>
+          <Link href={resolvedQuarterlyHref} className={styles.metricLinkCard}>
             <strong className={styles.metricLinkValue}>분기 보고서 목록</strong>
             <span className={styles.metricLinkMeta}>분기 보고서 목록으로 이동</span>
           </Link>
-          <Link href={badWorkplaceHref} className={styles.metricLinkCard}>
+          <Link href={resolvedBadWorkplaceHref} className={styles.metricLinkCard}>
             <strong className={styles.metricLinkValue}>불량 사업장 신고</strong>
             <span className={styles.metricLinkMeta}>이번 달 불량 사업장 신고로 이동</span>
           </Link>
-          <Link href={photoHref} className={styles.metricLinkCard}>
+          <Link href={resolvedPhotoHref} className={styles.metricLinkCard}>
             <strong className={styles.metricLinkValue}>사진첩</strong>
             <span className={styles.metricLinkMeta}>점검 사진과 현장 이미지 확인</span>
+          </Link>
+          <Link href={resolvedMailHref} className={styles.metricLinkCard}>
+            <strong className={styles.metricLinkValue}>메일함</strong>
+            <span className={styles.metricLinkMeta}>현장 기준 메일 작성과 이력 확인</span>
           </Link>
         </div>
       </div>

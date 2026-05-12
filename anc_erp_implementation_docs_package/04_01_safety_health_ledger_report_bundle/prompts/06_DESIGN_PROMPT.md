@@ -1,0 +1,14 @@
+# 06. Design Prompt — 공사안전보건대장 이행확인 보고서 묶음
+
+Design `공사안전보건대장 이행확인 보고서 묶음` for A&C 기술사 ERP.
+
+Required visual rules:
+- Korean B2B ERP style
+- Deep blue primary
+- Dense but readable tables
+- Owner-specific badges where ownerPartyId exists
+- AI draft badge
+- Orange warning, red blocker
+- A4 preview for document features
+- Full-screen file manager for webhard
+- 3-pane shell for mailbox

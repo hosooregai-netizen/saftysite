@@ -1,0 +1,9 @@
+# 07. Test Plan — 대시보드/통계
+
+```text
+test_14_dashboard_statistics_loads
+test_14_dashboard_statistics_requires_project_scope
+test_14_dashboard_statistics_owner_specific_isolation
+test_14_dashboard_statistics_status_transition
+test_14_dashboard_statistics_reverse_map_complete
+```

@@ -1,0 +1,2 @@
+api: GET /api/v1/owner-safety-activity-forms/{formId}
+models: OwnerSafetyActivityForm

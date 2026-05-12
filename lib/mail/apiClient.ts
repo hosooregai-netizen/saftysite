@@ -8,6 +8,8 @@ import {
 import type {
   MailAccount,
   MailAttachmentPayload,
+  MailboxBox,
+  MailboxDraft,
   MailMessage,
   MailOAuthStartPayload,
   MailProviderStatus,
@@ -99,15 +101,9 @@ export async function fetchMailAccounts() {
 export async function fetchMailProviderStatuses() {
   const googleRedirectUri =
     typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/google`;
-  const naverRedirectUri =
-    typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/naver`;
-  const naverWorksRedirectUri =
-    typeof window === 'undefined' ? '' : `${window.location.origin}/mail/connect/naver-works`;
   return requestMailApi<{ rows: MailProviderStatus[] }>(
     withQuery('/providers/status', {
       googleRedirectUri,
-      naverRedirectUri,
-      naverWorksRedirectUri,
     }),
   );
 }
@@ -219,7 +215,7 @@ export async function disconnectMailAccount(accountId: string) {
 
 export async function fetchMailThreads(input: {
   accountId?: string;
-  box?: string;
+  box?: MailboxBox | string;
   headquarterId?: string;
   limit?: number;
   offset?: number;
@@ -243,6 +239,28 @@ export async function fetchMailThreads(input: {
 
 export async function fetchMailThreadDetail(threadId: string) {
   return requestMailApi<MailThreadDetail>(`/threads/${encodeURIComponent(threadId)}`);
+}
+
+export async function patchMailThread(
+  threadId: string,
+  input: {
+    isStarred?: boolean;
+    isArchived?: boolean;
+    isTrashed?: boolean;
+    markRead?: boolean;
+    restore?: boolean;
+  },
+) {
+  return requestMailApi<MailThread>(`/threads/${encodeURIComponent(threadId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      ...(typeof input.isStarred === 'boolean' ? { is_starred: input.isStarred } : {}),
+      ...(typeof input.isArchived === 'boolean' ? { is_archived: input.isArchived } : {}),
+      ...(typeof input.isTrashed === 'boolean' ? { is_trashed: input.isTrashed } : {}),
+      ...(input.markRead ? { mark_read: true } : {}),
+      ...(input.restore ? { restore: true } : {}),
+    }),
+  });
 }
 
 export async function fetchMailMessage(messageId: string) {
@@ -278,12 +296,108 @@ export async function fetchMailRecipientSuggestions(input: {
   };
 }
 
+export async function fetchMailboxDrafts(input: {
+  accountId?: string;
+  query?: string;
+} = {}) {
+  return requestMailApi<{ rows: MailboxDraft[] }>(
+    withQuery('/drafts', {
+      accountId: input.accountId || '',
+      query: input.query || '',
+    }),
+  );
+}
+
+export async function createMailboxDraft(input: {
+  accountId?: string;
+  attachments?: MailAttachmentPayload[];
+  body?: string;
+  ccRecipients?: string[];
+  headquarterId?: string;
+  recipients?: string[];
+  reportKeys?: string[];
+  siteId?: string;
+  subject?: string;
+}) {
+  return requestMailApi<MailboxDraft>('/drafts', {
+    method: 'POST',
+    body: JSON.stringify({
+      account_id: input.accountId || '',
+      attachments: (input.attachments || []).map((attachment) => ({
+        content_type: attachment.contentType,
+        data_base64: attachment.dataBase64,
+        download_headers: attachment.downloadHeaders,
+        download_url: attachment.downloadUrl,
+        filename: attachment.filename,
+        report_key: attachment.reportKey,
+        size_bytes: attachment.sizeBytes,
+        source: attachment.source,
+      })),
+      body: input.body || '',
+      cc_recipients: input.ccRecipients || [],
+      headquarter_id: input.headquarterId || '',
+      recipients: input.recipients || [],
+      report_keys: input.reportKeys || [],
+      site_id: input.siteId || '',
+      subject: input.subject || '',
+    }),
+  });
+}
+
+export async function updateMailboxDraft(
+  draftId: string,
+  input: {
+    accountId?: string;
+    attachments?: MailAttachmentPayload[];
+    body?: string;
+    ccRecipients?: string[];
+    headquarterId?: string;
+    recipients?: string[];
+    reportKeys?: string[];
+    siteId?: string;
+    subject?: string;
+  },
+) {
+  return requestMailApi<MailboxDraft>(`/drafts/${encodeURIComponent(draftId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      account_id: input.accountId,
+      attachments: input.attachments?.map((attachment) => ({
+        content_type: attachment.contentType,
+        data_base64: attachment.dataBase64,
+        download_headers: attachment.downloadHeaders,
+        download_url: attachment.downloadUrl,
+        filename: attachment.filename,
+        report_key: attachment.reportKey,
+        size_bytes: attachment.sizeBytes,
+        source: attachment.source,
+      })),
+      body: input.body,
+      cc_recipients: input.ccRecipients,
+      headquarter_id: input.headquarterId,
+      recipients: input.recipients,
+      report_keys: input.reportKeys,
+      site_id: input.siteId,
+      subject: input.subject,
+    }),
+  });
+}
+
+export async function deleteMailboxDraft(draftId: string) {
+  return requestMailApi<void>(`/drafts/${encodeURIComponent(draftId)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function sendMail(input: {
   accountId: string;
   attachments?: MailAttachmentPayload[];
   body: string;
+  cc?: MailRecipient[];
   fromName?: string;
   headquarterId?: string;
+  forwardedFromMessageId?: string;
+  replyToMessageId?: string;
   reportKey?: string;
   reportKeys?: string[];
   siteId?: string;
@@ -308,8 +422,11 @@ export async function sendMail(input: {
       account_id: input.accountId,
       attachments,
       body: input.body,
+      cc: input.cc || [],
+      forwarded_from_message_id: input.forwardedFromMessageId || '',
       sender_name: input.fromName || '',
       headquarter_id: input.headquarterId || '',
+      reply_to_message_id: input.replyToMessageId || '',
       report_key: input.reportKey || '',
       report_keys: input.reportKeys || [],
       site_id: input.siteId || '',

@@ -1,0 +1,7 @@
+{"kind": "create_site_failed", "legacy_site_id": "84406", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "65640", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "50334", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "54604", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "4408", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "4409", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
+{"kind": "create_site_failed", "legacy_site_id": "1429", "error": "PATCH /api/safety/sites/778c630a4b2040648b834f10ebee13c5 failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}

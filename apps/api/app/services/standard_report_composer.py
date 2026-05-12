@@ -6,6 +6,16 @@ from .standard_risk_library import (
     get_standard_risk_rule,
     recommend_future_process_rules,
 )
+from .standard_report_writers import (
+    compose_section4_hazard_text,
+    compose_section4_improvement_plan,
+    compose_section5_countermeasure,
+    compose_section5_hazard,
+    compose_section6_drafts,
+    review_reason_for_finding,
+    review_reason_for_observation,
+    review_reason_for_plan,
+)
 
 
 def _safe_text(value: object) -> str:
@@ -120,6 +130,14 @@ def _fallback_countermeasure_text(match: dict[str, Any]) -> str:
     if fallback_reason:
         return f"확인 필요: {fallback_reason} 다음 공정에 맞는 예방대책을 선택해 주세요."
     return "확인 필요: 다음 공정에 맞는 표준 예방대책을 현장 확인 후 선택해 주세요."
+
+
+def _finding_guidance_text(match: dict[str, Any]) -> str:
+    guidance = _safe_text(match.get("standardGuidanceText")) or _fallback_guidance_text(match)
+    preventive = _safe_text(match.get("standardPreventiveMeasure"))
+    if guidance.startswith("확인 필요") or not preventive or preventive in guidance:
+        return guidance
+    return f"{guidance} 또한 {preventive}"
 
 
 def _observation_hazard(observation: dict[str, Any]) -> str:
@@ -261,8 +279,21 @@ def build_section4_findings(
         rule = get_standard_risk_rule(_safe_text(match.get("ruleKey")))
         rule_id = _safe_text(match.get("ruleKey"))
         location = _risk_location(observation, rule)
-        guidance_item = _safe_text(match.get("standardGuidanceText")) or _fallback_guidance_text(match)
-        hazard_text = _safe_text(match.get("standardHazardText")) or _observation_hazard(observation)
+        guidance_item = _finding_guidance_text(match)
+        base_hazard_text = _safe_text(match.get("standardHazardText")) or _observation_hazard(observation)
+        accident_type = _observation_accident_type(observation)
+        hazard_text = compose_section4_hazard_text(
+            location=location,
+            hazard=base_hazard_text,
+            accident_type=accident_type,
+            causative_agent=_observation_causative_agent(observation),
+        )
+        improvement_plan = compose_section4_improvement_plan(
+            location=location,
+            hazard=base_hazard_text,
+            accident_type=accident_type,
+            guidance=guidance_item,
+        )
         needs_review = (
             bool(match.get("needsHumanReview", True))
             or _location_needs_review(observation, match, location)
@@ -275,10 +306,10 @@ def build_section4_findings(
             "source": "AI_PHOTO_AND_RISK_LIBRARY",
             "location": location,
             "hazardDescription": hazard_text,
-            "accidentType": _observation_accident_type(observation),
+            "accidentType": accident_type,
             "causativeAgentKey": _safe_text((rule or {}).get("causativeAgentKey")) or _observation_causative_agent(observation),
             "riskLevel": _safe_text(match.get("riskLevel")) or _safe_text((rule or {}).get("defaultRiskLevel")) or "중",
-            "improvementPlan": guidance_item,
+            "improvementPlan": improvement_plan,
             "emphasis": _finding_emphasis(),
             "legalReferenceCandidates": list((rule or {}).get("legalReferenceCandidates") or []),
             "referenceMaterialCandidates": list((rule or {}).get("referenceMaterialCandidates") or []),
@@ -315,8 +346,15 @@ def build_section5_future_plans(
             rows.append(
                 {
                     "processName": "확인 필요",
-                    "hazard": "확인 필요: 다음 공정 위험요인 현장 확인 필요",
-                    "countermeasure": _fallback_countermeasure_text(match),
+                    "hazard": compose_section5_hazard(
+                        process_name="확인 필요",
+                        hazard="다음 공정 위험요인 현장 확인 필요",
+                    ),
+                    "countermeasure": compose_section5_countermeasure(
+                        process_name="확인 필요",
+                        hazard="다음 공정 위험요인 현장 확인 필요",
+                        countermeasure=_fallback_countermeasure_text(match),
+                    ),
                     "note": _future_plan_note(),
                     "confidence": _observation_confidence(observation, match),
                     "photoObservationIds": [observation_id] if observation_id else [],
@@ -372,10 +410,18 @@ def build_section5_future_plans(
             rows.append(
                 {
                     "processName": _future_process_name(rule),
-                    "hazard": _safe_text(rule.get("standardHazardText"))
-                    or "확인 필요: 다음 공정 위험요인 현장 확인 필요",
-                    "countermeasure": _safe_text(rule.get("standardPreventiveMeasure"))
-                    or _fallback_countermeasure_text(match),
+                    "hazard": compose_section5_hazard(
+                        process_name=_future_process_name(rule),
+                        hazard=_safe_text(rule.get("standardHazardText"))
+                        or "다음 공정 위험요인 현장 확인 필요",
+                    ),
+                    "countermeasure": compose_section5_countermeasure(
+                        process_name=_future_process_name(rule),
+                        hazard=_safe_text(rule.get("standardHazardText"))
+                        or "다음 공정 위험요인 현장 확인 필요",
+                        countermeasure=_safe_text(rule.get("standardPreventiveMeasure"))
+                        or _fallback_countermeasure_text(match),
+                    ),
                     "note": _future_plan_note(),
                     "confidence": _observation_confidence(observation, match),
                     "standardRiskRuleId": rule_id,
@@ -387,12 +433,63 @@ def build_section5_future_plans(
             )
             if len(rows) >= 3:
                 return rows[:3]
+    for observation in photo_observations:
+        if len(rows) >= 3:
+            break
+        if _safe_text(observation.get("photoRole")) != "step2_hazard":
+            continue
+        observation_id = _safe_text(observation.get("id"))
+        match = matches_by_id.get(observation_id, {})
+        rule_id = _safe_text(match.get("ruleKey"))
+        rule = get_standard_risk_rule(rule_id)
+        if rule_id and rule_id in seen_rule_ids:
+            continue
+        if rule_id:
+            seen_rule_ids.add(rule_id)
+        process_name = _future_process_name(rule) if rule else _process_name(observation)
+        hazard_text = (
+            _safe_text((rule or {}).get("standardHazardText"))
+            or _safe_text(match.get("standardHazardText"))
+            or _observation_hazard(observation)
+        )
+        countermeasure = (
+            _safe_text((rule or {}).get("standardPreventiveMeasure"))
+            or _safe_text(match.get("standardPreventiveMeasure"))
+            or _fallback_countermeasure_text(match)
+        )
+        confidence = _observation_confidence(observation, match)
+        row = {
+            "processName": process_name,
+            "hazard": compose_section5_hazard(
+                process_name=process_name,
+                hazard=hazard_text,
+            ),
+            "countermeasure": compose_section5_countermeasure(
+                process_name=process_name,
+                hazard=hazard_text,
+                countermeasure=countermeasure,
+            ),
+            "note": "hazard 사진 기반 향후 유사공정 대책 후보 - 현장 확인 후 확정 필요",
+            "confidence": confidence,
+            "photoObservationIds": [observation_id] if observation_id else [],
+            "evidencePhotoIds": [
+                _safe_text(observation.get("photoAssetId"))
+            ]
+            if _safe_text(observation.get("photoAssetId"))
+            else [],
+            "needsReview": True,
+            "source": "AI_PHOTO_AND_RISK_LIBRARY",
+        }
+        if rule_id:
+            row["standardRiskRuleId"] = rule_id
+        rows.append(row)
     return rows[:3]
 
 
 def build_risk_library_provenance(
     finding_candidates: list[dict[str, Any]],
     future_plans: list[dict[str, Any]],
+    section6_drafts: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     provenance: list[dict[str, Any]] = []
     for index, finding in enumerate(finding_candidates):
@@ -452,6 +549,40 @@ def build_risk_library_provenance(
             countermeasure_entry["standardRiskRuleId"] = rule_id
         provenance.append(hazard_entry)
         provenance.append(countermeasure_entry)
+    if section6_drafts:
+        for field_path, rows in (
+            ("sectionDrafts.doc11[0].content", section6_drafts.get("doc11") or []),
+            ("sectionDrafts.doc12[0].content", section6_drafts.get("doc12") or []),
+        ):
+            if not rows:
+                continue
+            row = rows[0]
+            provenance.append(
+                {
+                    "fieldPath": field_path,
+                    "source": "AI_PHOTO",
+                    "sourceId": "section6-risk-support",
+                    "evidencePhotoIds": list(row.get("evidencePhotoIds") or []),
+                    "photoObservationIds": list(row.get("photoObservationIds") or []),
+                    "confidence": float(row.get("confidence") or 0),
+                    "needsReview": True,
+                    "note": "사진 기반 위험유형으로 생성한 교육/지원사항 초안",
+                }
+            )
+        doc14 = section6_drafts.get("doc14") or {}
+        if _safe_text(doc14.get("body")):
+            provenance.append(
+                {
+                    "fieldPath": "sectionDrafts.doc14.body",
+                    "source": "AI_PHOTO",
+                    "sourceId": "section6-risk-support",
+                    "evidencePhotoIds": list(doc14.get("evidencePhotoIds") or []),
+                    "photoObservationIds": list(doc14.get("photoObservationIds") or []),
+                    "confidence": float(doc14.get("confidence") or 0),
+                    "needsReview": True,
+                    "note": "사진 기반 기타 지원사항 초안",
+                }
+            )
     return provenance
 
 
@@ -460,6 +591,7 @@ def _build_review_queue(
     photo_observations: list[dict[str, Any]],
     finding_candidates: list[dict[str, Any]],
     future_plans: list[dict[str, Any]],
+    section6_drafts: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     queue: list[dict[str, Any]] = []
     observations_by_id = _observation_by_id(photo_observations)
@@ -504,7 +636,7 @@ def _build_review_queue(
                 label="AI 위험요인 확인",
                 source="AI_PHOTO",
                 confidence=confidence,
-                reason="AI 관찰카드의 위험요인 confidence가 낮아 현장 확인이 필요합니다.",
+                reason=review_reason_for_observation(observation, confidence=confidence),
                 severity="warning",
                 suggested_value=hazard_summary,
                 evidence_photo_ids=[_safe_text(observation.get("photoAssetId"))] if _safe_text(observation.get("photoAssetId")) else [],
@@ -538,7 +670,7 @@ def _build_review_queue(
                     suggested_value=location_value,
                     source="AI_PHOTO",
                     confidence=float(finding.get("confidence") or 0),
-                    reason="위험장소 confidence가 낮거나 위치값이 불명확하여 현장 확인이 필요합니다.",
+                    reason=review_reason_for_finding(finding),
                     severity="warning",
                     evidence_photo_ids=list(finding.get("linkedPhotoIds") or []),
                 )
@@ -553,7 +685,7 @@ def _build_review_queue(
                     suggested_value=_safe_text(finding.get("improvementPlan")),
                     source="RISK_LIBRARY",
                     confidence=float(finding.get("confidence") or 0),
-                    reason="표준 위험 규칙 매칭이 불충분하여 지적사항 확인이 필요합니다.",
+                    reason=review_reason_for_finding(finding),
                     severity="required",
                     evidence_photo_ids=list(finding.get("linkedPhotoIds") or []),
                 )
@@ -568,7 +700,7 @@ def _build_review_queue(
                     suggested_value=_safe_text(finding.get("improvementPlan")),
                     source="RULE_TEMPLATE",
                     confidence=float(finding.get("confidence") or 0),
-                    reason="지적사항 초안은 현장 확인 후 확정이 필요합니다.",
+                    reason=review_reason_for_finding(finding),
                     severity="warning",
                     evidence_photo_ids=list(finding.get("linkedPhotoIds") or []),
                 )
@@ -587,7 +719,7 @@ def _build_review_queue(
                     suggested_value=process_name,
                     source="AI_PHOTO",
                     confidence=float(plan.get("confidence") or 0),
-                    reason="향후 진행공정 추정이 불명확하거나 현장 확인이 필요합니다.",
+                    reason=review_reason_for_plan(plan),
                     severity="warning",
                     evidence_photo_ids=evidence_photo_ids,
                 )
@@ -602,7 +734,7 @@ def _build_review_queue(
                     suggested_value=_safe_text(plan.get("countermeasure")),
                     source="RISK_LIBRARY",
                     confidence=float(plan.get("confidence") or 0),
-                    reason="표준 위험 규칙 매칭이 불충분하여 예방대책 확인이 필요합니다.",
+                    reason=review_reason_for_plan(plan),
                     severity="required",
                     evidence_photo_ids=evidence_photo_ids,
                 )
@@ -620,9 +752,60 @@ def _build_review_queue(
                     suggested_value=_safe_text(plan.get("countermeasure")),
                     source="RULE_TEMPLATE",
                     confidence=float(plan.get("confidence") or 0),
-                    reason="향후 진행공정 예방대책 초안은 현장 확인 후 확정이 필요합니다.",
+                    reason=review_reason_for_plan(plan),
                     severity="warning",
                     evidence_photo_ids=evidence_photo_ids,
+            )
+            )
+    if section6_drafts:
+        doc11 = section6_drafts.get("doc11") or []
+        doc12 = section6_drafts.get("doc12") or []
+        doc14 = section6_drafts.get("doc14") or {}
+        if doc11:
+            item = doc11[0]
+            queue.append(
+                _queue_item(
+                    field_path="sectionDrafts.doc11[0].content",
+                    section="other",
+                    field="doc11.content",
+                    label="6번 안전교육 초안 확인",
+                    suggested_value=_safe_text(item.get("content")),
+                    source="AI_PHOTO",
+                    confidence=float(item.get("confidence") or 0),
+                    reason="현장 참석인원과 실제 교육 실시 내용을 확인해야 합니다.",
+                    severity="warning",
+                    evidence_photo_ids=list(item.get("evidencePhotoIds") or []),
+                )
+            )
+        if doc12:
+            item = doc12[0]
+            queue.append(
+                _queue_item(
+                    field_path="sectionDrafts.doc12[0].content",
+                    section="other",
+                    field="doc12.content",
+                    label="6번 지원사항 초안 확인",
+                    suggested_value=_safe_text(item.get("content")),
+                    source="AI_PHOTO",
+                    confidence=float(item.get("confidence") or 0),
+                    reason="실제 지원 내역과 안전조치 이행 상태 확인이 필요합니다.",
+                    severity="warning",
+                    evidence_photo_ids=list(item.get("evidencePhotoIds") or []),
+                )
+            )
+        if _safe_text(doc14.get("body")):
+            queue.append(
+                _queue_item(
+                    field_path="sectionDrafts.doc14.body",
+                    section="other",
+                    field="doc14.body",
+                    label="6번 기타 메모 확인",
+                    suggested_value=_safe_text(doc14.get("body")),
+                    source="AI_PHOTO",
+                    confidence=float(doc14.get("confidence") or 0),
+                    reason="AI 초안 메모로 실제 조치일자와 현장 적용 여부 확인이 필요합니다.",
+                    severity="info",
+                    evidence_photo_ids=list(doc14.get("evidencePhotoIds") or []),
                 )
             )
     return queue
@@ -713,6 +896,20 @@ def _build_doc5_summary(
     }
 
 
+def _build_section6_drafts(
+    finding_candidates: list[dict[str, Any]],
+    future_plans: list[dict[str, Any]],
+    photo_observations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    source = finding_candidates[0] if finding_candidates else (future_plans[0] if future_plans else {})
+    if not source:
+        return {"doc11": [], "doc12": [], "doc14": {}}
+    return compose_section6_drafts(
+        source=source,
+        photo_observations=photo_observations,
+    )
+
+
 def compose_standard_report_draft(
     report_id: str,
     *,
@@ -725,11 +922,26 @@ def compose_standard_report_draft(
 
     finding_candidates = build_section4_findings(photo_observations, risk_matches)
     future_plans = build_section5_future_plans(photo_observations, risk_matches)
-    review_queue = _build_review_queue(report_meta or {}, photo_observations, finding_candidates, future_plans)
+    section6_drafts = _build_section6_drafts(
+        finding_candidates,
+        future_plans,
+        photo_observations,
+    )
+    review_queue = _build_review_queue(
+        report_meta or {},
+        photo_observations,
+        finding_candidates,
+        future_plans,
+        section6_drafts,
+    )
     section_drafts = _empty_section_drafts()
     section_drafts["doc5"] = _build_doc5_summary(finding_candidates, future_plans)
     section_drafts["doc7"] = [dict(item) for item in finding_candidates]
     section_drafts["doc8"] = future_plans
+    section_drafts["doc11"] = section6_drafts["doc11"]
+    section_drafts["doc12"] = section6_drafts["doc12"]
+    if section6_drafts["doc14"]:
+        section_drafts["doc14"] = section6_drafts["doc14"]
 
     return {
         "photoEvidence": photo_evidence,
@@ -745,6 +957,7 @@ def compose_standard_report_draft(
         "fieldProvenance": build_risk_library_provenance(
             finding_candidates,
             future_plans,
+            section6_drafts,
         ),
         "reviewQueue": review_queue,
         "documentsCompat": {},

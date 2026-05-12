@@ -1,0 +1,9 @@
+# 07. Test Plan — 산업안전보건관리비 사용 내용 확인
+
+```text
+test_04_06_safety_cost_usage_confirmation_loads
+test_04_06_safety_cost_usage_confirmation_requires_project_scope
+test_04_06_safety_cost_usage_confirmation_owner_specific_isolation
+test_04_06_safety_cost_usage_confirmation_status_transition
+test_04_06_safety_cost_usage_confirmation_reverse_map_complete
+```

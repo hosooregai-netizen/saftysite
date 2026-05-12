@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="language" content="en" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" /> -->
+    <title>인세프(InSEF) 건설현장안전관리솔루션</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="description" id="description" content="인세프(InSEF) 건설현장안전관리솔루션 오신걸 환영합니다" />
+    <meta name="keywords" id="keywords" content="인세프(InSEF) 건설현장안전관리솔루션">
+    <meta name="Resource-type" content="Document">
+    <meta name="Resource-type" content="Document" />
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="인세프(InSEF) 건설현장안전관리솔루션">
+    <meta property="og:description" content="인세프(InSEF) 건설현장안전관리솔루션 오신걸 환영합니다">
+    <meta property="og:image" content="">
+    <meta property="og:url" content="">
+    <link rel="shortcut icon" href="http://console.insafed.com/insef/public/images/common/favicon_insef.png" type="image/x-icon"/>
+
+    <title>attendance.attendance_check</title>
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+
+    <!-- Option 1: Include in HTML -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/fontawesome-free/css/all.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/ionicons/docs/css/ionicons.min.css">
+    <!-- Select2 -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/select2/css/select2.min.css">
+    <!-- Tempusdominus Bbootstrap 4 -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css">
+    <!-- iCheck -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/toastr/toastr.min.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/dist/css/adminlte.min.css">
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
+    <!-- Daterange picker -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/datetimepicker/jquery.datetimepicker.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/jquery-timepicker-wvega/jquery.timepicker.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css">
+    <!-- summernote -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/summernote/summernote-bs4.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/flag-icon-css/css/flag-icon.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/style.css">
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/media-quary.css">
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/app.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+    <meta name="csrf-token" content="R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK" />
+    
+    <!-- Google tag (gtag.js) : 구글 어날리틱스-->
+    <!-- 24.07.31 : Google Search Console  -->
+<meta name="google-site-verification" content="Er3bVWFzQK9FVP8u0GGoGm56EIpgRtMaquUipHf8ASU" />
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-M88CVJ6T8H"></script>
+<script>
+    if("false" == 'false') {
+        window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-M88CVJ6T8H');
+    }
+</script>    
+        
+    </head>
+
+<body class="hold-transition layout-fixed text-sm">
+    <div class="wrapper">
+        <!-- Content Wrapper. Contains page content -->
+        <!-- Main Sidebar Container -->
+<aside class="main-sidebar elevation-4 sidebar-dark-primary">
+    <!-- Brand Logo -->
+    <a href="http://console.insafed.com/insef/public/dashboard" class="brand-link" style="background: white;">
+        <img src="http://console.insafed.com/insef/public/images/logo.png" class="brand-image" style="opacity: .8;width: 95%;height: auto; margin-left: 0.3rem; margin-top: -0.15rem;">
+        <span class="brand-text font-weight-light">&nbsp;</span>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column text-sm nav-child-indent" data-widget="treeview" role="menu">
+                                    
+                    <!-- 최고 관리자 -->
+                    
+                    <!-- 기관 관리자 -->
+                    
+                    <!-- 기술지도요원 -->
+                    
+                                            <li class="nav-item" id="nav-dashboard">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/manager">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-home"></i>
+                                <span>대시보드</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-inspector">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/inspector">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-users"></i>
+                                <span>요원 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-conscompany">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/conscompany">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-building"></i>
+                                <span>건설사 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support1">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>기술지도현황(달력)</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support/list">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>기술지도현황(목록)</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support2">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support/agent">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>요원별 진행상황 보기</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-report">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/report">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-download"></i>
+                                <span>보고서 다운로드</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-data">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/data">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-database"></i>
+                                <span>데이터 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-form">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/form">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-file-alt"></i>
+                                <span>보고서 양식 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-userlog">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/sendlog">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-paper-plane"></i>
+                                <span>링크전송 내역</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-mypage">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/mypage">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-user"></i>
+                                <span>마이페이지</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-userguide">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/board">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-bell"></i>
+                                <span>공지사항</span>
+                            </a>
+                        </li>
+                                                </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+    </div>
+    <!-- /.sidebar -->
+</aside>
+      
+
+        
+        <div class="container-full">
+            <div class="row mr-0">
+                <div class="col-xl-8 content-box" style="margin-left:270px;">
+                    <!-- Header -->
+                    <div id="wrapper" class="admin">
+  <header>
+    <div class="toputil">
+      <div class="float-left toputil_admin">
+                <span class="mr-1 mt-1 toputil_rule">기관관리자</span>
+        
+        
+        <span id="lifeTime"></span>
+      </div>
+
+      
+        <div class="toputil_box">
+        <ul>
+          <li class="sm-none">
+              
+          </li>
+                      <li>
+          
+          한국종합안전
+
+                      <span style="font-size:9pt">(기관 코드 : 208)</span>
+                    </li>
+
+                      <li class="sm-none">
+          
+            <a href="http://console.insafed.com/insef/public/auth/logout" onclick="return confirm('로그아웃 하시겠습니까??')">
+              로그아웃 <i class="fas fa-sign-out-alt"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Menu -->
+    
+    <!-- menu -->
+
+    <div class="hamburger-menu">
+      <input id="menu_toggle" type="checkbox" onclick='getCheckboxValue(event)' />
+      <label class="menu_btn" for="menu_toggle" id="menu_btn">
+        <span></span>
+      </label>
+
+      <ul class="menu_box">
+                <li id="nav-dashboard">
+    <a href="http://console.insafed.com/insef/public/manager" class="btn_work">
+        <span>대시보드</span>
+        <i class="nav-icon fas fa-home"></i>
+    </a>
+</li>
+<li id="nav-inspector">
+    <a href="http://console.insafed.com/insef/public/inspector" class="btn_work">
+        <span>요원 관리</span>
+        <i class="nav-icon fas fa-users"></i>
+    </a>
+</li>
+<li id="nav-conscompany">
+    <a href="http://console.insafed.com/insef/public/conscompany" class="btn_work">
+        <span>건설사 관리</span>
+        <i class="nav-icon fas fa-building"></i>
+    </a>
+</li>
+<li id="nav-support1">
+    <a href="http://console.insafed.com/insef/public/support" class="btn_work">
+        <span>기술지도현황(달력)</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-support">
+    <a href="http://console.insafed.com/insef/public/support/list" class="btn_work">
+        <span>기술지도현황(목록)</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-support2">
+    <a href="http://console.insafed.com/insef/public/support/agent" class="btn_work">
+        <span>요원별 진행상황 보기</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-report">
+    <a href="http://console.insafed.com/insef/public/report" class="btn_work">
+        <span>보고서 다운로드</span>
+        <i class="nav-icon fas fa-download"></i>
+    </a>
+</li>
+<li id="nav-data">
+    <a href="http://console.insafed.com/insef/public/data" class="btn_work">
+        <span>데이터 관리</span>
+        <i class="nav-icon fas fa-database"></i>
+    </a>
+</li>
+<li id="nav-form">
+    <a href="http://console.insafed.com/insef/public/form" class="btn_work">
+        <span>보고서 양식 관리</span>
+        <i class="nav-icon fas fa-file-alt"></i>
+    </a>
+</li>
+<li id="nav-sendlog">
+    <a href="http://console.insafed.com/insef/public/sendlog" class="btn_work">
+        <span>링크전송 내역</span>
+        <i class="nav-icon fas fa-paper-plane"></i>
+    </a>
+</li>
+<li id="nav-mypage">
+    <a href="http://console.insafed.com/insef/public/mypage" class="btn_work">
+        <span>마이페이지</span>
+        <i class="nav-icon fas fa-user"></i>
+    </a>
+</li>
+<li id="nav-userguide">
+    <a href="http://console.insafed.com/insef/public/board" class="btn_work">
+        <span>공지사항</span>
+        <i class="nav-icon fas fa-bell"></i>
+    </a>
+</li>
+        
+        <div class="menu-line"></div>  
+        <div class="float-right text-right menu-user mt-5">
+          <span>
+            장정규님<Br>
+                        (기관 코드 : 208)
+                      </span>
+        </div>
+        <div class="float-right menu-user">
+          <a href="http://console.insafed.com/insef/public/auth/logout" class="btn ml-3"><span>로그아웃</span></a>
+        </div>
+
+      </ul>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+      $("nav > ul > li").mouseenter(function(){
+        $(this).children(".submenu").stop().slideDown(400);
+      });
+      $("nav > ul > li").mouseleave(function(){
+        $(this).children(".submenu").stop().slideUp(100);
+      });
+
+      /* 2021.05.21 : KEH : 해더 탭 서브 3 추가 */
+      $("nav > ul > li > ul > li").mouseenter(function(){
+        $(this).children(".submenu2").stop().slideDown(400);
+      });
+      $("nav > ul > li > ul > li").mouseleave(function(){
+        $(this).children(".submenu2").stop().slideUp(100);
+      });
+
+      function getCheckboxValue(event)  {
+        console.log(event.target.checked);
+        if(event.target.checked){
+          document.getElementById("menu_btn").style.cssText  = 'position: fixed;';
+        }else{
+          document.getElementById("menu_btn").style.cssText  = 'position: absolute;';
+        }   
+      }
+
+    </script>
+    <!-- END -->
+    
+    
+    
+
+    <div class="none"></div>
+  </header>
+</div>                </div>
+            </div>
+
+            
+            <div id="div_load_image" style="position:absolute; width:100%; height:100%; z-index:9999; display:none; background: #00000024;">
+                <img src='http://console.insafed.com/insef/public/images/loading.gif' style="width: 150px; height: auto;position: fixed; bottom: 50%; left: 0; right: 0; margin: auto;"/>
+            </div>
+
+            <!-- content -->
+            <div class="row mt-4 mr-0 pr-3 pl-3">
+                <div class="col-xl-8 content-box" style="margin-left:270px;">
+                    <!-- 25.02.14 : 이윤정 : 로그인 후 모달 창 추가 -->
+                                            <div class="modal fade bd-example-modal-lg" id="loginAfterModal" tabindex="-1" role="dialog"
+    aria-labelledby="loginAfterModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="modal-box">
+                    <div class="row">
+                        <div class="col-5">
+                            <img src="http://console.insafed.com/insef/public/images/icon/omnichannel.png" style="width:100px; ">
+                        </div>
+                        <div class="col-7 text-left mt-3">
+                            <p style="line-height: 1.5;">
+                                사용자의 활동은 데이터 보호와
+                                보다 나은 서비스 <br> 제공을 위해 <b>기록</b>
+                                및 <b>저장 관리</b> 되고 있습니다
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 text-center mt-3">
+                            <p>* 최근 접속 기록 * </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 text-center mt-3">
+                            <table class="table table-bordered">
+                                <tr class="text-center">
+                                    <th>접속 기록</th>
+                                    <th>접속 IP</th>
+                                </tr>
+                                                                                                            <tr class="animated-row text-center">
+                                            <td>2026-04-28 12:20:12</td>
+                                            <td>220.76.193.153</td>
+                                        </tr>
+                                                                            <tr class="animated-row text-center">
+                                            <td>2026-04-28 12:18:39</td>
+                                            <td>220.76.193.153</td>
+                                        </tr>
+                                                                                                </table>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 text-center animated-row mt-1">
+                            <!-- <button type="button" id="logoutButton" class="btn btn-secondary">비동의 (로그아웃)</button> -->
+                            <button id="agreeButton" class="btn btn-primary" data-dismiss="modal">
+                                <i class="fa fa-check" aria-hidden="true"></i> 확인하였습니다
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<link rel="stylesheet" href="http://console.insafed.com/insef/public/css/modal.css">
+                        <script>
+                            $(document).ready(function () {
+                                $('#loginAfterModal').modal('show');
+                            });
+                        </script>
+                    
+
+                            <!-- START -->
+    <section class="content-header p-0">
+                    <div class="container-fluid">
+    <div class="row mb-2">
+        <div class="col-sm-6 col-12">
+            <h1>
+                <i class="fas fa-link"></i>
+                달력으로 보기
+            </h1>
+        </div>
+        <div class="col-6 d-none d-sm-block">
+            <ol class="breadcrumb float-right">
+                <li class="breadcrumb-item">
+                    <a href="http://console.insafed.com/insef/public/dashboard" class="text-info"><i class="fas fa-home" style="color: #2A2C30;"></i></a>
+                </li>
+                                <li class="breadcrumb-item active">기술지도현황</li>
+                                <li class="breadcrumb-item ">달력으로 보기</li>
+                            </ol>
+        </div>
+    </div>
+</div>            </section>
+    <!-- END -->
+
+    <div class="content">
+        <div class="row">
+            <div class="col-md-12">
+                            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 mt-3">
+                <ul class="row tab_sty mb-4">
+    
+    
+    
+        <li class="col p-0">
+        <a href="http://console.insafed.com/insef/public/support">달력으로 보기</a>
+    </li>
+    <li class="col p-0">
+        <a href="http://console.insafed.com/insef/public/support/list">목록으로 보기</a>
+    </li>
+    
+    
+        <li class="col p-0">
+        <a href="http://console.insafed.com/insef/public/support/agent">요원별 진행상황 보기</a>
+    </li>
+    </ul>
+            </div>
+        </div>
+
+        <!-- 2022.02.15 : KEH : 페이지 가이드 -->
+        <div class="row page_guide srch_sty mb10">
+            <div class="col-md-6">
+                <ul class="pl10">
+                                        <li><b>일정이 달력에 표시되는 속도가 느릴 수 있습니다. 잠시만 기다려 주세요.</b></li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="pl10">
+                    <li><b>엑셀 내보내기</b> : 현재 달의 모든 데이터를 내보낼 수 있습니다.<br><b>(데이터가 많을 경우 시간이 걸릴 수 있습니다.)</b></li>
+
+                    
+                                            <li><b>엑셀 내보내기</b> : <b>요원</b> 선택 시 버튼이 활성화됩니다.</li>
+                                    </ul>
+            </div>
+        </div>
+
+        <form action="http://console.insafed.com/insef/public/support/calExcel" method="get">
+            <input type='hidden' name="fileName" value="기술지도일정현황_20260428122013.xlsx">
+            <input type="hidden" id="cal_month" name="cal_month" value="04">
+            <input type="hidden" id="cal_year" name="cal_year" value="2026">
+            <input type="hidden" id="company_id" name="company_id" value="208">
+            <input type="hidden" id="su_us_id" name="su_us_id" value="">
+            <input type="hidden" name="_token" id="token" value="R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK">
+
+            
+
+            <div class="row">
+                <div class="col-md-12 text-right">
+                                            <button type="button" class="btn btn-info"
+                            onclick="return confirm('요원' + '을 선택한 후에 [엑셀 내보내기]를 눌러주세요.')">
+                            엑셀 내보내기
+                        </button>
+                                    </div>
+            </div>
+        </form>
+
+                    <div class="row">
+                <div class="col-md-12">
+                    <div class="d-print-none p-3 mt-3 srch_sty mb10">
+  <form method="get" action="http://console.insafed.com/insef/public/support" accept-charset="UTF-8" class="form-horizontal" id="search-form"
+    autocomplete="off">
+
+    <div class="row">
+      
+            <div class="col-md-4 col-12">
+        <div class="form-group row">
+          <label for="su_us_id" class="col-form-label col-md-5 col-4 text-center">요원</label>
+          <div class="col-md-7 col-8">
+            <select name="su_us_id" class="form-control" id="su_us_id" onchange="this.form.submit()">
+              <option value="">전체(10)</option>
+                            <option value="1599" >
+                김재열</option>
+                            <option value="404" >
+                김정훈</option>
+                            <option value="458" >
+                류현성</option>
+                            <option value="1510" >
+                윤병선</option>
+                            <option value="1370" >
+                이왕근</option>
+                            <option value="1033" >
+                장정규</option>
+                            <option value="1125" >
+                전현우</option>
+                            <option value="775" >
+                조식</option>
+                            <option value="992" >
+                최우식</option>
+                            <option value="1240" >
+                최지원</option>
+                          </select>
+          </div>
+        </div>
+      </div>
+          </div>
+
+    
+  </form>
+</div>
+
+<script>
+  function ag_change(form){
+    $('#su_us_id option:eq(0)').prop('selected', true); 
+    form.submit();
+  }
+</script>                </div>
+            </div>
+        
+        <div class="row text-center">
+                            <div class="card col m-3">
+                    <div class="card-body pl-0 pr-0">
+                        <span class="support-total">요원 수
+                            <span id="support-total-agent">0</span>명
+                        </span>
+                    </div>
+                </div>
+                        <div class="card col m-3">
+                <div class="card-body pl-0 pr-0">
+                    <span class=" support-total text-secondary">예약
+                        <span id="support-total-status1">0</span>건
+                    </span>
+                </div>
+            </div>
+            <div class="card col m-3">
+                <div class="card-body pl-0 pr-0">
+                    <span class="support-total text-primary">진행
+                        <span id="support-total-status2">0</span>건
+                    </span>
+                </div>
+            </div>
+            <div class="card col m-3">
+                <div class="card-body pl-0 pr-0">
+                    <span class="support-total text-success">완료
+                        <span id="support-total-status3">0</span>건
+                    </span>
+                </div>
+            </div>
+            <div class="card col m-3">
+                <div class="card-body pl-0 pr-0">
+                    <span class="support-total text-approval">검토/승인
+                        <span id="support-total-status4">0</span>건
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 card-body p-0 mt-3">
+                <div id="calendar"></div>
+            </div>
+        </div>
+
+                    <div id="calendarModalView" class="modal fade" style="z-index: 10000;" data-backdrop="false" >
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 id="modalTitle" class="modal-title">점검일정현황</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span aria-hidden="true">×</span>
+                    <span class="sr-only">close</span>
+                </button>
+            </div>
+
+            <div id="modalBody" class="modal-body">
+                <table class="table table-bordered text-center">
+                    <tr>
+                        <th width="30%">방문일자</th>
+                        <td id="su_supported_at"></td>
+                    </tr>
+                    <tr>
+                        <th>담당요원</th>
+                        <td id="agent"></td>
+                    </tr>
+                    <tr>
+                        <th>현장</th>
+                        <td id="su_cs_id"></td>
+                    </tr>
+                    <tr>
+                        <th>현장책임자</th>
+                        <td id="su_manager_id"></td>
+                    </tr>
+                    <tr>
+                        <th>공사금액</th>
+                        <td id="cs_price"></td>
+                    </tr>
+                    <tr>
+                        <th>공사기간</th>
+                        <td id="cs_at"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="modal-footer">
+                <a class="btn btn-primary" id="showUrl">기술지도시작</a>
+                <a class="btn btn-warning" id="showConsUrl">현장관리</a>
+                <button class="btn btn-info" type="button" id="showReportUrl" style="background: #198754; border-color:#198754;">결과보고서</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+            </div>
+
+    <style>
+        .fc .fc-bg-event {
+            opacity: 0.7 !important;
+        }
+
+        .fc .fc-addButton-button {
+            background-color: #1f83fd;
+            border-color: #1f83fd;
+        }
+
+        .fc .fc-addButton-button:hover {
+            background-color: #134b8f;
+            border-color: #134b8f;
+        }
+
+        .fc-day-sun {
+            color: red;
+            /* 일요일 텍스트를 빨간색으로 설정 */
+        }
+
+        .fc-day-sat {
+            color: blue;
+            /* 일요일 텍스트를 빨간색으로 설정 */
+        }
+        .holiday a {
+            color: red !important; // 휴일에 해당하는 날짜의 배경색을 노란색으로 변경합니다.
+        }
+
+        .custom-more-dummy-event {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        .custom-more-link {
+            cursor: pointer;
+        }
+    </style>
+
+                </div>
+            </div>
+        <!-- /.content-wrapper -->
+        <script>
+$(".one>a").click(function() {
+    var submenu = $(this).next("ul");
+    var menus = $(this).parents(".one");
+    // submenu 가 화면상에 보일때는 위로 보드랍게 접고 아니면 아래로 보드랍게 펼치기
+    if( submenu.is(":visible") ){
+        submenu.slideUp();
+        menus.removeClass('on');
+    }else{
+        submenu.slideDown();
+        menus.addClass('on');
+    }
+});
+</script>
+
+<script type="text/javascript">
+var check_width = $( window ).width();
+$(function(){
+  $( window ).resize(function() {
+      check_width = $( window ).width();
+  });
+
+  $('.dep1 li').hover(function(){
+      if (check_width > 768) {
+          $('.dep2',this).slideDown(300, 'swing');
+      }
+  }, function(){
+      $('.dep2',this).slideUp(100, 'swing');
+  });
+});
+</script>
+
+</body>
+</html>
+    </div>
+    <!-- REQUIRED JS SCRIPTS -->
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/jquery/jquery.min.js"></script>
+    <!-- jQuery UI 1.11.4 -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/jquery-ui/jquery-ui.min.js"></script>
+    <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
+    <script>
+        $.widget.bridge('uibutton', $.ui.button)
+    </script>
+    <!-- Bootstrap 4 -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- daterangepicker -->
+
+    <!-- Tempusdominus Bootstrap 4 -->
+    <script src="http://console.insafed.com/insef/public/components/php-date-formatter/js/php-date-formatter.min.js"></script>
+    <script src="http://console.insafed.com/insef/public/components/datetimepicker/jquery.datetimepicker.js"></script>
+    <!-- Summernote -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/summernote/summernote-bs4.min.js"></script>
+    <!-- overlayScrollbars -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/toastr/toastr.min.js"></script>
+
+    <!-- AdminLTE App -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/dist/js/adminlte.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/bootstrap-switch/js/bootstrap-switch.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/select2/js/select2.full.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/sweetalert2/sweetalert2.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/inputmask/min/jquery.inputmask.bundle.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/js/lang/config.js"></script>
+
+    <script>
+        var lang = new Language('ko');
+    </script>
+
+    <script src="http://console.insafed.com/insef/public/js/app.js"></script>
+    <script src="http://console.insafed.com/insef/public/components/jquery-timepicker-wvega/jquery.timepicker.js"></script>
+
+    <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+    </script>    
+
+    <!-- START : 2023.02.13 : KEH : 메뉴, 탭 선택 -->
+    <script type="text/javascript">
+        function MenuTabSelect(dep, tab, depId = "") {
+            // console.log(depId);
+            if (depId != "") {
+                // 태그에 아이디로 찾기
+                // $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+                $('.nav').children("#nav-" + depId).children().eq(0).addClass('active'); // 사이드 메뉴
+            }else {
+                // nav 자식 순번으로 찾기
+                // $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+                $('.nav').children().eq(dep).children().eq(0).addClass('active'); // 사이드 메뉴
+            }
+
+            $('.tab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function MenuTabSelect_sub(tab) {
+            $('.tab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 230622 : report tab 추가 -->
+    <script type="text/javascript">
+        function reportMenuTabSelect(dep, tab, depId = "") {
+            if (depId != ""){
+                // 태그에 아이디로 찾기}
+                // $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+                $('.nav').children("#nav-" + depId).children().eq(0).addClass('active'); // 사이드 메뉴
+            }else {
+                // nav 자식 순번으로 찾기
+                // $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+                $('.nav').children().eq(dep).children().eq(0).addClass('active'); // 사이드 메뉴
+            }
+
+            $('.reporttab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function reportTabSelect_sub(tab) {
+            $('.reporttab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function burdenTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.burdentab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function burdenTabSelect_sub(tab) {
+            $('.burdentab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function reportDangerTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.reportDangerTab_sty').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function safetyTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.safetyTab_sty').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.07.21 : 기술지도 결과보고서 tab 추가 -->
+    <script type="text/javascript">
+        function reportResultTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.reportResultTab_sty').children().eq(tab).addClass('on');
+        }
+
+        function reportResultTabSelect_sub(tab) {
+            $('.reportResulttab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    
+        
+    
+<script>
+$(document).ready(function () {
+    $('#calendarModalView').draggable({ // 모달 data-target 설정
+        handle: ".modal-header" // 모달 헤더를 드래그 핸들로 지정
+    });
+    });
+</script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.7/index.min.js" integrity="sha512-xCMh+IX6X2jqIgak2DBvsP6DNPne/t52lMbAUJSjr3+trFn14zlaryZlBcXbHKw8SbrpS0n3zlqSVmZPITRDSQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.7/index.global.js" integrity="sha512-NCXXKviWmLA+7YnXVUsJd+ljf/VBfU+Yyglkd0UtEcUW0gpGhih8zK7gRQYULMQL4aiBIlVBy7akD/9nEQ+z/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.7/index.global.min.js" integrity="sha512-ImaVFNPyY+SQqhqxDOvh1woqWerGOjHQwCbbMa/U06wxb2Yq+nCpxJraA1Iv9MQiqBzN+e3w8CwI/l71mjMIJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.7/index.js" integrity="sha512-bBl4oHIOeYj6jgOLtaYQO99mCTSIb1HD0ImeXHZKqxDNC7UPWTywN2OQRp+uGi0kLurzgaA3fm4PX6e2Lnz9jQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+
+    <script>
+        $(document).ready(function() {
+            MenuTabSelect(0, 0, 'support1')
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                // initialDate: '2023-08-01', // 여기서 defaultDate를 설정합니다.
+                // event : "",
+                events: function(info, successCallback, failureCallback) {
+                    // console.log("불러 오는 중 : " + new Date());
+                    //the parameters order is important
+                    $.ajax({
+                        type: "GET",
+                        url: 'http://console.insafed.com/insef/public/support/calendarData',
+                        contentType: "application/json; charset=utf-8",
+                        dataType: "json",
+                        data: {
+                            start: info.startStr,
+                            end: info.endStr,
+                            company_id: "208",
+                            su_us_id: "",
+                        },
+                        success: function(data) {
+                            // console.log(data);
+                            successCallback(data);
+                            // console.log("불러오기 완료 : " + new Date());
+                        }
+                    });
+                },
+                locale: "ko", // 언어 : 한국어
+                height: 1000, // 달력 높이
+                dayMaxEventRows: true, // 보여지는 일정 제한
+                moreLinkClick: 'popover',
+                moreLinkContent: function(args) {
+                    return '+' + args.num + ' 더보기'; // 보여지는 일정 제한 시 더보기 기능
+                },
+                eventOrder: function(preEvent, nextEvent) {
+                    var roleId = "2";
+
+                    if (roleId == 2) {
+                        // us_name 오름차순 정렬
+                        var pre = preEvent.extendedProps?.description?.us_name ?? 'z';
+                        var next = nextEvent.extendedProps?.description?.us_name ?? 'z';
+
+                        return pre.localeCompare(next); // 오름차순
+                    } else {
+                        // su_updated_at 순서대로 정렬
+                        var pre = new Date(preEvent.extendedProps.su_updated_at);
+                        var next = new Date(nextEvent.extendedProps.su_updated_at);
+
+                        return pre - next; // 오름차순
+                    }
+                },
+                eventClick: function(info) {
+                    var data = info.event.extendedProps.description;
+
+                    if (2 != 3) {
+                        var modal = document.getElementById('calendarModalView');
+                        modal.querySelector('#modalTitle').innerText = data.su_round + "차 기술 지도 " + data
+                            .su_status;
+                        modal.querySelector('#su_supported_at').innerText = data.su_supported_at;
+                        modal.querySelector('#agent').innerText = data.us_name;
+                        modal.querySelector('#su_cs_id').innerText = data.cc_name + " - " + data
+                            .cs_name;
+                        modal.querySelector('#cs_price').innerText = new Intl.NumberFormat('en-US')
+                            .format(data.cs_price) + "원";
+                        modal.querySelector('#su_manager_id').innerText = data.su_manager_name + " (" +
+                            data.su_manager_hp + ")";
+
+                            
+
+                        var start = new Date(data.cs_started_at);
+                        var end = new Date(data.cs_ended_at);
+                        modal.querySelector('#cs_at').innerText = start.getFullYear() + "-" + ("0" +
+                                (start.getMonth() + 1)).slice(-2) + "-" + ("0" + start.getDate()).slice(-2) +
+                            " ~ " +
+                            end.getFullYear() + "-" + ("0" + (end.getMonth() + 1)).slice(-2) + "-" + ("0" +
+                                end.getDate()).slice(-2);
+
+                        modal.querySelector('#showUrl').onclick = "";
+                        if (data.su_status == "예약") {
+                            modal.querySelector('#showUrl').onclick = function() {
+                                return confirm('기술지도를 시작하시겠습니까?');
+                            }
+                        }
+
+                        modal.querySelector('#showUrl').href = info.event.extendedProps.showUrl;
+                        modal.querySelector('#showConsUrl').href = info.event.extendedProps.showConsUrl;
+
+                        modal.querySelector('#showReportUrl').onclick = function() {
+                            window.open('report/popup/' + data.su_id, '_blank',
+                                'width=1010, height=880, scrollbars=yes');
+                        }
+
+                        $('#calendarModalView').modal();
+                        // window.open(info.event.extendedProps.showUrl, "Thanks for Visiting!");
+                    } else {
+                        var modal = document.getElementById('calendarModal');
+                        modal.querySelector('#su_supported_at').value = data.su_supported_at;
+                        modal.querySelector('#su_id').value = data.id;
+                        modal.querySelector('#su_cs_id').value = data.su_cs_id;
+                        modal.querySelector('#su_cs_name').value = data.cc_name + " - " + data.cs_name;                        
+                        modal.querySelector('#su_manager_id').value = data.su_manager_name;
+                        modal.querySelector('#su_manager_name').value = data.su_manager_name;                        
+                        modal.querySelector('#txtPhone_su_manager_hp').value = data.su_manager_hp;
+                        modal.querySelector('#su_manager_email').value = data.su_manager_email;
+                        modal.querySelector('#manager_name').value = data.su_manager_name;
+
+                        getMangerList();
+
+                        modal.querySelector('#showUrl').onclick = "";
+                        if (data.su_status == "예약") {
+                            modal.querySelector('#showUrl').onclick = function() {
+                                return confirm('기술지도를 시작하시겠습니까?');
+                            }
+                        }
+
+                        modal.querySelector('#showUrl').href = info.event.extendedProps.showUrl;
+                        // modal.querySelector('#editUrl').action = info.event.extendedProps.editUrl;
+                        modal.querySelector('#showConsUrl').href = info.event.extendedProps.showConsUrl;
+                        modal.querySelector('#deleteUrl').action = info.event.extendedProps.deleteUrl;
+
+                        modal.querySelector('#showReportUrl').onclick = function() {
+                            window.open('report/popup/' + data.su_id, '_blank',
+                                'width=1010, height=880, scrollbars=yes');
+                        }
+
+                        $('.update_form').show();
+                        $('.create_form').hide();
+
+                        $('#calendarModal').modal();
+                    }
+                },
+                dateClick: function(info) {
+                    if (2 == 3) {
+                        if (window.confirm('[' + info.dateStr + ']에 일정을 등록하시겠습니까?')) {
+                            modalInit(info.dateStr);
+
+                            $('.update_form').hide();
+                            $('.create_form').show();
+                            $('#calendarModal').modal();
+                        }
+                    }
+                },
+                buttonText: {
+                    today: '오늘'
+                },
+                customButtons: {
+                    addButton: {
+                        text: '일정 추가',
+                        click: function() {
+                            modalInit('2026-04-28');
+
+                            $('.update_form').hide();
+                            $('.create_form').show();
+                            $('#calendarModal').modal();
+                        }
+                    }
+                },
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: (2 == 3) ? 'addButton' : '',
+                },                
+                eventDidMount: function(info) {
+                    // 이벤트 데이터 변환 후 호출되는 함수
+                    if (info.event.extendedProps.isHoliday) {
+                        var eventEl = info.el;
+                        var dayFrameEl = eventEl.closest('.fc-daygrid-day-frame'); // 휴일 이벤트가 있는 날짜의 부모 요소를 찾습니다.
+                        dayFrameEl.classList.add('holiday'); // 해당 부모 요소에 holiday-event 클래스를 추가합니다.
+                    }
+
+                    const dayCell = info.el.closest('.fc-daygrid-day');
+                    if (!dayCell) return;
+
+                    const dateStr = dayCell.getAttribute('data-date');
+                    if (!dateStr) return;
+
+                    // 날짜별 1회만 처리
+                    if (dayCell.dataset.customMoreChecked === '1') return;
+                    dayCell.dataset.customMoreChecked = '1';
+
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            const refreshedDayCell = calendarEl.querySelector('.fc-daygrid-day[data-date="' + dateStr + '"]');
+                            if (!refreshedDayCell) return;
+
+                            const hasRealMore = !!refreshedDayCell.querySelector('.fc-daygrid-more-link:not(.custom-more-link)');
+                            const visibleEvents = refreshedDayCell.querySelectorAll('.fc-daygrid-event-harness:not(.fc-daygrid-event-harness-abs)');
+                            const hasCustomMore = !!refreshedDayCell.querySelector('.custom-more-link');
+
+                            // 일정 많은 날은 기본 more 사용
+                            if (hasRealMore) return;
+
+                            // 일정이 없으면 안 만듦
+                            if (!visibleEvents.length) return;
+
+                            // 이미 있으면 안 만듦
+                            if (hasCustomMore) return;
+
+                            let bottom = refreshedDayCell.querySelector('.fc-daygrid-day-bottom');
+                            if (!bottom) {
+                                const eventsWrap = refreshedDayCell.querySelector('.fc-daygrid-day-events');
+                                if (!eventsWrap) return;
+
+                                bottom = document.createElement('div');
+                                bottom.className = 'fc-daygrid-day-bottom';
+                                bottom.style.marginTop = '0px';
+                                eventsWrap.appendChild(bottom);
+                            }
+
+                            const link = document.createElement('a');
+                            link.className = 'fc-daygrid-more-link fc-more-link custom-more-link';
+                            link.tabIndex = 0;
+                            link.title = 'Show events';
+                            link.textContent = '자세히보기';
+
+                            link.addEventListener('click', function(e) {
+                                e.preventDefault();
+
+                                const api = info.view.calendar;
+                                const clickedDayCell = this.closest('.fc-daygrid-day');
+                                if (!clickedDayCell) return;
+
+                                const clickedDateStr = clickedDayCell.getAttribute('data-date');
+                                if (!clickedDateStr) return;
+
+                                // 이전 dummy 제거
+                                if (api.customMoreEventIds && api.customMoreEventIds.length) {
+                                    api.customMoreEventIds.forEach(id => {
+                                        const ev = api.getEventById(id);
+                                        if (ev) ev.remove();
+                                    });
+                                    api.customMoreEventIds = [];
+                                }
+
+                                const realEvents = api.getEvents().filter(ev => {
+                                    if (!ev.startStr) return false;
+                                    if (ev.extendedProps && ev.extendedProps.__customMoreDummy) return false;
+                                    return ev.startStr.slice(0, 10) === clickedDateStr;
+                                });
+
+                                if (!realEvents.length) return;
+
+                                // enough dummy events to force real more link creation
+                                const dummyIds = [];
+                                for (let i = 0; i < 5; i++) {
+                                    const dummyId = '__custom_more_dummy__' + clickedDateStr + '__' + i + '__' + Date.now();
+                                    dummyIds.push(dummyId);
+
+                                    api.addEvent({
+                                        id: dummyId,
+                                        title: '　', // 공백 문자
+                                        start: clickedDateStr,
+                                        allDay: true,
+                                        display: 'block',
+                                        backgroundColor: '#ffffff',
+                                        borderColor: '#ffffff',
+                                        textColor: '#ffffff',
+                                        classNames: ['custom-more-dummy-event'],
+                                        extendedProps: {
+                                            __customMoreDummy: true
+                                        }
+                                    });
+                                }
+
+                                api.customMoreEventIds = dummyIds;
+
+                                requestAnimationFrame(() => {
+                                    requestAnimationFrame(() => {
+                                        requestAnimationFrame(() => {
+                                            const targetDayCell = calendarEl.querySelector(
+                                                '.fc-daygrid-day[data-date="' + clickedDateStr + '"]'
+                                            );
+                                            if (!targetDayCell) return;
+
+                                            const realMoreLink = targetDayCell.querySelector(
+                                                '.fc-daygrid-more-link:not(.custom-more-link)'
+                                            );
+
+                                            if (!realMoreLink) {
+                                                // 실패 시 dummy 정리
+                                                api.customMoreEventIds.forEach(id => {
+                                                    const ev = api.getEventById(id);
+                                                    if (ev) ev.remove();
+                                                });
+                                                api.customMoreEventIds = [];
+                                                return;
+                                            }
+
+                                            realMoreLink.dispatchEvent(new MouseEvent('click', {
+                                                bubbles: true,
+                                                cancelable: true,
+                                                view: window
+                                            }));
+
+                                            // popover가 열린 뒤 dummy 제거
+                                            setTimeout(() => {
+                                                if (api.customMoreEventIds && api.customMoreEventIds.length) {
+                                                    api.customMoreEventIds.forEach(id => {
+                                                        const ev = api.getEventById(id);
+                                                        if (ev) ev.remove();
+                                                    });
+                                                    api.customMoreEventIds = [];
+                                                }
+                                            }, 300);
+                                        });
+                                    });
+                                });
+                            });
+
+                            bottom.prepend(link);
+                        });
+                    });
+                }
+            });
+
+            calendar.customMoreEventIds = [];
+            calendar.render();
+
+            $('.fc-prev-button,.fc-next-button, .fc-today-button').click(function() {
+                getTotalCount();
+            });
+
+            getTotalCount();
+
+            // 통계 정보 표시
+            function getTotalCount() {
+                var cdate = calendar.getDate();
+                $('#cal_month').attr('value', cdate.getMonth() + 1);
+                $('#cal_year').attr('value', cdate.getFullYear());
+
+                $.ajax({
+                    type: "get",
+                    url: "http://console.insafed.com/insef/public/support/total",
+                    data: {
+                        "month": $("#cal_month").val(),
+                        "year": $("#cal_year").val(),
+                        "ag_id": $("#company_id option:selected").text(),
+                        "us_id": $("#su_us_id option:selected").text(),
+                        "ag_id": "208",
+                        "us_id": "",
+                        "_token": $('#token').val(),
+                    },
+                    success: function(result) {
+                        // console.log(result);
+                        if (2 != 3)
+                            document.getElementById('support-total-agent').innerHTML = result['result'][
+                                'agent'
+                            ];
+
+                        document.getElementById('support-total-status1').innerHTML = result['result'][
+                            'count1'
+                        ];
+                        document.getElementById('support-total-status2').innerHTML = result['result'][
+                            'count2'
+                        ];
+                        document.getElementById('support-total-status3').innerHTML = result['result'][
+                            'count3'
+                        ];
+                        document.getElementById('support-total-status4').innerHTML = result['result'][
+                            'count4'
+                        ];
+                    }
+                });
+            }
+        });
+    </script>
+    
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+<script> 
+    $(document).ready(function() {
+        let popupId = 0;
+            });
+
+    function openPopup(url, title, id) {
+        const popupWidth = 600;
+        const popupHeight = 400;
+        let popupWindow = window.open(url, title, `width=${popupWidth},height=${popupHeight}`);
+
+        popupWindow.onload = function() {
+            const contentWidth = popupWindow.document.body.scrollWidth;
+            const contentHeight = popupWindow.document.body.scrollHeight + 150;
+
+            popupWindow.resizeTo(contentWidth, contentHeight);
+
+            $(popupWindow.document).find('#dontShowToday').on('click', function() {
+                $.cookie('popup-' + id, 'true', {
+                    expires: 1,
+                    path: '/'
+                });
+                popupWindow.close();
+            });
+        };
+    }    
+</script>
+
+    <script>
+        $(document).ready(function() {
+            jQuery.datetimepicker.setLocale('kr');
+            $('.datepicker').datetimepicker({
+                autoclose: true,
+                todayHighlight: true,
+                sideBySide: true,
+                format: 'Y-m-d',
+                timepicker: false,
+            });
+        });
+
+        function dateButton() {
+            $('.datepicker').datetimepicker('show');
+        }
+    </script>
+<script>
+$(document).ready(function() {
+
+    // 서버에서 show_login_modal 세션 값을 가져오기
+    let showLoginModal = true; // 기본값 true
+    //console.log("서버에서 가져온 show_login_modal:", showLoginModal);
+
+    // ✅ sessionStorage 또는 서버 세션 값이 false면 모달 숨기기
+    if (!showLoginModal || sessionStorage.getItem('show_login_modal') === 'false') {
+        $('#loginAfterModal').modal('hide');
+    } else {
+        console.log("모달을 표시합니다.");
+        $('#loginAfterModal').modal('show');
+    }
+    function updateSessionAndHideModal() {
+    $.ajax({
+        url: "http://console.insafed.com/insef/public/auth/hideLoginModal",
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": "R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK"
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                sessionStorage.setItem('show_login_modal', 'false'); // 브라우저 저장소 값 변경
+                $('#loginAfterModal').modal('hide');
+                console.log("모달 숨김 처리 완료");
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("세션 변경 실패:", xhr.responseText);
+        }
+    });
+}
+
+    // 동의 버튼 클릭 시 호출
+    $('#agreeButton').click(updateSessionAndHideModal);
+
+    // 모달이 닫힐 때 호출 (예: ESC 키, 모달 외부 클릭 등)
+    $('#loginAfterModal').on('hidden.bs.modal', updateSessionAndHideModal);
+
+    // 2초 후 자동 실행
+    setTimeout(updateSessionAndHideModal, 2000);
+    
+    $(".animated-row").each(function(index) {
+        $(this).delay(300 * (index + 1)).queue(function(next) {
+            $(this).addClass("play");
+            next();
+        });
+    });
+});
+</script>
+</body>
+</html>

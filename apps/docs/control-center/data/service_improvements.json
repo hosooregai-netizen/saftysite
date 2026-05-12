@@ -1,0 +1,121 @@
+[
+  {
+    "step": "01",
+    "title": "Source Recovery / Clean Build",
+    "description": "누락 source file 복구, clean build 준비",
+    "overlay": "service_improvement_01_source_recovery_clean_build_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "02",
+    "title": "Mailbox State Consistency",
+    "description": "메일 연결 성공과 계정 없음 동시 표시 방지",
+    "overlay": "service_improvement_02_mailbox_state_consistency_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "03",
+    "title": "Mailbox 3-Pane & Compose",
+    "description": "수신자 입력, 작성창, 첨부, 발송 validation 안정화",
+    "overlay": "service_improvement_03_mailbox_threepane_compose_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "04",
+    "title": "Gmail Send & Sync Backend",
+    "description": "Gmail API messages.send backend 연결",
+    "overlay": "service_improvement_04_gmail_send_sync_overlay.zip",
+    "status": "build-pass"
+  },
+  {
+    "step": "05",
+    "title": "Mailbox Sync / Reconnect UX",
+    "description": "동기화/백필/재연결 상태 표시",
+    "overlay": "service_improvement_05_mailbox_sync_reconnect_overlay.zip",
+    "status": "build-pass"
+  },
+  {
+    "step": "06",
+    "title": "Webhard Permission / Public Share Security",
+    "description": "공개 공유 root boundary, 민감정보 노출 방지",
+    "overlay": "service_improvement_06_webhard_permission_public_share_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "07",
+    "title": "Webhard Share Dialog / Badges UX",
+    "description": "공유 dialog와 badge 한국어 업무 UI 개선",
+    "overlay": "service_improvement_07_webhard_share_dialog_badges_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "08",
+    "title": "Report / Billing / Auth Gate",
+    "description": "검토/export/credit/idempotency gate",
+    "overlay": "service_improvement_08_report_billing_auth_gate_overlay.zip",
+    "status": "failed"
+  },
+  {
+    "step": "09",
+    "title": "Photo Album Grid / Filters",
+    "description": "사진첩 grid/list/filter/detail drawer",
+    "overlay": "service_improvement_09_photo_album_grid_filters_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "10",
+    "title": "Headquarters/Sites Directory UI",
+    "description": "사업장/현장 CRUD modal, quick action",
+    "overlay": "service_improvement_10_headquarters_sites_directory_ui_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "11",
+    "title": "Report Guided Upload / Review",
+    "description": "AI 초안 생성 전 checklist, 필수 사진 guard",
+    "overlay": "service_improvement_11_report_guided_upload_review_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "12",
+    "title": "Report Review / Export UX",
+    "description": "검토 queue, 책임 확인, export CTA gate",
+    "overlay": "service_improvement_12_report_review_export_ux_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "13",
+    "title": "Report List Status / Filters",
+    "description": "보고서 상태/출력 상태 필터, export history",
+    "overlay": "service_improvement_13_report_list_status_filters_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "14",
+    "title": "Account Settings / Guest Import / Billing Entry UX",
+    "description": "Workspace login/Gmail connect 분리, guest import",
+    "overlay": "service_improvement_14_account_settings_guest_billing_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "15",
+    "title": "Final Clean Build / Route Smoke QA",
+    "description": "build/compile/route smoke QA 스크립트",
+    "overlay": "service_improvement_15_final_build_route_smoke_qa_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "16",
+    "title": "RC Manual QA / Blocker Tracking",
+    "description": "수동 route smoke, blocker, release decision",
+    "overlay": "service_improvement_16_rc_manual_qa_blocker_tracking_overlay.zip",
+    "status": "done"
+  },
+  {
+    "step": "18",
+    "title": "Report AI Update / AI Standardization",
+    "description": "Vision extraction, PhotoObservationCard, risk library match, section 4/5/6 composer, AI fill status UI",
+    "overlay": "docs/service-improvements/18-report-ai-update",
+    "status": "build-pass"
+  }
+]

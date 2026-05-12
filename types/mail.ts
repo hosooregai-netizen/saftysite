@@ -3,6 +3,7 @@ export type MailScope = 'shared' | 'personal';
 export type MailConnectionStatus = 'connected' | 'pending' | 'error';
 export type MailDirection = 'incoming' | 'outgoing';
 export type MailThreadStatus = 'draft' | 'sent' | 'delivered' | 'read' | 'replied';
+export type MailboxBox = 'all' | 'drafts' | 'inbox' | 'sent' | 'starred' | 'trash';
 
 export interface MailRecipient {
   email: string;
@@ -15,6 +16,17 @@ export interface MailRecipientSuggestion extends MailRecipient {
 }
 
 export interface MailAttachmentPayload {
+  filename: string;
+  contentType: string;
+  dataBase64?: string;
+  downloadHeaders?: Record<string, string>;
+  downloadUrl?: string;
+  reportKey?: string | null;
+  sizeBytes?: number;
+  source?: string | null;
+}
+
+export interface MailAttachmentRecord {
   filename: string;
   contentType: string;
   dataBase64?: string;
@@ -58,6 +70,7 @@ export interface MailThread {
   accountId: string;
   accountEmail: string;
   accountDisplayName: string;
+  accountLabel?: string | null;
   provider: MailProvider;
   scope: MailScope;
   subject: string;
@@ -71,6 +84,14 @@ export interface MailThread {
   messageCount: number;
   status: MailThreadStatus;
   lastDirection: MailDirection | null;
+  box?: MailboxBox;
+  isStarred?: boolean;
+  archivedAt?: string | null;
+  trashedAt?: string | null;
+  lastOpenedAt?: string | null;
+  hasAttachments?: boolean;
+  isUnread?: boolean;
+  participantsSummary?: string;
 }
 
 export interface MailMessage {
@@ -84,6 +105,7 @@ export interface MailMessage {
   fromEmail: string;
   fromName: string | null;
   to: MailRecipient[];
+  cc?: MailRecipient[];
   sentAt: string | null;
   deliveredAt: string | null;
   readAt: string | null;
@@ -92,6 +114,7 @@ export interface MailMessage {
   siteId: string | null;
   headquarterId: string | null;
   metadata: Record<string, unknown>;
+  attachments?: MailAttachmentRecord[];
   createdAt: string;
   updatedAt: string;
 }
@@ -131,4 +154,19 @@ export interface MailSyncSummary {
   incrementalAccountCount: number;
   queuedMessageCount: number;
   syncErrors: string[];
+}
+
+export interface MailboxDraft {
+  id: string;
+  accountId: string;
+  subject: string;
+  body: string;
+  recipients: string[];
+  ccRecipients: string[];
+  attachments: MailAttachmentRecord[];
+  headquarterId: string;
+  siteId: string;
+  reportKeys: string[];
+  createdAt: string;
+  updatedAt: string;
 }

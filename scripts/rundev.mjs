@@ -243,13 +243,13 @@ function parseRequestedPort() {
 
 function resolvePort() {
   const requestedPort = parseRequestedPort();
-  const owner3000 = getPortOwner(3000);
+  const requestedPortOwner = getPortOwner(requestedPort);
 
-  if (owner3000 && !isSameProjectOwner(owner3000)) {
+  if (requestedPortOwner && !isSameProjectOwner(requestedPortOwner)) {
     console.log(
-      `[dev] Port 3000 is already used by another project: ${describeOwner(owner3000)} (pid ${owner3000.pid}).`,
+      `[dev] Port ${requestedPort} is already used by another project: ${describeOwner(requestedPortOwner)} (pid ${requestedPortOwner.pid}).`,
     );
-    console.log('[dev] safetysite will run on port 3100 or the next available port.');
+    console.log(`[dev] safetysite will use the next available port after ${requestedPort}.`);
   }
 
   for (let index = 0; index <= MAX_PORT_SCAN; index += 1) {

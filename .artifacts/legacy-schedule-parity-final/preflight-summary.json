@@ -1,0 +1,11 @@
+{
+  "mode": "preflight",
+  "missing_site_count": 15,
+  "schedule_diff_before": {
+    "status_mismatch": 52,
+    "date_mismatch": 26,
+    "extra_legacy_selected_row": 28,
+    "missing_round": 7059,
+    "missing_site": 15
+  }
+}

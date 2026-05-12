@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { GuidedPhotoStepUploadInput } from '@saftysite/contracts';
 import {
   GuidedImageDropzone,
@@ -281,7 +281,7 @@ async function loadGuestDirectory() {
   return buildLocalDirectory();
 }
 
-export default function NewReportPage() {
+function NewReportPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [session, setSession] = useState<DemoSession | null>(null);
@@ -500,8 +500,14 @@ export default function NewReportPage() {
       metaFields.visitDate.trim() &&
       metaFields.drafterName.trim(),
   );
-  const canAttemptGenerate = sessionChecked && Boolean(session) && generationPhase !== 'generating';
-  const generationHelpText = !sessionChecked ? '보고서 작성 환경을 준비하고 있습니다.' : '';
+  const hasRequiredGuidedPhotos = step2Files.length > 0 && step3Files.length > 0;
+  const canAttemptGenerate =
+    sessionChecked && Boolean(session) && generationPhase !== 'generating' && hasRequiredGuidedPhotos;
+  const generationHelpText = !sessionChecked
+    ? '보고서 작성 환경을 준비하고 있습니다.'
+    : hasRequiredGuidedPhotos
+      ? ''
+      : '보고서 생성에는 현재 공정 또는 현장 전경 사진 1장과 현재 위험요인 사진 1장이 모두 필요합니다.';
 
   useEffect(() => {
     if (!stepValidationError) {
@@ -825,6 +831,12 @@ export default function NewReportPage() {
       setCurrentStep('meta');
       setStepValidationError('현장을 먼저 선택해 주세요.');
       siteFieldRef.current?.focus();
+      return;
+    }
+
+    if (!hasRequiredGuidedPhotos) {
+      setCurrentStep(step2Files.length === 0 ? 'overview' : 'hazard');
+      setStepValidationError('현재 공정 또는 현장 전경 사진 1장과 현재 위험요인 사진 1장을 모두 올려 주세요.');
       return;
     }
 
@@ -1405,5 +1417,13 @@ export default function NewReportPage() {
         setForm={setSiteForm}
       />
     </div>
+  );
+}
+
+export default function NewReportPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewReportPageContent />
+    </Suspense>
   );
 }

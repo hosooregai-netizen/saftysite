@@ -139,6 +139,60 @@ def _compose_risk_library_draft(
     return composed
 
 
+def build_photo_observations_response(
+    report_id: str,
+    photos: list[dict[str, Any]],
+    *,
+    report_meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    overview_photos = [
+        photo for photo in photos if str(photo.get("category") or "") != "hazard"
+    ]
+    hazard_photos = [
+        photo for photo in photos if str(photo.get("category") or "") == "hazard"
+    ]
+    observations = build_photo_observation_cards(
+        report_id,
+        overview_photos,
+        hazard_photos,
+        report_meta=report_meta or {},
+    )
+    return {
+        "photoObservations": observations,
+        "fieldProvenance": _build_observation_provenance(
+            report_id,
+            photo_observations=observations,
+        ),
+        "reviewQueue": [
+            {
+                "fieldPath": f"photoObservations[{index}].observedRiskStructured.hazardSummary",
+                "source": "AI_PHOTO",
+                "confidence": float(observation.get("confidence") or 0),
+                "needsReview": bool(observation.get("needsHumanReview", True)),
+                "reviewReasons": list(observation.get("reviewReasons") or []),
+                "evidencePhotoIds": [observation.get("photoAssetId")],
+            }
+            for index, observation in enumerate(observations)
+            if bool(observation.get("needsHumanReview", True))
+        ],
+    }
+
+
+def compose_standard_draft_from_observations(
+    report_id: str,
+    *,
+    report_meta: dict[str, Any] | None = None,
+    photo_observations: list[dict[str, Any]],
+    photo_evidence: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return _compose_risk_library_draft(
+        report_id,
+        report_meta=report_meta,
+        photo_observations=photo_observations,
+        photo_evidence=photo_evidence or [],
+    )
+
+
 def build_draft_from_photos(
     report_id: str,
     photos: list[dict[str, Any]],
@@ -180,7 +234,12 @@ def build_draft_from_guided_photos(
     *,
     report_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    photo_observations = build_photo_observation_cards(report_id, overview_photos, hazard_photos)
+    photo_observations = build_photo_observation_cards(
+        report_id,
+        overview_photos,
+        hazard_photos,
+        report_meta=report_meta or {},
+    )
     overview_observations = [item for item in photo_observations if item.get("photoRole") == "step1_overview"]
     hazard_observations = [item for item in photo_observations if item.get("photoRole") == "step2_hazard"]
     photo_evidence: list[dict[str, Any]] = []

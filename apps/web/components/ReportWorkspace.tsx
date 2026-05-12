@@ -37,6 +37,8 @@ type WorkspaceDraft = {
   photoEvidence: ReportPayload['photoEvidence'];
 };
 type ReviewQueueItem = ReportPayload['reviewMeta']['reviewQueue'][number];
+type PhotoObservationCard = ReportPayload['photoObservations'][number];
+type FieldProvenance = ReportPayload['fieldProvenance'][number];
 
 type FollowUpRow = {
   id: string;
@@ -119,6 +121,28 @@ const EMPTY_SUPPORT: ReportPayload['sectionDrafts']['doc12'][number] = {
 
 function safeText(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function formatConfidence(value: unknown): string {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? `${Math.round(value * 100)}%`
+    : '확인 필요';
+}
+
+function provenanceStatusLabel(provenance: FieldProvenance | undefined): string {
+  if (!provenance) {
+    return '수동 수정';
+  }
+  if (provenance.needsReview) {
+    return '확인 필요';
+  }
+  if (provenance.source === 'RISK_LIBRARY' || provenance.source === 'RULE_TEMPLATE') {
+    return '표준 매칭';
+  }
+  if (provenance.source === 'AI_PHOTO') {
+    return 'AI 채움';
+  }
+  return '수동 수정';
 }
 
 function buildReviewItemId(fieldPath: string): string {
@@ -824,6 +848,7 @@ export default function ReportWorkspace({
   const [authBusy, setAuthBusy] = useState(false);
   const [anonymousTokenForClaim, setAnonymousTokenForClaim] = useState<string | null>(null);
   const [reviewQueueOpen, setReviewQueueOpen] = useState(false);
+  const [observationDrawerIndex, setObservationDrawerIndex] = useState<number | null>(null);
 
   const baseReportRef = useRef(baseReport);
   const workspaceRef = useRef(workspace);
@@ -931,6 +956,17 @@ export default function ReportWorkspace({
     followUpRows,
     activeSectionId,
   );
+  const photoObservations = previewPayload.photoObservations;
+  const fieldProvenance = previewPayload.fieldProvenance;
+  const selectedObservation =
+    observationDrawerIndex === null ? null : photoObservations[observationDrawerIndex] ?? null;
+  const aiFilledCount = fieldProvenance.filter((item) => item.source === 'AI_PHOTO').length;
+  const standardMatchedCount = fieldProvenance.filter(
+    (item) => item.source === 'RISK_LIBRARY' || item.source === 'RULE_TEMPLATE',
+  ).length;
+  const aiReviewCount = photoObservations.filter(
+    (item) => item.needsHumanReview || item.reviewReasons.length > 0,
+  ).length;
   const reviewQueue = previewPayload.reviewMeta.reviewQueue;
   const unresolvedReviewQueue = reviewQueue.filter((item) => !item.resolved);
   const unresolvedRequiredReviewQueue = unresolvedReviewQueue.filter(
@@ -955,14 +991,50 @@ export default function ReportWorkspace({
         ? styles.reviewSummaryAccentAdvisory
         : styles.reviewSummaryAccentClear;
 
+  function getFieldProvenance(fieldPath: string): FieldProvenance | undefined {
+    return fieldProvenance.find((item) => item.fieldPath === fieldPath);
+  }
+
+  function renderConfidenceBadge(fieldPath: string) {
+    const provenance = getFieldProvenance(fieldPath);
+    if (!provenance) {
+      return null;
+    }
+    const label = provenanceStatusLabel(provenance);
+    return (
+      <span
+        className={`${styles.aiBadge} ${
+          provenance.needsReview
+            ? styles.aiBadgeReview
+            : provenance.source === 'RISK_LIBRARY' || provenance.source === 'RULE_TEMPLATE'
+              ? styles.aiBadgeStandard
+              : styles.aiBadgeFilled
+        }`}
+        title={safeText(provenance.note) || label}
+      >
+        {label} · {formatConfidence(provenance.confidence)}
+      </span>
+    );
+  }
+
+  function observationDisplayTitle(observation: PhotoObservationCard): string {
+    return (
+      safeText(observation.riskContext?.hazardSummary) ||
+      safeText(observation.observedRiskStructured?.hazardSummary) ||
+      safeText(observation.observedRisk) ||
+      '사진 관찰카드'
+    );
+  }
+
   useEffect(() => {
-    if (!reviewQueueOpen) {
+    if (!reviewQueueOpen && observationDrawerIndex === null) {
       return;
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setReviewQueueOpen(false);
+        setObservationDrawerIndex(null);
       }
     };
 
@@ -970,7 +1042,7 @@ export default function ReportWorkspace({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [reviewQueueOpen]);
+  }, [reviewQueueOpen, observationDrawerIndex]);
 
   const resolveReportSession = useCallback(async (): Promise<DemoSession> => {
     const preferredSession = preferredSessionRef.current;
@@ -1408,13 +1480,10 @@ export default function ReportWorkspace({
         ...unresolvedRequired.slice(0, 5).map((item) => `- ${item.label}`),
         ...blockingIssues.slice(0, 5).map((item) => `- ${item}`),
       ];
-      const proceed = window.confirm(
-        `${unresolvedRequired.length > 0 ? `필수 검토 항목 ${unresolvedRequired.length}개` : '출력 전 확인 항목'}가 남아 있습니다.\n\n${warningLines.join('\n')}\n\n그래도 다운로드를 진행할까요?`,
+      setActionError(
+        `${unresolvedRequired.length > 0 ? `필수 검토 항목 ${unresolvedRequired.length}개` : '출력 전 확인 항목'}가 남아 있습니다.\n\n${warningLines.join('\n')}\n\n필수 검토 항목을 확인한 뒤 다시 다운로드해 주세요.`,
       );
-      if (!proceed) {
-        setActionError('필수 검토 항목을 확인한 뒤 다시 다운로드해 주세요.');
-        return;
-      }
+      return;
     }
 
     const currentSession = await resolveReportSession();
@@ -1507,6 +1576,75 @@ export default function ReportWorkspace({
     } finally {
       setAuthBusy(false);
     }
+  }
+
+  function renderAiStatusPanel() {
+    return (
+      <section className={`erp-panel ${styles.aiStatusPanel}`}>
+        <div className={styles.aiStatusHeader}>
+          <div>
+            <span className={styles.editorEyebrow}>AI Fill Status</span>
+            <h2 className={styles.reviewPanelTitle}>사진 기반 AI 표준화 결과</h2>
+            <p className={styles.reviewPanelSummary}>
+              관찰카드, 표준 위험 매칭, 확인 필요 사유를 한 곳에서 점검합니다.
+            </p>
+          </div>
+          <div className={styles.aiMetricGrid}>
+            <div>
+              <span>관찰카드</span>
+              <strong>{photoObservations.length}</strong>
+            </div>
+            <div>
+              <span>AI 채움</span>
+              <strong>{aiFilledCount}</strong>
+            </div>
+            <div>
+              <span>표준 매칭</span>
+              <strong>{standardMatchedCount}</strong>
+            </div>
+            <div>
+              <span>확인 필요</span>
+              <strong>{aiReviewCount}</strong>
+            </div>
+          </div>
+        </div>
+
+        {photoObservations.length === 0 ? (
+          <div className={styles.aiEmptyState}>
+            아직 사진 관찰카드가 없습니다. `/reports/new`에서 필수 사진을 업로드한 뒤 AI 초안을 생성해 주세요.
+          </div>
+        ) : (
+          <div className={styles.aiObservationList}>
+            {photoObservations.slice(0, 4).map((observation, index) => (
+              <article key={observation.id || observation.photoAssetId} className={styles.aiObservationCard}>
+                <div>
+                  <span className={styles.aiObservationRole}>
+                    {observation.photoRole === 'step2_hazard' ? '위험요인 사진' : '전경/공정 사진'}
+                  </span>
+                  <strong>{observationDisplayTitle(observation)}</strong>
+                  <p>
+                    {safeText(observation.workContext?.summary) ||
+                      safeText(observation.observedProcess) ||
+                      '공정 맥락 확인 필요'}
+                  </p>
+                </div>
+                <div className={styles.aiObservationMeta}>
+                  <span>{formatConfidence(observation.confidence)}</span>
+                  <span>{observation.needsHumanReview ? '확인 필요' : '검토 완료 가능'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="erp-button erp-button-secondary"
+                  onClick={() => setObservationDrawerIndex(index)}
+                >
+                  근거 보기
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    );
   }
 
   function renderSection1() {
@@ -2048,7 +2186,10 @@ export default function ReportWorkspace({
                     />
                   </label>
                   <label className={`${styles.formStackRow} ${styles.fieldSpan}`}>
-                    <span className={styles.formLabel}>유해·위험요인</span>
+                    <span className={styles.formLabel}>
+                      유해·위험요인
+                      {renderConfidenceBadge(`findingCandidates[${index}].hazardDescription`)}
+                    </span>
                     <textarea
                       className={styles.textareaControl}
                       value={safeText(finding.hazardDescription)}
@@ -2056,7 +2197,10 @@ export default function ReportWorkspace({
                     />
                   </label>
                   <label className={`${styles.formStackRow} ${styles.fieldSpan}`}>
-                    <span className={styles.formLabel}>지적사항 / 개선요청</span>
+                    <span className={styles.formLabel}>
+                      지적사항 / 개선요청
+                      {renderConfidenceBadge(`findingCandidates[${index}].improvementPlan`)}
+                    </span>
                     <textarea
                       className={`${styles.textareaControl} ${styles.textareaTall}`}
                       value={safeText(finding.improvementPlan)}
@@ -2131,26 +2275,36 @@ export default function ReportWorkspace({
           </div>
           {workspace.sectionDrafts.doc8.map((plan, index) => (
             <div key={`plan-${index}`} className={styles.planRow}>
-              <input
-                className={styles.inputControl}
-                value={safeText(plan.processName)}
-                onChange={(event) => updatePlanField(index, 'processName', event.target.value)}
-              />
-              <textarea
-                className={`${styles.textareaControl} ${styles.textareaTall}`}
-                value={safeText(plan.hazard)}
-                onChange={(event) => updatePlanField(index, 'hazard', event.target.value)}
-              />
-              <textarea
-                className={`${styles.textareaControl} ${styles.textareaTall}`}
-                value={safeText(plan.countermeasure)}
-                onChange={(event) => updatePlanField(index, 'countermeasure', event.target.value)}
-              />
-              <textarea
-                className={`${styles.textareaControl} ${styles.textareaTall}`}
-                value={safeText(plan.note)}
-                onChange={(event) => updatePlanField(index, 'note', event.target.value)}
-              />
+              <div className={styles.planFieldStack}>
+                <input
+                  className={styles.inputControl}
+                  value={safeText(plan.processName)}
+                  onChange={(event) => updatePlanField(index, 'processName', event.target.value)}
+                />
+              </div>
+              <div className={styles.planFieldStack}>
+                {renderConfidenceBadge(`sectionDrafts.doc8[${index}].hazard`)}
+                <textarea
+                  className={`${styles.textareaControl} ${styles.textareaTall}`}
+                  value={safeText(plan.hazard)}
+                  onChange={(event) => updatePlanField(index, 'hazard', event.target.value)}
+                />
+              </div>
+              <div className={styles.planFieldStack}>
+                {renderConfidenceBadge(`sectionDrafts.doc8[${index}].countermeasure`)}
+                <textarea
+                  className={`${styles.textareaControl} ${styles.textareaTall}`}
+                  value={safeText(plan.countermeasure)}
+                  onChange={(event) => updatePlanField(index, 'countermeasure', event.target.value)}
+                />
+              </div>
+              <div className={styles.planFieldStack}>
+                <textarea
+                  className={`${styles.textareaControl} ${styles.textareaTall}`}
+                  value={safeText(plan.note)}
+                  onChange={(event) => updatePlanField(index, 'note', event.target.value)}
+                />
+              </div>
             </div>
           ))}
         </div>
@@ -2187,7 +2341,10 @@ export default function ReportWorkspace({
                 />
               </label>
               <label className={`${styles.formRow} ${styles.formRowTall}`}>
-                <span className={styles.formLabel}>교육내용</span>
+                <span className={styles.formLabel}>
+                  교육내용
+                  {renderConfidenceBadge('sectionDrafts.doc11[0].content')}
+                </span>
                 <textarea
                   className={styles.textareaControl}
                   value={safeText(education.content)}
@@ -2203,7 +2360,10 @@ export default function ReportWorkspace({
                 />
               </label>
               <label className={`${styles.formRow} ${styles.formRowTall}`}>
-                <span className={styles.formLabel}>지원사항</span>
+                <span className={styles.formLabel}>
+                  지원사항
+                  {renderConfidenceBadge('sectionDrafts.doc12[0].content')}
+                </span>
                 <textarea
                   className={styles.textareaControl}
                   value={safeText(support.content)}
@@ -2219,7 +2379,10 @@ export default function ReportWorkspace({
             </div>
             <div className={styles.formStack}>
               <label className={styles.formStackRow}>
-                <span className={styles.formLabel}>기타 사항</span>
+                <span className={styles.formLabel}>
+                  기타 사항
+                  {renderConfidenceBadge('sectionDrafts.doc14.body')}
+                </span>
                 <textarea
                   className={`${styles.textareaControl} ${styles.textareaTall}`}
                   value={safeText(workspace.sectionDrafts.doc14.body)}
@@ -2375,6 +2538,8 @@ export default function ReportWorkspace({
         </div>
       </section>
 
+      {renderAiStatusPanel()}
+
       <section className={`erp-panel ${styles.reviewPanel}`}>
         <div className={styles.reviewPanelHeader}>
           <div>
@@ -2512,6 +2677,106 @@ export default function ReportWorkspace({
                 ))}
               </div>
             )}
+          </section>
+        </div>
+      ) : null}
+
+      {selectedObservation ? (
+        <div
+          className={styles.disclaimerBackdrop}
+          role="presentation"
+          onClick={() => setObservationDrawerIndex(null)}
+        >
+          <section
+            className={`${styles.disclaimerDialog} ${styles.observationDrawer}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="observation-drawer-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.disclaimerHeader}>
+              <div>
+                <span className={styles.editorEyebrow}>Photo Observation</span>
+                <h2 id="observation-drawer-title" className={styles.reviewPanelTitle}>
+                  {observationDisplayTitle(selectedObservation)}
+                </h2>
+                <p className={styles.reviewPanelSummary}>
+                  {selectedObservation.photoRole === 'step2_hazard'
+                    ? '위험요인 사진 기반 관찰카드'
+                    : '전경/공정 사진 기반 관찰카드'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="erp-button erp-button-secondary"
+                onClick={() => setObservationDrawerIndex(null)}
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className={styles.observationDrawerGrid}>
+              <div>
+                <span>작업 맥락</span>
+                <strong>
+                  {safeText(selectedObservation.workContext?.summary) ||
+                    safeText(selectedObservation.observedProcess) ||
+                    '확인 필요'}
+                </strong>
+              </div>
+              <div>
+                <span>위험 맥락</span>
+                <strong>
+                  {safeText(selectedObservation.riskContext?.hazardSummary) ||
+                    safeText(selectedObservation.observedRiskStructured?.hazardSummary) ||
+                    '확인 필요'}
+                </strong>
+              </div>
+              <div>
+                <span>기인물 / 재해유형</span>
+                <strong>
+                  {safeText(selectedObservation.riskContext?.causativeAgent) ||
+                    safeText(selectedObservation.observedRiskStructured?.causativeAgent) ||
+                    '확인 필요'}{' '}
+                  ·{' '}
+                  {safeText(selectedObservation.riskContext?.accidentType) ||
+                    safeText(selectedObservation.observedRiskStructured?.accidentType) ||
+                    '확인 필요'}
+                </strong>
+              </div>
+              <div>
+                <span>표준 매칭</span>
+                <strong>{safeText(selectedObservation.standardMapping?.ruleKey) || '확인 필요'}</strong>
+              </div>
+            </div>
+
+            <div className={styles.observationDetailSection}>
+              <strong>시각 객체</strong>
+              <div className={styles.aiChipList}>
+                {selectedObservation.visualObjects.length > 0 ? (
+                  selectedObservation.visualObjects.map((item, index) => (
+                    <span key={`${item.label}-${index}`} className={styles.aiEvidenceChip}>
+                      {safeText(item.label) || 'object'} · {formatConfidence(item.confidence)}
+                    </span>
+                  ))
+                ) : (
+                  <span className={styles.aiEvidenceChip}>fallback keyword</span>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.observationDetailSection}>
+              <strong>검토 사유</strong>
+              {selectedObservation.reviewReasons.length > 0 ? (
+                <ul className={styles.observationReasonList}>
+                  {selectedObservation.reviewReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>추가 확인 사유가 없습니다.</p>
+              )}
+            </div>
           </section>
         </div>
       ) : null}

@@ -1,0 +1,320 @@
+[
+  {
+    "id": "mailbox",
+    "label": "메일함",
+    "description": "Gmail/Naver-like three-pane mailbox, OAuth, sync, compose, reconnect states.",
+    "routes": [
+      "/mailbox",
+      "/mail/connect/google?error=access_denied"
+    ],
+    "sourceFiles": [
+      "apps/web/features/mailbox/components/MailboxShellScreen.tsx",
+      "apps/web/features/mailbox/components/MailboxComposePanel.tsx",
+      "apps/web/lib/mail/apiClient.ts",
+      "apps/api/app/apps_stack.py",
+      "apps/api/app/mail_google_service.py"
+    ],
+    "specs": [
+      "docs/safety-features/mailbox/specs/README.md",
+      "docs/safety-features/mailbox/specs/design_implementation.md",
+      "docs/service-improvements/02-mailbox-state-consistency/README.md",
+      "docs/service-improvements/05-mailbox-sync-reconnect/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/mailbox/prompts/12_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/02-mailbox-state-consistency/SERVICE_IMPROVEMENT_02_PROMPT.md",
+      "docs/service-improvements/05-mailbox-sync-reconnect/SERVICE_IMPROVEMENT_05_PROMPT.md"
+    ],
+    "qaGates": [
+      "연결 성공 메시지와 계정 없음 메시지 동시 표시 금지",
+      "Workspace Google login과 Gmail connect CTA 분리",
+      "OAuth pending / no accounts / sync needed / reconnect required state 분리",
+      "수신자 없는 발송 disabled"
+    ],
+    "risk": "state-contradiction"
+  },
+  {
+    "id": "webhard",
+    "label": "웹하드",
+    "description": "Drive-like file manager, permissions, share dialog, public share boundary.",
+    "routes": [
+      "/webhard",
+      "/share/{validToken}",
+      "/share/{invalidToken}"
+    ],
+    "sourceFiles": [
+      "apps/web/features/drive/DriveScreen.tsx",
+      "apps/web/features/drive/DriveShareDialog.tsx",
+      "apps/web/features/drive/PublicDriveShareScreen.tsx",
+      "apps/api/app/drive_service.py",
+      "apps/api/app/main.py"
+    ],
+    "specs": [
+      "docs/safety-features/webhard/specs/README.md",
+      "docs/safety-features/webhard/specs/design_implementation.md",
+      "docs/safety-features/webhard/specs/drive_ui_regression_gate.md",
+      "docs/service-improvements/06-webhard-permission-public-share/README.md",
+      "docs/service-improvements/07-webhard-share-dialog-badges/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/webhard/prompts/12_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/06-webhard-permission-public-share/SERVICE_IMPROVEMENT_06_PROMPT.md",
+      "docs/service-improvements/07-webhard-share-dialog-badges/SERVICE_IMPROVEMENT_07_PROMPT.md"
+    ],
+    "qaGates": [
+      "Drive-like sidebar + main file canvas 유지",
+      "ERP card layout 회귀 금지",
+      "public share root 밖 접근 차단",
+      "expired/revoked share 데이터 반환 금지"
+    ],
+    "risk": "public-share-security"
+  },
+  {
+    "id": "report-workspace",
+    "label": "보고서 작성",
+    "description": "Guided upload, AI draft, review queue, export gate.",
+    "routes": [
+      "/reports/new",
+      "/reports/{knownReportId}"
+    ],
+    "sourceFiles": [
+      "apps/web/app/reports/new/page.tsx",
+      "apps/web/components/ReportWorkspace.tsx",
+      "apps/web/components/ReportExportGatePanel.tsx",
+      "apps/api/app/main.py"
+    ],
+    "specs": [
+      "docs/safety-features/report-workspace/specs/README.md",
+      "docs/safety-features/report-workspace/specs/design_implementation.md",
+      "docs/service-improvements/11-report-guided-upload-review/README.md",
+      "docs/service-improvements/12-report-review-export-ux/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/report-workspace/prompts/13_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/11-report-guided-upload-review/SERVICE_IMPROVEMENT_11_PROMPT.md",
+      "docs/service-improvements/12-report-review-export-ux/SERVICE_IMPROVEMENT_12_PROMPT.md"
+    ],
+    "qaGates": [
+      "필수 사진 없으면 AI 초안 생성 disabled",
+      "필수 review queue 남으면 export disabled",
+      "책임 확인 전 export disabled",
+      "local/generated snapshot server sync 전 export disabled"
+    ],
+    "risk": "export-gate"
+  },
+  {
+    "id": "report-list",
+    "label": "보고서 목록",
+    "description": "Status filters, search, sorting, export history.",
+    "routes": [
+      "/reports"
+    ],
+    "sourceFiles": [
+      "apps/web/components/ReportsOverview.tsx"
+    ],
+    "specs": [
+      "docs/safety-features/report-list/specs/README.md",
+      "docs/safety-features/report-list/specs/design_implementation.md",
+      "docs/service-improvements/13-report-list-status-filters/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/report-list/prompts/08_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/13-report-list-status-filters/SERVICE_IMPROVEMENT_13_PROMPT.md"
+    ],
+    "qaGates": [
+      "상태 필터 동작",
+      "출력 상태 필터 동작",
+      "검색/정렬 동작",
+      "export history summary 표시"
+    ],
+    "risk": "status-filter"
+  },
+  {
+    "id": "headquarters-sites",
+    "label": "사업장/현장",
+    "description": "ERP directory CRUD, modal validation, quick actions.",
+    "routes": [
+      "/headquarters",
+      "/sites"
+    ],
+    "sourceFiles": [
+      "apps/web/components/HeadquartersHubScreen.tsx",
+      "apps/web/components/SitesHubScreen.tsx",
+      "apps/web/features/admin/sections/*"
+    ],
+    "specs": [
+      "docs/safety-features/headquarters-sites/specs/README.md",
+      "docs/safety-features/headquarters-sites/specs/design_implementation.md",
+      "docs/service-improvements/10-headquarters-sites-directory-ui/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/headquarters-sites/prompts/14_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/10-headquarters-sites-directory-ui/SERVICE_IMPROVEMENT_10_PROMPT.md"
+    ],
+    "qaGates": [
+      "사업장/현장 CRUD modal 표시",
+      "필수 입력 validation",
+      "보고서/사진첩/메일함 quick action 이동"
+    ],
+    "risk": "directory-context"
+  },
+  {
+    "id": "photo-album",
+    "label": "사진첩",
+    "description": "Photo grid/list, filters, guest/auth adapter, evidence CTA.",
+    "routes": [
+      "/photo-album",
+      "/photo-album?headquarterId={id}&siteId={id}"
+    ],
+    "sourceFiles": [
+      "apps/web/components/ErpPhotoAlbumScreen.tsx",
+      "apps/web/features/photos/components/PhotoAlbumPanel.tsx",
+      "apps/web/types/photos.ts"
+    ],
+    "specs": [
+      "docs/safety-features/photo-album/specs/README.md",
+      "docs/safety-features/photo-album/specs/design_implementation.md",
+      "docs/service-improvements/09-photo-album-grid-filters/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/photo-album/prompts/17_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/09-photo-album-grid-filters/SERVICE_IMPROVEMENT_09_PROMPT.md"
+    ],
+    "qaGates": [
+      "grid/list 전환",
+      "사업장/현장/회차/검색 필터",
+      "detail drawer 표시",
+      "보고서 연결 CTA 표시"
+    ],
+    "risk": "photo-context"
+  },
+  {
+    "id": "account-settings",
+    "label": "설정",
+    "description": "Workspace login, guest import, billing entry, Gmail connect separation.",
+    "routes": [
+      "/account"
+    ],
+    "sourceFiles": [
+      "apps/web/components/AccountSettingsScreen.tsx",
+      "apps/web/lib/sessionAuthFlow.ts",
+      "apps/web/lib/guestWorkspaceCache.ts"
+    ],
+    "specs": [
+      "docs/safety-features/account-settings/specs/README.md",
+      "docs/safety-features/account-settings/specs/design_implementation.md",
+      "docs/service-improvements/14-account-settings-guest-billing/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/account-settings/prompts/09_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/14-account-settings-guest-billing/SERVICE_IMPROVEMENT_14_PROMPT.md"
+    ],
+    "qaGates": [
+      "Workspace login과 Gmail connect 분리",
+      "guest cache summary 표시",
+      "중복 import 방지",
+      "billing entry 유지"
+    ],
+    "risk": "auth-mail-confusion"
+  },
+  {
+    "id": "billing-credits",
+    "label": "결제/크레딧",
+    "description": "Checkout, success/fail, ledger, report export billing.",
+    "routes": [
+      "/billing/checkout",
+      "/billing/success",
+      "/billing/fail",
+      "/credits"
+    ],
+    "sourceFiles": [
+      "apps/api/app/services/credits.py",
+      "apps/api/app/main.py",
+      "apps/web/app/billing/*"
+    ],
+    "specs": [
+      "docs/safety-features/billing-credits/specs/README.md",
+      "docs/safety-features/billing-credits/specs/design_implementation.md",
+      "docs/service-improvements/08-report-billing-auth-gate/README.md"
+    ],
+    "prompts": [
+      "docs/safety-features/billing-credits/prompts/10_DESIGN_IMPLEMENTATION_PROMPT.md",
+      "docs/service-improvements/08-report-billing-auth-gate/SERVICE_IMPROVEMENT_08_PROMPT.md"
+    ],
+    "qaGates": [
+      "최초 final export 1 credit 차감",
+      "same report re-export no charge",
+      "Toss confirm/webhook 중복 지급 방지"
+    ],
+    "risk": "billing-idempotency"
+  },
+  {
+    "id": "auth-workspace",
+    "label": "인증/워크스페이스",
+    "description": "Workspace Google login, callback states, guest claim/import.",
+    "routes": [
+      "/auth/google/callback?error=access_denied"
+    ],
+    "sourceFiles": [
+      "apps/web/app/auth/google/callback/page.tsx",
+      "apps/web/lib/sessionAuthFlow.ts",
+      "apps/api/app/main.py"
+    ],
+    "specs": [
+      "docs/safety-features/auth-workspace/specs/README.md",
+      "docs/safety-features/auth-workspace/specs/design_implementation.md"
+    ],
+    "prompts": [
+      "docs/safety-features/auth-workspace/prompts/09_DESIGN_IMPLEMENTATION_PROMPT.md"
+    ],
+    "qaGates": [
+      "Workspace Google login callback 상태 표시",
+      "Gmail connect와 혼동 금지",
+      "guest claim/import ownership 유지"
+    ],
+    "risk": "workspace-access"
+  },
+  {
+    "id": "report-ai-standardization",
+    "label": "보고서 AI 표준화",
+    "description": "사진 기반 Vision/fallback 관찰카드와 표준 위험 라이브러리로 보고서 section 4/5/6 초안을 채웁니다.",
+    "routes": [
+      "/reports/new",
+      "/reports/{reportId}"
+    ],
+    "sourceFiles": [
+      "apps/api/app/services/vision_photo_extractor.py",
+      "apps/api/app/services/photo_observation_cards.py",
+      "apps/api/app/services/standard_risk_library.py",
+      "apps/api/app/services/standard_report_composer.py",
+      "apps/api/app/services/ai_pipeline.py",
+      "apps/web/components/ReportWorkspace.tsx"
+    ],
+    "specs": [
+      "docs/safety-features/report-ai-standardization/README.md",
+      "docs/safety-features/report-ai-standardization/01-data-contract/photo_observation_schema.md",
+      "docs/safety-features/report-ai-standardization/02-photo-ai/vision_extraction_plan.md",
+      "docs/safety-features/report-ai-standardization/03-risk-library/standard_risk_library_improvement.md",
+      "docs/safety-features/report-ai-standardization/04-report-composer/section_composer_improvement.md",
+      "docs/safety-features/report-ai-standardization/05-ui-ux/ai_fill_status_ui.md",
+      "docs/service-improvements/18-report-ai-update/README.md"
+    ],
+    "prompts": [
+      "docs/service-improvements/18-report-ai-update/SERVICE_IMPROVEMENT_18_PROMPT.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/01_READ_AND_PLAN.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/02_IMPLEMENT_VISION_PHOTO_EXTRACTOR.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/03_IMPROVE_STANDARD_RISK_LIBRARY.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/04_IMPROVE_STANDARD_REPORT_COMPOSER.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/05_UPDATE_REPORT_WORKSPACE_UI.md",
+      "docs/safety-features/report-ai-standardization/07-prompts/06_QA_AND_REGRESSION.md"
+    ],
+    "qaGates": [
+      "사다리 hazard 사진은 LADDER_FALL_PREVENTION과 section 4 지적사항을 생성",
+      "철근/개구부 사진은 보호캡/덮개/난간 대책 후보를 생성",
+      "hazard context만 있어도 section 5가 비지 않음",
+      "section 6 교육/지원사항 초안이 최소 1개 생성",
+      "AI fill status, confidence badge, review reason 표시"
+    ],
+    "risk": "ai-report-standardization"
+  }
+]

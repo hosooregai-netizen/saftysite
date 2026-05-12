@@ -65,8 +65,14 @@ _FUTURE_PROCESS_RULE_KEYS_BY_DETAIL: dict[tuple[str, str], list[str]] = {
     ],
     ("골조공사", "단부 및 개구부 주변 작업"): [
         "OPENING_FALL_COVER",
+        "REBAR_IMPALEMENT_PREVENTION",
         "STAIR_GUARDRAIL_FALL_PREVENTION",
         "FORMWORK_SHORING_COLLAPSE_PREVENTION",
+    ],
+    ("골조공사", "철근 배근 및 돌출부 관리"): [
+        "REBAR_IMPALEMENT_PREVENTION",
+        "OPENING_FALL_COVER",
+        "HOUSEKEEPING_TRIP_FALL",
     ],
     ("외부 마감공사", "외장 패널 취부"): [
         "SCAFFOLD_EDGE_FALL_PREVENTION",
@@ -105,6 +111,7 @@ _FUTURE_PROCESS_RULE_KEYS_BY_MAJOR: dict[str, list[str]] = {
         "FORMWORK_SHORING_COLLAPSE_PREVENTION",
         "LIFTING_STRUCK_BY_LOAD",
         "OPENING_FALL_COVER",
+        "REBAR_IMPALEMENT_PREVENTION",
     ],
     "외부 마감공사": [
         "SCAFFOLD_EDGE_FALL_PREVENTION",
@@ -116,12 +123,16 @@ _FUTURE_PROCESS_RULE_KEYS_BY_MAJOR: dict[str, list[str]] = {
         "TEMPORARY_POWER_ELECTRIC_SHOCK",
         "WELDING_FIRE_PREVENTION",
         "LADDER_FALL_PREVENTION",
+        "COMPRESSOR_HOSE_TRIP_PRESSURE",
+        "GRINDER_CUTTING_INJURY",
     ],
     "지붕공사": [
         "ROOF_EDGE_FALL_PROTECTION",
         "LADDER_FALL_PREVENTION",
     ],
     "기타": [
+        "HOUSEKEEPING_TRIP_FALL",
+        "MATERIAL_STACK_COLLAPSE",
         "CONFINED_SPACE_SUFFOCATION_PREVENTION",
     ],
 }
@@ -240,6 +251,24 @@ STANDARD_RISK_RULES: list[StandardRiskRule] = [
         location_fallback="계단 및 계단참 주변",
     ),
     _rule(
+        key="REBAR_IMPALEMENT_PREVENTION",
+        major_process="골조공사",
+        detail_process="철근 배근 및 돌출부 관리",
+        accident_types=["절단/베임/찔림", "넘어짐", "협착", "전도", "추락"],
+        causative_agent="돌출 철근",
+        causative_agent_key="rebar",
+        causative_agent_aliases=["철근", "돌출 철근", "배근", "rebar"],
+        hazard_keywords=["철근", "돌출", "찔림", "넘어짐", "보호캡", "개구부"],
+        process_keywords=["철근", "배근", "골조", "슬래브", "기초"],
+        location_keywords=["철근", "배근구간", "통로", "개구부"],
+        standard_hazard_text="철근 돌출부 접촉 및 통로 간섭에 따른 찔림·넘어짐 위험",
+        standard_guidance_text="철근 돌출부에는 보호캡을 설치하고 보행통로와 작업구간을 구분하여 접근통제 상태를 확인하실 것",
+        standard_preventive_measure="철근 보호캡 설치, 돌출부 식별표시, 보행통로 정리 및 접근통제를 실시",
+        default_risk_level="중",
+        reference_material_candidates=["철근 돌출부 보호조치 점검표"],
+        location_fallback="철근 배근 및 돌출부 주변",
+    ),
+    _rule(
         key="SCAFFOLD_EDGE_FALL_PREVENTION",
         major_process="외부 마감공사",
         detail_process="비계 및 작업발판 작업",
@@ -269,8 +298,8 @@ STANDARD_RISK_RULES: list[StandardRiskRule] = [
         process_keywords=["설비", "전기", "마감", "천장", "보수"],
         location_keywords=["실내", "복도", "천장", "통로"],
         standard_hazard_text="사다리 사용 중 전도 및 추락 위험",
-        standard_guidance_text="사다리는 견고한 바닥에 설치하고 미끄럼방지 및 상부 고정조치를 확인한 후 사용하실 것",
-        standard_preventive_measure="사다리 고정, 미끄럼방지 상태 확인, 2인 1조 사용 및 과도한 상부작업 금지를 실시",
+        standard_guidance_text="사다리는 견고한 바닥에 설치하고 전도방지, 미끄럼방지, 상부 고정조치를 확인한 후 2인 1조로 사용하실 것",
+        standard_preventive_measure="사다리 고정, 미끄럼방지 상태 확인, 2인 1조 사용, 필요 시 안전대 또는 이동식 작업발판 대체 사용 및 과도한 상부작업 금지를 실시",
         default_risk_level="중",
         reference_material_candidates=["사다리 작업 안전수칙"],
         location_fallback="사다리 사용 작업구간",
@@ -472,6 +501,78 @@ STANDARD_RISK_RULES: list[StandardRiskRule] = [
         default_risk_level="중",
         reference_material_candidates=["가설전기 안전관리 기준"],
         location_fallback="가설전기 및 분전반 주변",
+    ),
+    _rule(
+        key="COMPRESSOR_HOSE_TRIP_PRESSURE",
+        major_process="내부 마감공사",
+        detail_process="공기압축기 및 호스 사용 작업",
+        accident_types=["전도", "충돌"],
+        causative_agent="공기압축기 및 호스",
+        causative_agent_key="compressor",
+        causative_agent_aliases=["공기압축기", "압축기", "컴프레서", "호스", "compressor"],
+        hazard_keywords=["호스", "넘어짐", "압력", "방치", "전도"],
+        process_keywords=["설비", "마감", "청소", "보수", "공압"],
+        location_keywords=["통로", "실내", "작업구간"],
+        standard_hazard_text="공기압축기 호스 방치와 압력장치 관리 미흡에 따른 넘어짐 및 압력 위험",
+        standard_guidance_text="공기압축기와 호스는 통로를 침범하지 않도록 정리하고 압력장치 이상 여부와 연결부 상태를 확인하실 것",
+        standard_preventive_measure="호스 정리, 압력계·연결부 점검, 통로 확보 및 작업 전 이상 유무 확인을 실시",
+        default_risk_level="중",
+        reference_material_candidates=["공기압축기 사용 안전수칙"],
+        location_fallback="공기압축기 및 호스 사용 작업구간",
+    ),
+    _rule(
+        key="HOUSEKEEPING_TRIP_FALL",
+        major_process="기타",
+        detail_process="정리정돈 및 보행통로 관리",
+        accident_types=["전도", "추락"],
+        causative_agent="정리되지 않은 통로",
+        causative_agent_key="housekeeping",
+        causative_agent_aliases=["통로", "정리정돈", "폐기물", "자재", "housekeeping"],
+        hazard_keywords=["정리", "청소", "폐기물", "통로", "넘어짐", "단차"],
+        process_keywords=["정리", "청소", "마감", "이동", "반출"],
+        location_keywords=["통로", "출입구", "작업구간"],
+        standard_hazard_text="통로 정리정돈 미흡과 장애물 방치에 따른 넘어짐 위험",
+        standard_guidance_text="보행통로의 자재와 폐기물을 정리하고 미끄럼·단차·장애물 상태를 점검하실 것",
+        standard_preventive_measure="보행통로 확보, 장애물 제거, 폐기물 정리 및 미끄럼 방지상태 확인을 실시",
+        default_risk_level="하",
+        reference_material_candidates=["현장 정리정돈 안전점검표"],
+        location_fallback="보행통로 및 작업구간",
+    ),
+    _rule(
+        key="MATERIAL_STACK_COLLAPSE",
+        major_process="기타",
+        detail_process="자재 적재 및 보관",
+        accident_types=["붕괴", "낙하", "전도"],
+        causative_agent="적재 자재",
+        causative_agent_key="material_stack",
+        causative_agent_aliases=["적재", "자재더미", "자재", "팔레트", "material stack"],
+        hazard_keywords=["적재", "붕괴", "낙하", "전도", "받침", "결속"],
+        process_keywords=["자재", "반입", "보관", "적치"],
+        location_keywords=["자재보관", "적치장", "통로"],
+        standard_hazard_text="자재 적재 불량에 따른 전도·붕괴 및 낙하 위험",
+        standard_guidance_text="자재 적재 높이와 받침·결속 상태를 확인하고 보행통로와 적치구역을 분리하실 것",
+        standard_preventive_measure="적재높이 제한, 받침·결속 보강, 통로 분리 및 낙하 위험구간 접근통제를 실시",
+        default_risk_level="중",
+        reference_material_candidates=["자재 적재 및 보관 안전수칙"],
+        location_fallback="자재 적재 및 보관구간",
+    ),
+    _rule(
+        key="GRINDER_CUTTING_INJURY",
+        major_process="내부 마감공사",
+        detail_process="그라인더 및 절단 작업",
+        accident_types=["협착", "화재"],
+        causative_agent="그라인더 및 절단기",
+        causative_agent_key="grinder",
+        causative_agent_aliases=["그라인더", "연삭기", "절단기", "grinder"],
+        hazard_keywords=["그라인더", "연삭", "절단", "비산", "불티", "접촉"],
+        process_keywords=["금속", "절단", "설비", "보수"],
+        location_keywords=["작업구간", "실내", "철물"],
+        standard_hazard_text="그라인더 사용 중 회전부 접촉, 비산물 및 불티에 따른 상해 위험",
+        standard_guidance_text="그라인더 방호덮개와 보안경 착용 상태를 확인하고 불티비산 방지 및 가연물 제거 조치를 이행하실 것",
+        standard_preventive_measure="방호덮개 설치, 보안경·안면보호구 착용, 불티비산 방지 및 가연물 제거를 실시",
+        default_risk_level="중",
+        reference_material_candidates=["그라인더 작업 안전수칙"],
+        location_fallback="그라인더 및 절단 작업구간",
     ),
     _rule(
         key="WELDING_FIRE_PREVENTION",
@@ -733,8 +834,29 @@ def _score_rule(
     observed_process = _safe_text(observation.get("observedProcess"))
     accident_type = _safe_text(risk.get("accidentType"))
     causative_agent = _safe_text(risk.get("causativeAgent"))
+    causative_agent_key = _safe_text(risk.get("causativeAgentKey"))
     hazard_summary = _safe_text(risk.get("hazardSummary"))
     location_text = _safe_text(risk.get("locationText"))
+    visual_objects = []
+    for item in observation.get("visualObjects", []):
+        if isinstance(item, dict):
+            label = _safe_text(item.get("label"))
+            category = _safe_text(item.get("category"))
+            if label:
+                visual_objects.append(_normalize_text(label))
+            if category:
+                visual_objects.append(_normalize_text(category))
+            continue
+        if _safe_text(item):
+            visual_objects.append(_normalize_text(item))
+    ai_text = observation.get("aiText") if isinstance(observation.get("aiText"), dict) else {}
+    ai_text_values = [
+        _normalize_text(ai_text.get("hazardDescription")),
+        _normalize_text(ai_text.get("improvementPlan")),
+        _normalize_text(ai_text.get("preventiveMeasure")),
+        _normalize_text(ai_text.get("educationTopic")),
+        _normalize_text(ai_text.get("supportMemo")),
+    ]
 
     matched_by: list[str] = []
     score = 0.0
@@ -767,12 +889,27 @@ def _score_rule(
         matched_by.append("accidentType")
 
     if causative_agent and _matches_alias(causative_agent, rule["causativeAgentAliases"]):
-        score += 2.5
+        score += 3.0
         exact_hits += 1
         matched_by.append("causativeAgent")
 
+    if causative_agent_key and causative_agent_key == rule["causativeAgentKey"]:
+        score += 3.0
+        exact_hits += 1
+        matched_by.append("causativeAgentKey")
+
+    visual_hits = _keyword_hits(visual_objects, rule["keywords"] + rule["causativeAgentAliases"])
+    if visual_hits > 0:
+        score += min(visual_hits * 1.5, 3.0)
+        keyword_hits += visual_hits
+        matched_by.append("visualObject")
+
     keyword_hits += _keyword_hits(
-        [_normalize_text(hazard_summary), _normalize_text(location_text)],
+        [
+            _normalize_text(hazard_summary),
+            _normalize_text(location_text),
+            *ai_text_values,
+        ],
         rule["keywords"],
     )
     if keyword_hits > 0:
@@ -870,16 +1007,21 @@ def match_observation_to_risk_rule(observation: dict[str, Any]) -> RiskLibraryMa
     photo_role = _observation_photo_role(observation)
 
     if rule is None:
+        risk = _observation_risk(observation)
+        hazard_text = _safe_text(risk.get("hazardSummary")) or "사진 기반 위험요인 현장 확인 필요"
+        fallback_guidance = (
+            f"확인 필요: {fallback_reason} 사진 초안을 기준으로 현장 확인 후 표준 개선대책을 확정해 주세요."
+        )
         return {
             "observationId": observation_id,
             "photoRole": photo_role,
             "ruleKey": None,
             "matchScore": _normalize_match_score(raw_score, observation, matched=False),
             "matchedBy": matched_by,
-            "standardHazardText": "",
-            "standardGuidanceText": "",
-            "standardCountermeasureText": "",
-            "standardPreventiveMeasure": "",
+            "standardHazardText": hazard_text,
+            "standardGuidanceText": fallback_guidance,
+            "standardCountermeasureText": fallback_guidance,
+            "standardPreventiveMeasure": fallback_guidance,
             "riskLevel": "중",
             "needsHumanReview": True,
             "fallbackReason": fallback_reason,

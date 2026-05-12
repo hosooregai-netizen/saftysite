@@ -18,7 +18,11 @@ import {
   uploadPhotoAlbumAsset,
 } from '@/lib/photos/apiClient';
 import { createPhotoThumbnail } from '@/lib/photos/thumbnail';
-import type { PhotoAlbumItem, PhotoAlbumMutationCapabilities } from '@/types/photos';
+import type {
+  PhotoAlbumItem,
+  PhotoAlbumListResponse,
+  PhotoAlbumMutationCapabilities,
+} from '@/types/photos';
 import styles from './PhotoAlbumPanel.module.css';
 
 interface PhotoAlbumSiteOption {
@@ -32,6 +36,8 @@ interface PhotoAlbumSiteOption {
 interface PhotoAlbumPanelProps {
   backHref?: string | null;
   backLabel?: string | null;
+  capabilityNotice?: string | null;
+  dataAdapter?: PhotoAlbumDataAdapter;
   initialHeadquarterId?: string | null;
   initialReportKey?: string | null;
   initialReportTitle?: string | null;
@@ -52,6 +58,27 @@ interface PhotoAlbumRoundGroup {
 interface PhotoUploadProgress {
   completed: number;
   total: number;
+}
+
+export interface PhotoAlbumDataAdapter {
+  deleteSelection: (itemIds: string[]) => Promise<void>;
+  downloadSelection: (itemIds: string[]) => Promise<void>;
+  list: (input: {
+    deferredQuery: string;
+    headquarterId: string;
+    initialReportKey: string | null;
+    lockedHeadquarterId: string | null;
+    lockedSiteId: string | null;
+    offset?: number;
+    siteId: string;
+  }) => Promise<PhotoAlbumListResponse>;
+  updateRounds: (itemIds: string[], roundNo: number) => Promise<void>;
+  upload: (input: {
+    file: File;
+    roundNo: number;
+    siteId: string;
+    thumbnail?: File | null;
+  }) => Promise<PhotoAlbumItem>;
 }
 
 const PAGE_SIZE = 20;
@@ -229,9 +256,23 @@ async function requestPhotoAlbumRows(input: {
   });
 }
 
+const defaultPhotoAlbumDataAdapter: PhotoAlbumDataAdapter = {
+  deleteSelection: async (itemIds) => {
+    await deletePhotoAlbumSelection(itemIds);
+  },
+  downloadSelection: downloadPhotoAlbumSelection,
+  list: requestPhotoAlbumRows,
+  updateRounds: async (itemIds, roundNo) => {
+    await updatePhotoAlbumRounds(itemIds, roundNo);
+  },
+  upload: uploadPhotoAlbumAsset,
+};
+
 export function PhotoAlbumPanel({
   backHref = null,
   backLabel = null,
+  capabilityNotice = null,
+  dataAdapter,
   initialHeadquarterId = null,
   initialReportKey = null,
   initialSiteId = null,
@@ -240,6 +281,7 @@ export function PhotoAlbumPanel({
   mode,
   sites,
 }: PhotoAlbumPanelProps) {
+  const adapter = dataAdapter ?? defaultPhotoAlbumDataAdapter;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
@@ -258,6 +300,7 @@ export function PhotoAlbumPanel({
   const [uploadRoundNo, setUploadRoundNo] = useState(0);
   const [bulkRoundNo, setBulkRoundNo] = useState(0);
   const [rows, setRows] = useState<PhotoAlbumItem[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [mutationCapabilities, setMutationCapabilities] =
     useState<PhotoAlbumMutationCapabilities | null>(null);
   const [loadedRowCount, setLoadedRowCount] = useState(0);
@@ -363,7 +406,7 @@ export function PhotoAlbumPanel({
       try {
         setLoading(true);
         setError(null);
-        const response = await requestPhotoAlbumRows({
+        const response = await adapter.list({
           deferredQuery,
           headquarterId,
           initialReportKey,
@@ -396,6 +439,7 @@ export function PhotoAlbumPanel({
       cancelled = true;
     };
   }, [
+    adapter,
     deferredQuery,
     headquarterId,
     initialReportKey,
@@ -450,10 +494,10 @@ export function PhotoAlbumPanel({
     try {
       setLoadingMoreRows(true);
       setError(null);
-      const response = await requestPhotoAlbumRows({
-        deferredQuery,
-        headquarterId,
-        initialReportKey,
+        const response = await adapter.list({
+          deferredQuery,
+          headquarterId,
+          initialReportKey,
         lockedHeadquarterId,
         lockedSiteId,
         offset: loadedRowCount,
@@ -473,6 +517,7 @@ export function PhotoAlbumPanel({
       setLoadingMoreRows(false);
     }
   }, [
+    adapter,
     deferredQuery,
     headquarterId,
     initialReportKey,
@@ -602,13 +647,15 @@ export function PhotoAlbumPanel({
     selectedSiteIds.length === 1 &&
     bulkRoundOptions.length > 0 &&
     bulkRoundNo > 0;
-  const mutationCapabilityNotice = !roundUpdateSupported && !deleteSupported
-    ? '현재 연결된 Safety API 서버가 사진 회차 변경과 삭제를 아직 지원하지 않습니다.'
-    : !roundUpdateSupported
-      ? '현재 연결된 Safety API 서버가 사진 회차 변경을 아직 지원하지 않습니다.'
-      : !deleteSupported
-        ? '현재 연결된 Safety API 서버가 사진 삭제를 아직 지원하지 않습니다.'
-        : null;
+  const mutationCapabilityNotice =
+    capabilityNotice ??
+    (!roundUpdateSupported && !deleteSupported
+      ? '현재 연결된 Safety API 서버가 사진 회차 변경과 삭제를 아직 지원하지 않습니다.'
+      : !roundUpdateSupported
+        ? '현재 연결된 Safety API 서버가 사진 회차 변경을 아직 지원하지 않습니다.'
+        : !deleteSupported
+          ? '현재 연결된 Safety API 서버가 사진 삭제를 아직 지원하지 않습니다.'
+          : null);
 
   const activeItemMatchesContext =
     activeItem &&
@@ -655,7 +702,7 @@ export function PhotoAlbumPanel({
   const handleDownload = async (itemIds: string[]) => {
     try {
       setError(null);
-      await downloadPhotoAlbumSelection(itemIds);
+      await adapter.downloadSelection(itemIds);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '사진 다운로드에 실패했습니다.');
     }
@@ -687,7 +734,7 @@ export function PhotoAlbumPanel({
       await runConcurrentPhotoUploads(nextFiles, async (file) => {
         try {
           const thumbnail = await createPhotoThumbnail(file).catch(() => null);
-          const uploadedItem = await uploadPhotoAlbumAsset({
+          const uploadedItem = await adapter.upload({
             file,
             roundNo: uploadRoundNo,
             siteId: uploadSiteId,
@@ -766,7 +813,7 @@ export function PhotoAlbumPanel({
       setError(null);
       setNotice(null);
       const selectedCount = selectedIds.length;
-      await updatePhotoAlbumRounds(selectedIds, bulkRoundNo);
+      await adapter.updateRounds(selectedIds, bulkRoundNo);
       setRows((current) =>
         sortPhotoAlbumRows(
           current.map((item) =>
@@ -828,7 +875,7 @@ export function PhotoAlbumPanel({
       if (deletedActiveItem) {
         setActiveItem(null);
       }
-      await deletePhotoAlbumSelection(deletingIds);
+      await adapter.deleteSelection(deletingIds);
       setRows((current) => current.filter((item) => !deletingIds.includes(item.id)));
       setPendingDeleteIds((current) => current.filter((itemId) => !deletingIds.includes(itemId)));
       setSelectedIds([]);
@@ -889,6 +936,82 @@ export function PhotoAlbumPanel({
       setError(nextError instanceof Error ? nextError.message : '사진 메타데이터 내보내기에 실패했습니다.');
     }
   };
+
+  const renderPhotoList = (listRows: PhotoAlbumItem[], showHeadquarter: boolean) => (
+    <div className={styles.list} role="table" aria-label="사진 목록">
+      <div className={styles.listHeader} role="row">
+        <span>선택</span>
+        <span>파일</span>
+        <span>{showHeadquarter ? '건설사/현장' : '현장'}</span>
+        <span>회차</span>
+        <span>촬영/등록</span>
+        <span>작업</span>
+      </div>
+      {listRows.map((item) => {
+        const isSelected = selectedIds.includes(item.id);
+        return (
+          <article
+            key={item.id}
+            className={`${styles.listRow} ${isSelected ? styles.listRowSelected : ''}`}
+            role="row"
+          >
+            <label className={styles.listCheckbox}>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => handleToggleRow(item.id)}
+                aria-label={`${item.fileName} 선택`}
+              />
+            </label>
+            <button
+              type="button"
+              className={styles.listPreviewButton}
+              onClick={() => setActiveItem(item)}
+            >
+              {item.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.previewUrl} alt="" className={styles.listThumb} />
+              ) : (
+                <span className={styles.listThumbFallback}>사진</span>
+              )}
+              <span className={styles.listFileBlock}>
+                <strong title={item.fileName}>{item.fileName}</strong>
+                <span>
+                  {formatFileSize(item.sizeBytes)} · {getSourceLabel(item.sourceKind)}
+                </span>
+              </span>
+            </button>
+            <span className={styles.listMetaBlock}>
+              {showHeadquarter ? <strong>{item.headquarterName}</strong> : null}
+              <span>{item.siteName}</span>
+            </span>
+            <span className={styles.listMetaText}>{formatRoundLabel(item.roundNo)}</span>
+            <span className={styles.listMetaText}>
+              {item.capturedAt
+                ? `촬영 ${formatDateLabel(item.capturedAt)}`
+                : `등록 ${formatDateLabel(item.createdAt)}`}
+            </span>
+            <span className={styles.listActions}>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => setActiveItem(item)}
+              >
+                상세
+              </button>
+              <button
+                type="button"
+                className="app-button app-button-secondary"
+                onClick={() => void handleDownload([item.id])}
+              >
+                다운로드
+              </button>
+            </span>
+          </article>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className={adminStyles.dashboardStack}>
@@ -1099,6 +1222,28 @@ export function PhotoAlbumPanel({
                     {deleting ? '삭제 중...' : '선택 삭제'}
                   </button>
                 </div>
+                <div className={styles.viewToggle} role="group" aria-label="사진첩 보기 방식">
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${
+                      viewMode === 'grid' ? styles.viewToggleActive : ''
+                    }`}
+                    aria-pressed={viewMode === 'grid'}
+                    onClick={() => setViewMode('grid')}
+                  >
+                    카드 보기
+                  </button>
+                  <button
+                    type="button"
+                    className={`app-button app-button-secondary ${
+                      viewMode === 'list' ? styles.viewToggleActive : ''
+                    }`}
+                    aria-pressed={viewMode === 'list'}
+                    onClick={() => setViewMode('list')}
+                  >
+                    목록 보기
+                  </button>
+                </div>
               </div>
 
               {isSiteScopedView ? (
@@ -1123,9 +1268,12 @@ export function PhotoAlbumPanel({
                             <strong>{roundGroup.label}</strong>
                             <span className={styles.groupMeta}>{roundGroup.rows.length}건</span>
                           </div>
-                          <div
-                            className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
-                          >
+                          {viewMode === 'list' ? (
+                            renderPhotoList(roundGroup.rows, mode === 'admin')
+                          ) : (
+                            <div
+                              className={`${styles.grid} ${mode === 'worker' ? styles.workerCompactGrid : ''}`}
+                            >
                             {roundGroup.rows.map((item) => {
                               const isSelected = selectedIds.includes(item.id);
                               return (
@@ -1207,12 +1355,15 @@ export function PhotoAlbumPanel({
                                 </article>
                               );
                             })}
-                          </div>
+                            </div>
+                          )}
                         </section>
                       ))}
                     </div>
                   </section>
                 </div>
+              ) : viewMode === 'list' ? (
+                renderPhotoList(visibleRows, true)
               ) : (
                 <div className={styles.grid}>
                   {visibleRows.map((item) => {

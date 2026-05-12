@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   bootstrapReportSession,
   hasGeneratedReportSnapshot,
@@ -12,6 +12,9 @@ import {
 } from '@/lib/reportApi';
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
+type ExportFilter = 'all' | 'both' | 'hwpx' | 'none' | 'pdf';
+type ReportStatusFilter = 'all' | 'draft' | 'exported' | 'generating' | 'review_completed' | 'review_needed';
+type SortMode = 'recent' | 'review-pending' | 'visit-asc' | 'visit-desc';
 
 function getReportStatusLabel(report: ReportRecord): string {
   if (report.status === 'exported') return '출력 완료';
@@ -29,6 +32,22 @@ function getReportStatusTone(report: ReportRecord): 'warning' | 'neutral' | 'inf
   return 'neutral';
 }
 
+function getReportStatusFilter(report: ReportRecord): Exclude<ReportStatusFilter, 'all'> {
+  if (report.status === 'exported') return 'exported';
+  if (report.status === 'review_completed') return 'review_completed';
+  if (report.payload.currentSection === 'ai-generating') return 'generating';
+  if (report.status === 'draft_ready') return 'review_needed';
+  return 'draft';
+}
+
+function getExportFilter(report: ReportRecord): Exclude<ExportFilter, 'all'> {
+  const formats = new Set(report.exports.map((item) => item.format));
+  if (formats.has('pdf') && formats.has('hwpx')) return 'both';
+  if (formats.has('pdf')) return 'pdf';
+  if (formats.has('hwpx')) return 'hwpx';
+  return 'none';
+}
+
 function getExportStatus(report: ReportRecord): string {
   const formats = new Set(report.exports.map((item) => item.format));
   if (formats.has('pdf') && formats.has('hwpx')) return 'PDF/HWPX 출력';
@@ -42,6 +61,10 @@ export function ReportsOverview() {
   const [loadState, setLoadState] = useState<LoadState>('idle');
   const [loadError, setLoadError] = useState('');
   const [reports, setReports] = useState<ReportRecord[]>([]);
+  const [exportFilter, setExportFilter] = useState<ExportFilter>('all');
+  const [query, setQuery] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('recent');
+  const [statusFilter, setStatusFilter] = useState<ReportStatusFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -78,6 +101,43 @@ export function ReportsOverview() {
     };
   }, []);
 
+  const visibleReports = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const rows = reports.filter((report) => {
+      if (statusFilter !== 'all' && getReportStatusFilter(report) !== statusFilter) {
+        return false;
+      }
+      if (exportFilter !== 'all' && getExportFilter(report) !== exportFilter) {
+        return false;
+      }
+      if (!normalizedQuery) {
+        return true;
+      }
+      const meta = report.payload.reportMeta;
+      return [
+        meta.siteName,
+        meta.customerName,
+        meta.drafterName,
+        meta.visitDate,
+      ].some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
+    });
+
+    return [...rows].sort((left, right) => {
+      if (sortMode === 'visit-desc') {
+        return String(right.payload.reportMeta.visitDate || '').localeCompare(String(left.payload.reportMeta.visitDate || ''));
+      }
+      if (sortMode === 'visit-asc') {
+        return String(left.payload.reportMeta.visitDate || '').localeCompare(String(right.payload.reportMeta.visitDate || ''));
+      }
+      if (sortMode === 'review-pending') {
+        const leftPending = left.payload.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
+        const rightPending = right.payload.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
+        return rightPending - leftPending || String(right.updated_at).localeCompare(String(left.updated_at));
+      }
+      return String(right.updated_at).localeCompare(String(left.updated_at));
+    });
+  }, [exportFilter, query, reports, sortMode, statusFilter]);
+
   return (
     <div className="erp-page">
       <section className="page-header-card">
@@ -100,9 +160,47 @@ export function ReportsOverview() {
         <div className="erp-panel-header">
           <h2>보고서 목록</h2>
           <div className="erp-toolbar">
-            <input className="erp-input erp-search" defaultValue="" placeholder="현장명, 작성자, 지도일 검색" />
-            <select className="erp-select" defaultValue="recent" aria-label="정렬">
+            <input
+              className="erp-input erp-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="현장명, 작성자, 지도일 검색"
+            />
+            <select
+              className="erp-select"
+              value={statusFilter}
+              aria-label="진행상태 필터"
+              onChange={(event) => setStatusFilter(event.target.value as ReportStatusFilter)}
+            >
+              <option value="all">상태 전체</option>
+              <option value="draft">사진 수집중</option>
+              <option value="generating">생성중</option>
+              <option value="review_needed">검토 필요</option>
+              <option value="review_completed">검토 완료</option>
+              <option value="exported">출력 완료</option>
+            </select>
+            <select
+              className="erp-select"
+              value={exportFilter}
+              aria-label="출력상태 필터"
+              onChange={(event) => setExportFilter(event.target.value as ExportFilter)}
+            >
+              <option value="all">출력 전체</option>
+              <option value="none">미출력</option>
+              <option value="pdf">PDF</option>
+              <option value="hwpx">HWPX</option>
+              <option value="both">PDF+HWPX</option>
+            </select>
+            <select
+              className="erp-select"
+              value={sortMode}
+              aria-label="정렬"
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+            >
               <option value="recent">최종수정순</option>
+              <option value="visit-desc">지도일 최신순</option>
+              <option value="visit-asc">지도일 오래된순</option>
+              <option value="review-pending">검토대기 많은순</option>
             </select>
           </div>
         </div>
@@ -119,8 +217,8 @@ export function ReportsOverview() {
               <span>출력 여부</span>
               <span>작업</span>
             </div>
-            {reports.length > 0 ? (
-              reports.map((report, index) => {
+            {visibleReports.length > 0 ? (
+              visibleReports.map((report, index) => {
                 const reviewPendingCount = report.payload.reviewMeta.reviewQueue.filter((item) => item.needsReview).length;
                 const findingCount = report.payload.findingCandidates.length;
                 const reportHref = hasGeneratedReportSnapshot(report.id)
@@ -142,7 +240,7 @@ export function ReportsOverview() {
                     }}
                   >
                     <div className="report-row-primary">
-                      <strong>{reports.length - index}차</strong>
+                      <strong>{visibleReports.length - index}차</strong>
                       <span>{report.payload.reportMeta.visitDate}</span>
                     </div>
                     <div className="report-row-title">
@@ -181,8 +279,8 @@ export function ReportsOverview() {
             ) : (
               <article className="report-row">
                 <div className="report-row-title">
-                  <strong>저장된 보고서 없음</strong>
-                  <span>새 보고서를 시작해 주세요.</span>
+                  <strong>{reports.length > 0 ? '조건에 맞는 보고서 없음' : '저장된 보고서 없음'}</strong>
+                  <span>{reports.length > 0 ? '검색어나 필터를 초기화해 주세요.' : '새 보고서를 시작해 주세요.'}</span>
                 </div>
               </article>
             )}

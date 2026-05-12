@@ -1,0 +1,23 @@
+[
+  {
+    "id": "BLK-BILLING-TOSS-CREDENTIALS",
+    "feature": "billing-credits",
+    "severity": "S0",
+    "status": "open",
+    "summary": "TOSS_PAYMENTS_SECRET_KEY와 TOSS_PAYMENTS_API_BASE_URL이 없어 Toss 외부 QA를 완료할 수 없습니다."
+  },
+  {
+    "id": "BLK-EXTERNAL-GMAIL-LIVE-QA",
+    "feature": "mailbox",
+    "severity": "S2",
+    "status": "open",
+    "summary": "Mailbox compose와 access_denied 오류 표시는 통과했고 Google OAuth 설정/redirect/handoff도 통과했지만 사용자 승인, live sync, 실제 Gmail test send QA는 아직 완료되지 않았습니다."
+  },
+  {
+    "id": "BLK-REPORT-AI-LIVE-VISION-QA",
+    "feature": "report-ai-standardization",
+    "severity": "S2",
+    "status": "open",
+    "summary": "OPENAI_API_KEY가 없어 fallback/mock 기준 QA는 통과했지만 실제 Vision 이미지 분석 QA는 아직 완료되지 않았습니다."
+  }
+]

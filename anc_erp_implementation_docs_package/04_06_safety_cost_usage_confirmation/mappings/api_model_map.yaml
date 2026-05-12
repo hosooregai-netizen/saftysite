@@ -1,0 +1,2 @@
+api: GET /api/v1/safety-cost-usage-confirmation-forms/{formId}
+models: SafetyCostUsageConfirmationForm

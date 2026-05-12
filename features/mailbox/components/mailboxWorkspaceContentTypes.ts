@@ -30,9 +30,6 @@ export interface MailboxWorkspaceContentProps {
   isDemoMode: boolean;
   isSendingMail: boolean;
   mailSendProgress: MailSendProgressState | null;
-  naverWorksProviderStatusDetail: string;
-  naverWorksProviderStatusLabel: string;
-  naverWorksProviderStatusTone: MailboxStatusTone;
   oauthProvider: 'google' | 'naver_mail' | 'naver_works' | null;
   recipientSuggestionIndex: number;
   recipientSuggestions: RecipientSuggestionItem[];
@@ -66,7 +63,6 @@ export interface MailboxWorkspaceContentProps {
   onComposerInput: () => void;
   onComposerLink: () => void;
   onConnectGoogle: () => void;
-  onConnectNaverWorks: () => void;
   onFocusRecipient: () => void;
   onMoveThreadPage: (nextPage: number) => void;
   onOpenReportPicker: () => void;

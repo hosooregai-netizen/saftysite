@@ -191,6 +191,7 @@ const majorProcessSchema = z.enum([
 
 const accidentTypeSchema = z.enum([
   '추락',
+  '떨어짐',
   '낙하',
   '충돌',
   '붕괴',
@@ -198,6 +199,8 @@ const accidentTypeSchema = z.enum([
   '화재',
   '협착',
   '전도',
+  '넘어짐',
+  '절단/베임/찔림',
   '확인 필요',
 ]);
 
@@ -213,6 +216,7 @@ const observedRiskStructuredSchema = z
   .object({
     locationText: z.string().default(''),
     accidentType: accidentTypeSchema.default('확인 필요'),
+    causativeAgentKey: z.string().default(''),
     causativeAgent: z.string().default(''),
     hazardSummary: z.string().default(''),
     recommendedActionKey: z.string().default(''),
@@ -240,6 +244,53 @@ const supportObservationSchema = z
   })
   .optional();
 
+const visualObjectSchema = z.object({
+  label: z.string().default(''),
+  category: z.string().default(''),
+  confidence: z.number().min(0).max(1).default(0),
+});
+
+const workContextSchema = z.object({
+  summary: z.string().default(''),
+  majorProcess: z.string().default('확인 필요'),
+  detailProcess: z.string().default(''),
+  locationText: z.string().default(''),
+  confidence: z.number().min(0).max(1).default(0),
+});
+
+const riskContextSchema = z.object({
+  locationText: z.string().default(''),
+  hazardSummary: z.string().default(''),
+  accidentType: z.string().default('확인 필요'),
+  causativeAgentKey: z.string().default(''),
+  causativeAgent: z.string().default(''),
+  unsafeCondition: z.string().default(''),
+  unsafeBehavior: z.string().default(''),
+  riskLevel: z.string().default('확인 필요'),
+  confidence: z.number().min(0).max(1).default(0),
+});
+
+const standardMappingSchema = z.object({
+  ruleKey: z.string().default(''),
+  recommendedActionKey: z.string().default(''),
+  matchScore: z.number().min(0).max(1).default(0),
+  matchedBy: z.array(z.string()).default([]),
+  fallbackReason: z.string().default(''),
+  confidence: z.number().min(0).max(1).default(0),
+});
+
+const aiTextSchema = z.object({
+  section4Finding: z.string().default(''),
+  section5Plan: z.string().default(''),
+  locationCandidate: z.string().default(''),
+  hazardDescription: z.string().default(''),
+  improvementPlan: z.string().default(''),
+  preventiveMeasure: z.string().default(''),
+  educationTopic: z.string().default(''),
+  supportMemo: z.string().default(''),
+  supportNote: z.string().default(''),
+});
+
 export const photoObservationCardSchema = z.object({
   id: z.string().default(''),
   reportId: z.string().default(''),
@@ -251,6 +302,12 @@ export const photoObservationCardSchema = z.object({
   observedRiskStructured: observedRiskStructuredSchema,
   previousGuidanceCheck: previousGuidanceCheckSchema,
   supportObservation: supportObservationSchema,
+  visualObjects: z.array(visualObjectSchema).default([]),
+  workContext: workContextSchema.optional(),
+  riskContext: riskContextSchema.optional(),
+  standardMapping: standardMappingSchema.optional(),
+  aiText: aiTextSchema.optional(),
+  reviewReasons: z.array(z.string()).default([]),
   rawAiNotes: z.string().default(''),
   confidence: z.number().min(0).max(1).default(0),
   needsHumanReview: z.boolean().default(true),
@@ -313,6 +370,9 @@ export const sectionDraftsSchema = z.object({
         content: z.string(),
         attendeeCount: z.string().optional(),
         confidence: z.number().min(0).max(1),
+        photoObservationIds: z.array(z.string()).optional(),
+        evidencePhotoIds: z.array(z.string()).optional(),
+        needsReview: z.boolean().optional(),
       }),
     )
     .default([]),
@@ -322,6 +382,9 @@ export const sectionDraftsSchema = z.object({
         activityType: z.string(),
         content: z.string(),
         confidence: z.number().min(0).max(1),
+        photoObservationIds: z.array(z.string()).optional(),
+        evidencePhotoIds: z.array(z.string()).optional(),
+        needsReview: z.boolean().optional(),
       }),
     )
     .default([]),
@@ -338,6 +401,9 @@ export const sectionDraftsSchema = z.object({
     title: z.string().default(''),
     body: z.string().default(''),
     confidence: z.number().min(0).max(1),
+    photoObservationIds: z.array(z.string()).optional(),
+    evidencePhotoIds: z.array(z.string()).optional(),
+    needsReview: z.boolean().optional(),
   }),
 });
 

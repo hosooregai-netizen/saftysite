@@ -1,0 +1,9 @@
+# 07. Test Plan — 지적사항/조치현황 사진대지
+
+```text
+test_04_11_finding_action_photo_ledger_loads
+test_04_11_finding_action_photo_ledger_requires_project_scope
+test_04_11_finding_action_photo_ledger_owner_specific_isolation
+test_04_11_finding_action_photo_ledger_status_transition
+test_04_11_finding_action_photo_ledger_reverse_map_complete
+```

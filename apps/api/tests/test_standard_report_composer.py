@@ -7,6 +7,45 @@ from app.services.standard_risk_library import match_observations_to_risk_librar
 
 
 class StandardReportComposerTests(unittest.TestCase):
+    def _compose_single_hazard(
+        self,
+        *,
+        observation_id: str,
+        location: str,
+        accident_type: str,
+        causative_agent_key: str,
+        causative_agent: str,
+        hazard_summary: str,
+        rule_key: str,
+        confidence: float = 0.9,
+    ) -> dict:
+        observations = [
+            {
+                "id": observation_id,
+                "photoAssetId": f"photo-{observation_id}",
+                "photoRole": "step2_hazard",
+                "observedProcess": "현재 위험요인 점검",
+                "confidence": confidence,
+                "needsHumanReview": False,
+                "observedRiskStructured": {
+                    "locationText": location,
+                    "accidentType": accident_type,
+                    "causativeAgentKey": causative_agent_key,
+                    "causativeAgent": causative_agent,
+                    "hazardSummary": hazard_summary,
+                    "recommendedActionKey": rule_key,
+                    "confidence": confidence,
+                },
+            }
+        ]
+        return compose_standard_report_draft(
+            f"report-{observation_id}",
+            report_meta={},
+            photo_observations=observations,
+            photo_evidence=[],
+            risk_matches=match_observations_to_risk_library(observations),
+        )
+
     def test_review_queue_includes_required_meta_and_low_confidence_observation_items(self) -> None:
         observations = [
             {
@@ -97,6 +136,70 @@ class StandardReportComposerTests(unittest.TestCase):
             observations[0]["observedRiskStructured"]["hazardSummary"],
         )
         self.assertEqual(draft["sectionDrafts"]["doc7"][0]["improvementPlan"], finding["improvementPlan"])
+
+    def test_ladder_section4_writing_quality_mentions_fall_and_controls(self) -> None:
+        draft = self._compose_single_hazard(
+            observation_id="ladder-quality",
+            location="복도 천장 작업구간",
+            accident_type="추락",
+            causative_agent_key="portable_ladder",
+            causative_agent="사다리",
+            hazard_summary="사다리 사용 중 전도 및 추락 위험",
+            rule_key="LADDER_FALL_PREVENTION",
+        )
+
+        finding = draft["findingCandidates"][0]
+        self.assertEqual(finding["standardRiskRuleId"], "LADDER_FALL_PREVENTION")
+        self.assertIn("복도 천장 작업구간", finding["hazardDescription"])
+        self.assertIn("사다리", finding["hazardDescription"])
+        self.assertTrue(
+            "추락" in finding["hazardDescription"] or "전도" in finding["hazardDescription"]
+        )
+        self.assertIn("전도방지", finding["improvementPlan"])
+        self.assertIn("2인 1조", finding["improvementPlan"])
+        self.assertTrue(
+            "안전대" in finding["improvementPlan"] or "작업발판" in finding["improvementPlan"]
+        )
+
+    def test_rebar_section4_writing_quality_mentions_impalement_trip_controls(self) -> None:
+        draft = self._compose_single_hazard(
+            observation_id="rebar-quality",
+            location="철근 배근 통로",
+            accident_type="절단/베임/찔림",
+            causative_agent_key="rebar",
+            causative_agent="돌출 철근",
+            hazard_summary="철근 돌출부 접촉에 따른 찔림 및 넘어짐 위험",
+            rule_key="REBAR_IMPALEMENT_PREVENTION",
+        )
+
+        finding = draft["findingCandidates"][0]
+        self.assertEqual(finding["standardRiskRuleId"], "REBAR_IMPALEMENT_PREVENTION")
+        self.assertIn("철근", finding["hazardDescription"])
+        self.assertTrue(
+            "찔림" in finding["hazardDescription"] or "넘어짐" in finding["hazardDescription"]
+        )
+        self.assertIn("보호캡", finding["improvementPlan"])
+        self.assertIn("통로", finding["improvementPlan"])
+        self.assertIn("접근통제", finding["improvementPlan"])
+
+    def test_opening_section4_writing_quality_mentions_fall_cover_rail_signage(self) -> None:
+        draft = self._compose_single_hazard(
+            observation_id="opening-quality",
+            location="4층 개구부 주변",
+            accident_type="추락",
+            causative_agent_key="opening",
+            causative_agent="단부 및 개구부",
+            hazard_summary="개구부 방호 미흡으로 인한 추락 위험",
+            rule_key="OPENING_FALL_COVER",
+        )
+
+        finding = draft["findingCandidates"][0]
+        self.assertEqual(finding["standardRiskRuleId"], "OPENING_FALL_COVER")
+        self.assertIn("개구부", finding["hazardDescription"])
+        self.assertIn("추락", finding["hazardDescription"])
+        self.assertIn("덮개", finding["improvementPlan"])
+        self.assertIn("난간", finding["improvementPlan"])
+        self.assertIn("위험표지", finding["improvementPlan"])
 
     def test_section5_uses_standard_preventive_measure_alias(self) -> None:
         observations = [
@@ -286,6 +389,69 @@ class StandardReportComposerTests(unittest.TestCase):
         self.assertIn(
             "일부 4번/5번 문안은 현장 확인 후 확정이 필요합니다.",
             draft["validationResult"]["warnings"],
+        )
+
+    def test_hazard_only_context_populates_section5_and_section6_drafts(self) -> None:
+        observations = [
+            {
+                "id": "obs-ladder",
+                "photoAssetId": "photo-ladder",
+                "photoRole": "step2_hazard",
+                "observedProcess": "사다리 작업구간",
+                "confidence": 0.78,
+                "needsHumanReview": True,
+                "observedProcessStructured": {
+                    "majorProcess": "내부 마감공사",
+                    "detailProcess": "사다리 사용 작업",
+                    "confidence": 0.78,
+                },
+                "observedRiskStructured": {
+                    "locationText": "복도 천장 작업구간",
+                    "accidentType": "추락",
+                    "causativeAgentKey": "portable_ladder",
+                    "causativeAgent": "사다리",
+                    "hazardSummary": "사다리 사용 중 전도 및 추락 위험",
+                    "recommendedActionKey": "",
+                    "confidence": 0.78,
+                },
+                "aiText": {
+                    "educationTopic": "사다리 작업 추락예방 교육",
+                },
+            }
+        ]
+
+        matches = match_observations_to_risk_library(observations)
+        draft = compose_standard_report_draft(
+            "report-hazard-only",
+            report_meta={},
+            photo_observations=observations,
+            photo_evidence=[],
+            risk_matches=matches,
+        )
+
+        self.assertTrue(draft["sectionDrafts"]["doc8"])
+        self.assertIn("향후", draft["sectionDrafts"]["doc8"][0]["hazard"])
+        self.assertIn("사다리", draft["sectionDrafts"]["doc8"][0]["hazard"])
+        self.assertIn("예상", draft["sectionDrafts"]["doc8"][0]["hazard"])
+        self.assertTrue(draft["sectionDrafts"]["doc11"])
+        self.assertTrue(draft["sectionDrafts"]["doc12"])
+        self.assertTrue(draft["sectionDrafts"]["doc14"]["body"])
+        self.assertIn("재해유형", draft["sectionDrafts"]["doc11"][0]["content"])
+        self.assertIn("기인물", draft["sectionDrafts"]["doc11"][0]["content"])
+        self.assertIn("작업 전 점검사항", draft["sectionDrafts"]["doc11"][0]["content"])
+        self.assertIn("관리감독자", draft["sectionDrafts"]["doc12"][0]["content"])
+        self.assertNotEqual(
+            draft["sectionDrafts"]["doc14"]["body"],
+            "사진 기반 기타 확인사항",
+        )
+        self.assertTrue(
+            any(item["fieldPath"] == "sectionDrafts.doc11[0].content" for item in draft["reviewQueue"])
+        )
+        self.assertTrue(
+            any("현장 참석인원" in item["reason"] for item in draft["reviewQueue"])
+        )
+        self.assertTrue(
+            any(item["fieldPath"] == "sectionDrafts.doc14.body" for item in draft["fieldProvenance"])
         )
 
 

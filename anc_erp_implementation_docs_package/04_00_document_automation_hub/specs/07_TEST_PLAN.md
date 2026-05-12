@@ -1,0 +1,9 @@
+# 07. Test Plan — 표준서식 자동화 허브
+
+```text
+test_04_00_document_automation_hub_loads
+test_04_00_document_automation_hub_requires_project_scope
+test_04_00_document_automation_hub_owner_specific_isolation
+test_04_00_document_automation_hub_status_transition
+test_04_00_document_automation_hub_reverse_map_complete
+```

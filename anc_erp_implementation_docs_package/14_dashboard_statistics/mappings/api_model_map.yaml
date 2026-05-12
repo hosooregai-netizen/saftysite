@@ -1,0 +1,2 @@
+api: GET /api/v1/dashboard/overview
+models: DashboardMetricSnapshot, DashboardAlert, MetricDrilldownResult
