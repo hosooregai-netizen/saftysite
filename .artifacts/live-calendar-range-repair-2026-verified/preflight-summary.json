@@ -1,0 +1,13 @@
+{
+  "start_date": "2026-01-01",
+  "end_date": "2027-01-01",
+  "legacy_count": 1056,
+  "live_count": 1058,
+  "missing_count": 0,
+  "extra_count": 2,
+  "missing_by_date": {},
+  "extra_by_date": {
+    "2026-04-09": 1,
+    "2026-04-21": 1
+  }
+}

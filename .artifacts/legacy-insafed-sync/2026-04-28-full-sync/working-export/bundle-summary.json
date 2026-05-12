@@ -1,0 +1,10 @@
+{
+  "excluded_test_site_count": 0,
+  "filtered_admin_report_count": 9858,
+  "filtered_headquarter_count": 1199,
+  "filtered_inspector_count": 8,
+  "filtered_site_count": 1534,
+  "filtered_worker_report_count": 8527,
+  "schedule_workbook_present": false,
+  "target_legacy_site_count": 1534
+}

@@ -1,0 +1,14 @@
+{
+  "start_date": "2026-04-15",
+  "end_date": "2026-04-16",
+  "legacy_count": 24,
+  "live_count": 13,
+  "missing_count": 13,
+  "extra_count": 2,
+  "missing_by_date": {
+    "2026-04-16": 13
+  },
+  "extra_by_date": {
+    "2026-04-15": 2
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "import": {
+    "headquarters": 1199,
+    "sites": 1534,
+    "reports_reconciled": 8527,
+    "headquarters_sites_only": false,
+    "update_missing_only": false,
+    "summary": {
+      "created_headquarters": 3,
+      "updated_headquarters": 1196,
+      "created_sites": 6,
+      "updated_sites": 1528,
+      "created_users": 0,
+      "updated_users": 8,
+      "created_assignments": 11,
+      "reactivated_assignments": 0,
+      "updated_schedules": 12580,
+      "skipped_worker_links": 0,
+      "skipped_schedules": 0,
+      "reports_reconciled": 8527
+    }
+  },
+  "importFinishedAt": "2026-04-28T03:58:14+00:00"
+}

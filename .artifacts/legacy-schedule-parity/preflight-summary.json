@@ -1,0 +1,11 @@
+{
+  "mode": "execute",
+  "missing_site_count": 216,
+  "schedule_diff_before": {
+    "status_mismatch": 33,
+    "date_mismatch": 32,
+    "extra_legacy_selected_row": 28,
+    "missing_round": 6155,
+    "missing_site": 216
+  }
+}

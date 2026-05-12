@@ -1,0 +1,996 @@
+<!-- 메뉴 선택시 색 지정-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="language" content="en" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width" /> -->
+    <title>인세프(InSEF) 건설현장안전관리솔루션</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="description" id="description" content="인세프(InSEF) 건설현장안전관리솔루션 오신걸 환영합니다" />
+    <meta name="keywords" id="keywords" content="인세프(InSEF) 건설현장안전관리솔루션">
+    <meta name="Resource-type" content="Document">
+    <meta name="Resource-type" content="Document" />
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="인세프(InSEF) 건설현장안전관리솔루션">
+    <meta property="og:description" content="인세프(InSEF) 건설현장안전관리솔루션 오신걸 환영합니다">
+    <meta property="og:image" content="">
+    <meta property="og:url" content="">
+    <link rel="shortcut icon" href="http://console.insafed.com/insef/public/images/common/favicon_insef.png" type="image/x-icon"/>
+
+    <title></title>
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+
+    <!-- Option 1: Include in HTML -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/fontawesome-free/css/all.min.css">
+    <!-- Ionicons -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/ionicons/docs/css/ionicons.min.css">
+    <!-- Select2 -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/select2/css/select2.min.css">
+    <!-- Tempusdominus Bbootstrap 4 -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/tempusdominus-bootstrap-4/css/tempusdominus-bootstrap-4.min.css">
+    <!-- iCheck -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/toastr/toastr.min.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/dist/css/adminlte.min.css">
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
+    <!-- Daterange picker -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/datetimepicker/jquery.datetimepicker.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/jquery-timepicker-wvega/jquery.timepicker.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/sweetalert2-theme-bootstrap-4/bootstrap-4.min.css">
+    <!-- summernote -->
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/admin-lte/plugins/summernote/summernote-bs4.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/components/flag-icon-css/css/flag-icon.css">
+
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/style.css">
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/media-quary.css">
+    <link rel="stylesheet" href="http://console.insafed.com/insef/public/css/app.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+    <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+    <meta name="csrf-token" content="R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK" />
+    
+    <!-- Google tag (gtag.js) : 구글 어날리틱스-->
+    <!-- 24.07.31 : Google Search Console  -->
+<meta name="google-site-verification" content="Er3bVWFzQK9FVP8u0GGoGm56EIpgRtMaquUipHf8ASU" />
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-M88CVJ6T8H"></script>
+<script>
+    if("false" == 'false') {
+        window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-M88CVJ6T8H');
+    }
+</script>    
+        
+    </head>
+
+<body class="hold-transition layout-fixed text-sm">
+    <div class="wrapper">
+        <!-- Content Wrapper. Contains page content -->
+        <!-- Main Sidebar Container -->
+<aside class="main-sidebar elevation-4 sidebar-dark-primary">
+    <!-- Brand Logo -->
+    <a href="http://console.insafed.com/insef/public/dashboard" class="brand-link" style="background: white;">
+        <img src="http://console.insafed.com/insef/public/images/logo.png" class="brand-image" style="opacity: .8;width: 95%;height: auto; margin-left: 0.3rem; margin-top: -0.15rem;">
+        <span class="brand-text font-weight-light">&nbsp;</span>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column text-sm nav-child-indent" data-widget="treeview" role="menu">
+                                    
+                    <!-- 최고 관리자 -->
+                    
+                    <!-- 기관 관리자 -->
+                    
+                    <!-- 기술지도요원 -->
+                    
+                                            <li class="nav-item" id="nav-dashboard">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/manager">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-home"></i>
+                                <span>대시보드</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-inspector">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/inspector">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-users"></i>
+                                <span>요원 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-conscompany">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/conscompany">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-building"></i>
+                                <span>건설사 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support1">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>기술지도현황(달력)</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support/list">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>기술지도현황(목록)</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-support2">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/support/agent">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-calendar-check"></i>
+                                <span>요원별 진행상황 보기</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-report">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/report">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-download"></i>
+                                <span>보고서 다운로드</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-data">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/data">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-database"></i>
+                                <span>데이터 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-form">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/form">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-file-alt"></i>
+                                <span>보고서 양식 관리</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-userlog">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/sendlog">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-paper-plane"></i>
+                                <span>링크전송 내역</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-mypage">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/mypage">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-user"></i>
+                                <span>마이페이지</span>
+                            </a>
+                        </li>
+                                            <li class="nav-item" id="nav-userguide">
+                            <a class="nav-link" href="http://console.insafed.com/insef/public/board">
+                                <!-- 아이콘 class를 배열 4번째 넣기 -->
+                                <i class="nav-icon fas fa-bell"></i>
+                                <span>공지사항</span>
+                            </a>
+                        </li>
+                                                </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+    </div>
+    <!-- /.sidebar -->
+</aside>
+      
+
+        
+        <div class="container-full">
+            <div class="row mr-0">
+                <div class="col-xl-8 content-box" style="margin-left:270px;">
+                    <!-- Header -->
+                    <div id="wrapper" class="admin">
+  <header>
+    <div class="toputil">
+      <div class="float-left toputil_admin">
+                <span class="mr-1 mt-1 toputil_rule">기관관리자</span>
+        
+        
+        <span id="lifeTime"></span>
+      </div>
+
+      
+        <div class="toputil_box">
+        <ul>
+          <li class="sm-none">
+              
+          </li>
+                      <li>
+          
+          한국종합안전
+
+                      <span style="font-size:9pt">(기관 코드 : 208)</span>
+                    </li>
+
+                      <li class="sm-none">
+          
+            <a href="http://console.insafed.com/insef/public/auth/logout" onclick="return confirm('로그아웃 하시겠습니까??')">
+              로그아웃 <i class="fas fa-sign-out-alt"></i>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Menu -->
+    
+    <!-- menu -->
+
+    <div class="hamburger-menu">
+      <input id="menu_toggle" type="checkbox" onclick='getCheckboxValue(event)' />
+      <label class="menu_btn" for="menu_toggle" id="menu_btn">
+        <span></span>
+      </label>
+
+      <ul class="menu_box">
+                <li id="nav-dashboard">
+    <a href="http://console.insafed.com/insef/public/manager" class="btn_work">
+        <span>대시보드</span>
+        <i class="nav-icon fas fa-home"></i>
+    </a>
+</li>
+<li id="nav-inspector">
+    <a href="http://console.insafed.com/insef/public/inspector" class="btn_work">
+        <span>요원 관리</span>
+        <i class="nav-icon fas fa-users"></i>
+    </a>
+</li>
+<li id="nav-conscompany">
+    <a href="http://console.insafed.com/insef/public/conscompany" class="btn_work">
+        <span>건설사 관리</span>
+        <i class="nav-icon fas fa-building"></i>
+    </a>
+</li>
+<li id="nav-support1">
+    <a href="http://console.insafed.com/insef/public/support" class="btn_work">
+        <span>기술지도현황(달력)</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-support">
+    <a href="http://console.insafed.com/insef/public/support/list" class="btn_work">
+        <span>기술지도현황(목록)</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-support2">
+    <a href="http://console.insafed.com/insef/public/support/agent" class="btn_work">
+        <span>요원별 진행상황 보기</span>
+        <i class="nav-icon fas fa-calendar-check"></i>
+    </a>
+</li>
+<li id="nav-report">
+    <a href="http://console.insafed.com/insef/public/report" class="btn_work">
+        <span>보고서 다운로드</span>
+        <i class="nav-icon fas fa-download"></i>
+    </a>
+</li>
+<li id="nav-data">
+    <a href="http://console.insafed.com/insef/public/data" class="btn_work">
+        <span>데이터 관리</span>
+        <i class="nav-icon fas fa-database"></i>
+    </a>
+</li>
+<li id="nav-form">
+    <a href="http://console.insafed.com/insef/public/form" class="btn_work">
+        <span>보고서 양식 관리</span>
+        <i class="nav-icon fas fa-file-alt"></i>
+    </a>
+</li>
+<li id="nav-sendlog">
+    <a href="http://console.insafed.com/insef/public/sendlog" class="btn_work">
+        <span>링크전송 내역</span>
+        <i class="nav-icon fas fa-paper-plane"></i>
+    </a>
+</li>
+<li id="nav-mypage">
+    <a href="http://console.insafed.com/insef/public/mypage" class="btn_work">
+        <span>마이페이지</span>
+        <i class="nav-icon fas fa-user"></i>
+    </a>
+</li>
+<li id="nav-userguide">
+    <a href="http://console.insafed.com/insef/public/board" class="btn_work">
+        <span>공지사항</span>
+        <i class="nav-icon fas fa-bell"></i>
+    </a>
+</li>
+        
+        <div class="menu-line"></div>  
+        <div class="float-right text-right menu-user mt-5">
+          <span>
+            장정규님<Br>
+                        (기관 코드 : 208)
+                      </span>
+        </div>
+        <div class="float-right menu-user">
+          <a href="http://console.insafed.com/insef/public/auth/logout" class="btn ml-3"><span>로그아웃</span></a>
+        </div>
+
+      </ul>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+      $("nav > ul > li").mouseenter(function(){
+        $(this).children(".submenu").stop().slideDown(400);
+      });
+      $("nav > ul > li").mouseleave(function(){
+        $(this).children(".submenu").stop().slideUp(100);
+      });
+
+      /* 2021.05.21 : KEH : 해더 탭 서브 3 추가 */
+      $("nav > ul > li > ul > li").mouseenter(function(){
+        $(this).children(".submenu2").stop().slideDown(400);
+      });
+      $("nav > ul > li > ul > li").mouseleave(function(){
+        $(this).children(".submenu2").stop().slideUp(100);
+      });
+
+      function getCheckboxValue(event)  {
+        console.log(event.target.checked);
+        if(event.target.checked){
+          document.getElementById("menu_btn").style.cssText  = 'position: fixed;';
+        }else{
+          document.getElementById("menu_btn").style.cssText  = 'position: absolute;';
+        }   
+      }
+
+    </script>
+    <!-- END -->
+    
+    
+    
+
+    <div class="none"></div>
+  </header>
+</div>                </div>
+            </div>
+
+            
+            <div id="div_load_image" style="position:absolute; width:100%; height:100%; z-index:9999; display:none; background: #00000024;">
+                <img src='http://console.insafed.com/insef/public/images/loading.gif' style="width: 150px; height: auto;position: fixed; bottom: 50%; left: 0; right: 0; margin: auto;"/>
+            </div>
+
+            <!-- content -->
+            <div class="row mt-4 mr-0 pr-3 pl-3">
+                <div class="col-xl-8 content-box" style="margin-left:270px;">
+                    <!-- 25.02.14 : 이윤정 : 로그인 후 모달 창 추가 -->
+                                            <div class="modal fade bd-example-modal-lg" id="loginAfterModal" tabindex="-1" role="dialog"
+    aria-labelledby="loginAfterModal">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-body text-center p-5">
+                <div class="modal-box">
+                    <div class="row">
+                        <div class="col-5">
+                            <img src="http://console.insafed.com/insef/public/images/icon/omnichannel.png" style="width:100px; ">
+                        </div>
+                        <div class="col-7 text-left mt-3">
+                            <p style="line-height: 1.5;">
+                                사용자의 활동은 데이터 보호와
+                                보다 나은 서비스 <br> 제공을 위해 <b>기록</b>
+                                및 <b>저장 관리</b> 되고 있습니다
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 text-center mt-3">
+                            <p>* 최근 접속 기록 * </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 text-center mt-3">
+                            <table class="table table-bordered">
+                                <tr class="text-center">
+                                    <th>접속 기록</th>
+                                    <th>접속 IP</th>
+                                </tr>
+                                                                    <tr class="animated-row text-center">
+                                        <td colspan="10">내역이 존재하지 않습니다</td>
+                                    </tr>
+                                                            </table>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 text-center animated-row mt-1">
+                            <!-- <button type="button" id="logoutButton" class="btn btn-secondary">비동의 (로그아웃)</button> -->
+                            <button id="agreeButton" class="btn btn-primary" data-dismiss="modal">
+                                <i class="fa fa-check" aria-hidden="true"></i> 확인하였습니다
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<link rel="stylesheet" href="http://console.insafed.com/insef/public/css/modal.css">
+                        <script>
+                            $(document).ready(function () {
+                                $('#loginAfterModal').modal('show');
+                            });
+                        </script>
+                    
+
+                        <!-- START -->
+    <section class="content-header p-0">
+        <div class="container-fluid">
+    <div class="row mb-2">
+        <div class="col-sm-6 col-12">
+            <h1>
+                <i class="fas fa-link"></i>
+                링크전송 내역
+            </h1>
+        </div>
+        <div class="col-6 d-none d-sm-block">
+            <ol class="breadcrumb float-right">
+                <li class="breadcrumb-item">
+                    <a href="http://console.insafed.com/insef/public/dashboard" class="text-info"><i class="fas fa-home" style="color: #2A2C30;"></i></a>
+                </li>
+                                <li class="breadcrumb-item ">링크전송 내역</li>
+                            </ol>
+        </div>
+    </div>
+</div>    </section>
+    <!-- END -->
+
+    <!-- Main content -->
+    <div class="content">
+        <!-- 2022.02.15 : KEH : 페이지 가이드 -->
+        <div class="row page_guide srch_sty mb10">
+            <div class="col-md-6">
+                <ul class="pl10">
+                    <li>링크 전송 내역은 최대 <b>2년간 보관되며,</b> 이후 자동으로 삭제됩니다.</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul class="pl10">
+                    <li><b>엑셀 다운로드</b> : 모든 내역을 엑셀 파일로 저장할 수 있습니다.<br>엑셀 파일은 발송일 기준으로 오래된 내역이 상단에, 최신 내역이 하단에 정렬되어 있습니다.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="row">
+    <div class="col-md-12">
+        <div class="card-header p-0 pb10 pt10">
+            <h3 class="card-title mt-1" id="post-themes-title">
+                <i class="fas fa-search"></i>
+                검색
+            </h3>
+        </div>
+    </div>
+</div>
+
+<div class="d-print-none p-3 mt-3 srch_sty mb10">
+  <form method="get" action="http://console.insafed.com/insef/public/sendlog" accept-charset="UTF-8" class="form-horizontal" id="search-form" autocomplete="off">
+    <div class="row">
+      
+            <div class="col-md-6 col-12">
+        <div class="form-group row">
+          <label for="us_id" class="col-form-label col-md-4 col-4 text-center">요원명(선택)</label>
+            <div class="col-sm-6 col-6">
+              <select name="us_id" class="form-control" id="us_id" onchange="this.form.submit()">
+                <option value="">요원 전체(10)</option>
+                                  <option value="1599" >
+                    김재열
+                  </option>
+                                  <option value="404" >
+                    김정훈
+                  </option>
+                                  <option value="458" >
+                    류현성
+                  </option>
+                                  <option value="1510" >
+                    윤병선
+                  </option>
+                                  <option value="1370" >
+                    이왕근
+                  </option>
+                                  <option value="1033" >
+                    장정규
+                  </option>
+                                  <option value="1125" >
+                    전현우
+                  </option>
+                                  <option value="775" >
+                    조식
+                  </option>
+                                  <option value="992" >
+                    최우식
+                  </option>
+                                  <option value="1240" >
+                    최지원
+                  </option>
+                              </select>
+            </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6 col-12">
+        <div class="form-group d-flex align-items-center">
+          <label for="date" class="col-form-label col-md-4 col-4 text-center">발송일자</label>
+          <div class="col-md-3 col-4">
+            <input type="date" name="s_date" class="form-control date" value="2025-04-28"
+              id="s_date">
+          </div>
+          <label>~</label>
+          <div class="col-md-3 col-4">
+            <input type="date" name="e_date" class="form-control date" value="2026-04-28"
+              id="e_date">
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-12">
+        <div class="form-group row">
+          <label for="cc_name" class="col-form-label col-md-4 col-4 text-center">건설사명</label>
+          <div class="col-md-7 col-8">
+            <input name="cc_name" class="form-control" value="" id="cc_name"
+              placeholder="건설사명을 입력해 주세요">
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-12">
+        <div class="form-group row">
+          <label for="cs_name" class="col-form-label col-md-4 col-4 text-center">현장명</label>
+          <div class="col-md-7 col-8">
+            <input name="cs_name" class="form-control" value="" id="cs_name"
+              placeholder="현장명을 입력해 주세요">
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-6 col-12">
+        <div class="form-group row">
+          <label for="isSendSms" class="col-form-label col-md-4 col-4 text-center">문자 전송 기록</label>
+            <div class="col-sm-6 col-6 d-flex align-center">
+              <input type="checkBox" name="isSendSms" id="isSendSms" >
+            </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-12">
+        <div class="form-group row">
+          <label for="isSendMail" class="col-form-label col-md-4 col-4 text-center">메일 전송 기록</label>
+            <div class="col-sm-6 col-6 d-flex align-center">
+              <input type="checkBox" name="isSendMail" id="isChange" >
+            </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="row border-top pt16">
+      <div class="col-12 text-center">
+        <button type="submit" class="btn btn-search mr-3"> 검색</button>
+        <a href="http://console.insafed.com/insef/public/sendlog" class="btn btn-default">초기화</a>
+      </div>
+    </div>
+    
+  </form>
+</div>            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card-header p-0 pb10 pt10">
+                    <h3 class="card-title mt-1" id="post-themes-title">
+                        <i class="fas fa-list"></i> 목록
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-12 card-body p-1">
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered text-center">
+                        <colgroup>
+                            <col width="5%">
+                            <col width="7%">
+                                                        <col width="6%">
+                                                        <col width="10%">
+                            <col width="15%">
+                            <col width="10%">
+                            <col width="14%">
+                            <col width="7%">
+                            <col width="7%">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>순번</th>
+                                <th>전송 구분<br>(홈페이지/앱)</th>
+                                                                <th>이름</th>
+                                                                <th>건설사명</th>
+                                <!-- <th>지도기관명</th> -->
+                                <th>현장명</th>
+                                <th>수신<br>연락처/이메일</th>
+                                <th>전송 결과</th>
+                                <th>발송일자<br>(발송시간)</th>
+                                <th>열람여부<br>(열람시간)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                                                            <tr>
+                                    <td>3</td>
+                                    <td>홈페이지</td>
+                                    <!-- <td></td> -->
+                                                                        <td>김재열</td>
+                                                                        <td>호곡종합건설(주)</td>
+                                    <!-- <td>한국종합안전</td> -->
+                                    <td class="text-left">서울특별시 교육청 세명컴퓨터고등학교 1회차</td>
+                                    <td>ysp951@hanmail.net</td>
+                                    <td>결과보고서 링크 전송[Mail] 완료</td>
+                                    <td>2026-04-23<br />
+13:53:18</td>
+                                    <td>
+                                                                                    <span class="badge bg-secondary">미열람</span>
+                                                                            </td>
+                                </tr>
+                                                            <tr>
+                                    <td>2</td>
+                                    <td>홈페이지</td>
+                                    <!-- <td></td> -->
+                                                                        <td>김재열</td>
+                                                                        <td>하이엠솔루텍주식회사</td>
+                                    <!-- <td>한국종합안전</td> -->
+                                    <td class="text-left">본사 시스템 에어컨 구매 및 설치공사 (화장실 등) 1회차</td>
+                                    <td>2piglet@naver.com</td>
+                                    <td>결과보고서 링크 전송[Mail] 완료</td>
+                                    <td>2026-04-22<br />
+13:56:09</td>
+                                    <td>
+                                                                                    <span class="badge bg-success">열람</span><br>
+                                            <small class="text-muted">
+                                                 2026-04-23<br>
+                                                13:22:51<br>
+                                            </small>
+                                                                            </td>
+                                </tr>
+                                                            <tr>
+                                    <td>1</td>
+                                    <td>앱</td>
+                                    <!-- <td></td> -->
+                                                                        <td>김정훈</td>
+                                                                        <td>신한토건주식회사</td>
+                                    <!-- <td>한국종합안전</td> -->
+                                    <td class="text-left">노원구 중계문화보건센터 개발사업 건축공사 7회차</td>
+                                    <td>02-2091-1192</td>
+                                    <td>결과보고서 링크 전송[SMS] 완료</td>
+                                    <td>2025-06-27<br />
+14:57:12</td>
+                                    <td>
+                                                                                    <span class="badge bg-secondary">미열람</span>
+                                                                            </td>
+                                </tr>
+                                                    </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3 mb-3">
+            <div class="col-md-12">
+                <div class="table-pagination">
+                    <ul class="pagination pagination-sm m-0 float-center d-print-none">
+    <!-- Previous Page Link -->
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    
+<!-- Pagination Elements -->
+        <!-- "Three Dots" Separator -->
+        
+    <!-- Array Of Links -->
+                                                        <li class="page-item active">
+                        <span class="page-link">1</span>
+                    </li>
+                                        
+<!-- Next Page Link -->
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 card-footer text-center d-print-none mt-3">
+                <form method="POST" action="http://console.insafed.com/insef/public/sendlog/export" accept-charset="UTF-8" class="d-inline approval-form"><input name="_token" type="hidden" value="R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK">
+                    <button type="submit" id="btn_export" class="btn btn-warning"
+                        onclick="return confirm('데이터 양이 많을 경우 시간이 소요될 수 있습니다.')">
+                        <i class="fas fa-file-excel"></i> 엑셀 다운로드
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- /.content -->
+                </div>
+            </div>
+        <!-- /.content-wrapper -->
+        <script>
+$(".one>a").click(function() {
+    var submenu = $(this).next("ul");
+    var menus = $(this).parents(".one");
+    // submenu 가 화면상에 보일때는 위로 보드랍게 접고 아니면 아래로 보드랍게 펼치기
+    if( submenu.is(":visible") ){
+        submenu.slideUp();
+        menus.removeClass('on');
+    }else{
+        submenu.slideDown();
+        menus.addClass('on');
+    }
+});
+</script>
+
+<script type="text/javascript">
+var check_width = $( window ).width();
+$(function(){
+  $( window ).resize(function() {
+      check_width = $( window ).width();
+  });
+
+  $('.dep1 li').hover(function(){
+      if (check_width > 768) {
+          $('.dep2',this).slideDown(300, 'swing');
+      }
+  }, function(){
+      $('.dep2',this).slideUp(100, 'swing');
+  });
+});
+</script>
+
+</body>
+</html>
+    </div>
+    <!-- REQUIRED JS SCRIPTS -->
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/jquery/jquery.min.js"></script>
+    <!-- jQuery UI 1.11.4 -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/jquery-ui/jquery-ui.min.js"></script>
+    <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
+    <script>
+        $.widget.bridge('uibutton', $.ui.button)
+    </script>
+    <!-- Bootstrap 4 -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- daterangepicker -->
+
+    <!-- Tempusdominus Bootstrap 4 -->
+    <script src="http://console.insafed.com/insef/public/components/php-date-formatter/js/php-date-formatter.min.js"></script>
+    <script src="http://console.insafed.com/insef/public/components/datetimepicker/jquery.datetimepicker.js"></script>
+    <!-- Summernote -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/summernote/summernote-bs4.min.js"></script>
+    <!-- overlayScrollbars -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/toastr/toastr.min.js"></script>
+
+    <!-- AdminLTE App -->
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/dist/js/adminlte.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/bootstrap-switch/js/bootstrap-switch.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/select2/js/select2.full.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/sweetalert2/sweetalert2.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/components/admin-lte/plugins/inputmask/min/jquery.inputmask.bundle.min.js"></script>
+
+    <script src="http://console.insafed.com/insef/public/js/lang/config.js"></script>
+
+    <script>
+        var lang = new Language('ko');
+    </script>
+
+    <script src="http://console.insafed.com/insef/public/js/app.js"></script>
+    <script src="http://console.insafed.com/insef/public/components/jquery-timepicker-wvega/jquery.timepicker.js"></script>
+
+    <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+    </script>    
+
+    <!-- START : 2023.02.13 : KEH : 메뉴, 탭 선택 -->
+    <script type="text/javascript">
+        function MenuTabSelect(dep, tab, depId = "") {
+            // console.log(depId);
+            if (depId != "") {
+                // 태그에 아이디로 찾기
+                // $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+                $('.nav').children("#nav-" + depId).children().eq(0).addClass('active'); // 사이드 메뉴
+            }else {
+                // nav 자식 순번으로 찾기
+                // $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+                $('.nav').children().eq(dep).children().eq(0).addClass('active'); // 사이드 메뉴
+            }
+
+            $('.tab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function MenuTabSelect_sub(tab) {
+            $('.tab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 230622 : report tab 추가 -->
+    <script type="text/javascript">
+        function reportMenuTabSelect(dep, tab, depId = "") {
+            if (depId != ""){
+                // 태그에 아이디로 찾기}
+                // $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+                $('.nav').children("#nav-" + depId).children().eq(0).addClass('active'); // 사이드 메뉴
+            }else {
+                // nav 자식 순번으로 찾기
+                // $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+                $('.nav').children().eq(dep).children().eq(0).addClass('active'); // 사이드 메뉴
+            }
+
+            $('.reporttab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function reportTabSelect_sub(tab) {
+            $('.reporttab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function burdenTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.burdentab_sty').children().eq(tab).addClass('on');
+        }
+        
+        function burdenTabSelect_sub(tab) {
+            $('.burdentab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function reportDangerTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.reportDangerTab_sty').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.06.27 : tab 추가 -->
+    <script type="text/javascript">
+        function safetyTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.safetyTab_sty').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    <!-- 23.07.21 : 기술지도 결과보고서 tab 추가 -->
+    <script type="text/javascript">
+        function reportResultTabSelect(dep, tab, depId = "") {
+            if (depId != "") // 태그에 아이디로 찾기
+                $('.nav').children().eq(0).children("#nav-" + depId).addClass('btn_cap current');
+            else // nav 자식 순번으로 찾기
+                $('.nav').children().eq(0).children().eq(dep).addClass('btn_cap current');
+
+            $('.reportResultTab_sty').children().eq(tab).addClass('on');
+        }
+
+        function reportResultTabSelect_sub(tab) {
+            $('.reportResulttab_sub').children().eq(tab).addClass('on');
+        }
+    </script>
+    <!-- END -->
+
+    
+        
+        <script>
+        $(document).ready(function() {
+            MenuTabSelect(1, 0, 'userlog')
+        });
+    </script>
+<script>
+$(document).ready(function() {
+
+    // 서버에서 show_login_modal 세션 값을 가져오기
+    let showLoginModal = true; // 기본값 true
+    //console.log("서버에서 가져온 show_login_modal:", showLoginModal);
+
+    // ✅ sessionStorage 또는 서버 세션 값이 false면 모달 숨기기
+    if (!showLoginModal || sessionStorage.getItem('show_login_modal') === 'false') {
+        $('#loginAfterModal').modal('hide');
+    } else {
+        console.log("모달을 표시합니다.");
+        $('#loginAfterModal').modal('show');
+    }
+    function updateSessionAndHideModal() {
+    $.ajax({
+        url: "http://console.insafed.com/insef/public/auth/hideLoginModal",
+        method: "POST",
+        headers: {
+            "X-CSRF-TOKEN": "R2ukxBhBWG47uTetEO2lwwhsWKYvjvjmxPOAULAK"
+        },
+        dataType: "json",
+        success: function(response) {
+            if (response.success) {
+                sessionStorage.setItem('show_login_modal', 'false'); // 브라우저 저장소 값 변경
+                $('#loginAfterModal').modal('hide');
+                console.log("모달 숨김 처리 완료");
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("세션 변경 실패:", xhr.responseText);
+        }
+    });
+}
+
+    // 동의 버튼 클릭 시 호출
+    $('#agreeButton').click(updateSessionAndHideModal);
+
+    // 모달이 닫힐 때 호출 (예: ESC 키, 모달 외부 클릭 등)
+    $('#loginAfterModal').on('hidden.bs.modal', updateSessionAndHideModal);
+
+    // 2초 후 자동 실행
+    setTimeout(updateSessionAndHideModal, 2000);
+    
+    $(".animated-row").each(function(index) {
+        $(this).delay(300 * (index + 1)).queue(function(next) {
+            $(this).addClass("play");
+            next();
+        });
+    });
+});
+</script>
+</body>
+</html>

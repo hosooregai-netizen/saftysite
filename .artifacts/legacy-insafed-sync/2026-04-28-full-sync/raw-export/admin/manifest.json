@@ -1,0 +1,24 @@
+{
+  "startedAt": "2026-04-28T03:20:12+00:00",
+  "finishedAt": "2026-04-28T03:32:36+00:00",
+  "counts": {
+    "inspectors": 10,
+    "supportListRows": 3056,
+    "supportAgentRows": 10,
+    "dataRows": 2053,
+    "sendlogRows": 3,
+    "reports": 9858,
+    "pdfReports": 0
+  },
+  "paths": {
+    "inspectors": "admin/inspectors.jsonl",
+    "supportList": "admin/support-list.jsonl",
+    "supportAgentSummary": "admin/support-agent-summary.jsonl",
+    "schedulesWorkbook": null,
+    "dataManagement": "admin/data-management.jsonl",
+    "sendlog": "admin/sendlog.jsonl",
+    "reports": "admin/reports/metadata.jsonl",
+    "reportPdfDir": "admin/reports/pdf",
+    "rawPages": "admin/raw"
+  }
+}

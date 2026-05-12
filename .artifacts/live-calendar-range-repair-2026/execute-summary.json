@@ -1,0 +1,18 @@
+{
+  "start_date": "2026-01-01",
+  "end_date": "2027-01-01",
+  "legacy_count": 1056,
+  "live_count_after": 1057,
+  "recreated_missing_site_count": 7,
+  "synced_site_count": 20,
+  "missing_count_before": 21,
+  "missing_count_after": 4,
+  "extra_count_before": 36,
+  "extra_count_after": 5,
+  "missing_by_date_after": {
+    "2026-01-05": 1,
+    "2026-01-26": 1,
+    "2026-03-05": 1,
+    "2026-03-17": 1
+  }
+}

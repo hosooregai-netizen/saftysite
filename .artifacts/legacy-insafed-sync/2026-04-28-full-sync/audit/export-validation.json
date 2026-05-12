@@ -1,0 +1,26 @@
+{
+  "raw_headquarters_rows": 1218,
+  "raw_sites_rows": 1534,
+  "raw_worker_reports_rows": 0,
+  "raw_admin_inspectors_rows": 10,
+  "raw_admin_reports_rows": 9858,
+  "working_headquarters_rows": 1199,
+  "working_sites_rows": 1534,
+  "working_worker_reports_rows": 8527,
+  "working_admin_inspectors_rows": 8,
+  "working_admin_reports_rows": 9858,
+  "raw_manifest_counts": {
+    "headquarters": 1218,
+    "reports": 0,
+    "sites": 1534
+  },
+  "admin_manifest_counts": {
+    "inspectors": 10,
+    "supportListRows": 3056,
+    "supportAgentRows": 10,
+    "dataRows": 2053,
+    "sendlogRows": 3,
+    "reports": 9858,
+    "pdfReports": 0
+  }
+}

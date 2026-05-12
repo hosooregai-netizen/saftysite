@@ -1,0 +1,15 @@
+{
+  "start_date": "2026-04-15",
+  "end_date": "2026-04-16",
+  "legacy_count": 24,
+  "live_count_after": 13,
+  "recreated_missing_site_count": 0,
+  "synced_site_count": 14,
+  "missing_count_before": 13,
+  "missing_count_after": 13,
+  "extra_count_before": 2,
+  "extra_count_after": 2,
+  "missing_by_date_after": {
+    "2026-04-16": 13
+  }
+}

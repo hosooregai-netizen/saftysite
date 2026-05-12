@@ -1,0 +1,15 @@
+{
+  "schedule_diff_summary": {
+    "status_mismatch": 216,
+    "missing_round": 7150,
+    "missing_site": 10
+  },
+  "schedule_diff_count": 7376,
+  "target_site_count": 1534,
+  "missing_live_sites_from_schedule_sync": 10,
+  "site_sample_missing": 0,
+  "report_sample_missing": 9,
+  "expected_legacy_report_count": 9858,
+  "actual_legacy_report_count": 8769,
+  "missing_legacy_report_count": 1098
+}

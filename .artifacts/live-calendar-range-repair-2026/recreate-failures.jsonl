@@ -1,0 +1,1 @@
+{"kind": "create_site_failed", "legacy_site_id": "84406", "error": "POST /api/safety/sites failed: 409 같은 사업장 내 동일 현장명이 이미 존재합니다."}
