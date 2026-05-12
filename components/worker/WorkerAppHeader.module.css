@@ -37,14 +37,6 @@
   }
 }
 
-.brand {
-  font-size: var(--text-title);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
-}
-
 .brandLink {
   display: inline-flex;
   align-items: center;
@@ -53,10 +45,14 @@
   text-decoration: none;
 }
 
-.brandLink:hover .brand {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 4px;
+.brandVisual {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.brandLink:hover .brandVisual {
+  opacity: 0.96;
 }
 
 .brandLink:focus-visible {
@@ -158,13 +154,6 @@
 @media (max-width: 767px) {
   .appHeader {
     padding: 12px;
-  }
-
-  .brand {
-    font-size: var(--text-body-lg);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .accountName {

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import InstituteWordmark from '@/components/branding/InstituteWordmark';
 import { WorkerMenuButton } from '@/components/worker/WorkerMenu';
 import { SERVICE_NAME } from '@/lib/branding';
 import styles from './WorkerAppHeader.module.css';
@@ -11,6 +12,7 @@ interface WorkerAppHeaderProps {
   onLogout: () => void;
   onOpenMenu: () => void;
   brand?: string;
+  brandNode?: ReactNode;
   brandHref?: string;
   accountLabel?: string;
   logoutLabel?: string;
@@ -22,6 +24,7 @@ export default function WorkerAppHeader({
   onLogout,
   onOpenMenu,
   brand = SERVICE_NAME,
+  brandNode,
   brandHref = '/',
   accountLabel = '로그인 계정',
   logoutLabel = '로그아웃',
@@ -35,7 +38,9 @@ export default function WorkerAppHeader({
             <WorkerMenuButton onClick={onOpenMenu} />
           </div>
           <Link href={brandHref} className={styles.brandLink} aria-label={`${brand} 홈으로 이동`}>
-            <span className={styles.brand}>{brand}</span>
+            <span className={styles.brandVisual}>
+              {brandNode ?? <InstituteWordmark compact tone="light" />}
+            </span>
           </Link>
         </div>
 
