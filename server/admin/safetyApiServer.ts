@@ -371,21 +371,24 @@ export function getServerRequestTimeoutMs(path: string, options: RequestInit) {
     return LONG_RUNNING_SERVER_TIMEOUT_MS;
   }
 
+  const pathname = path.split('?')[0];
+
   if (
-    path.includes('/original-pdf') ||
-    path.startsWith('/uploads/') ||
-    path.includes('/content-items/assets/')
+    pathname.includes('/original-pdf') ||
+    pathname.startsWith('/uploads/') ||
+    pathname.includes('/content-items/assets/') ||
+    /^\/photo-assets\/[^/]+\/download\/?$/.test(pathname)
   ) {
     return FILE_DOWNLOAD_SERVER_TIMEOUT_MS;
   }
 
   if (
-    path.includes('/dashboard/') ||
-    path === '/mail/send' ||
-    path.includes('/reports/upsert') ||
-    path.includes('/content-items/assets/upload') ||
-    path.includes('/photo-assets/upload') ||
-    path.includes('/excel-imports/')
+    pathname.includes('/dashboard/') ||
+    pathname === '/mail/send' ||
+    pathname.includes('/reports/upsert') ||
+    pathname.includes('/content-items/assets/upload') ||
+    pathname.includes('/photo-assets/upload') ||
+    pathname.includes('/excel-imports/')
   ) {
     return LONG_RUNNING_SERVER_TIMEOUT_MS;
   }
@@ -836,9 +839,12 @@ export function appendAdminDispatchEventServer(
 export function fetchAdminOverviewServer(
   token: string,
   request: Request | null = null,
+  options: { includeFullRows?: boolean } = {},
 ): Promise<SafetyBackendAdminOverviewResponse> {
   return requestSafetyAdminServer<SafetyBackendAdminOverviewResponse>(
-    '/admin/dashboard/overview',
+    withQuery('/admin/dashboard/overview', {
+      include_full_rows: options.includeFullRows === true ? true : undefined,
+    }),
     {},
     token,
     request,

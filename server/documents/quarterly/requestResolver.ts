@@ -236,7 +236,7 @@ export async function resolveQuarterlyDocumentRequest(
       documentKind: 'quarterly_report',
       reportKey,
       updatedAt: payload.report.updated_at || '',
-      version: 'quarterly-cover-site-v2',
+      version: 'quarterly-template-v9-holder-v1',
     },
     report,
     site: payload.site,

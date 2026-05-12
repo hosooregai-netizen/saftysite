@@ -222,9 +222,9 @@ function getHeadquarterMissingFields(item: SafetyHeadquarter) {
     item.opening_number,
     item.business_registration_no,
     item.corporate_registration_no,
-    item.license_no,
     item.contact_name,
     item.contact_phone,
+    item.contact_email,
     item.address,
   ].filter((value) => !String(value ?? '').trim()).length;
 }
@@ -272,6 +272,7 @@ export function buildAdminHeadquartersListResponse(
         item.license_no ?? '',
         item.contact_name ?? '',
         item.contact_phone ?? '',
+        item.contact_email ?? '',
         item.address ?? '',
         item.memo ?? '',
       ]
@@ -306,7 +307,7 @@ export function buildAdminHeadquartersListResponse(
     summary: {
       completedCount: filteredRows.filter((item) => getHeadquarterMissingFields(item) === 0).length,
       contactGapCount: filteredRows.filter((item) =>
-        [item.contact_name, item.contact_phone, item.address].some(
+        [item.contact_name, item.contact_phone, item.contact_email, item.address].some(
           (value) => !String(value ?? '').trim(),
         ),
       ).length,

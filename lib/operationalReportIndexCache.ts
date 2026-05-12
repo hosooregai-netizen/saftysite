@@ -30,6 +30,7 @@ const operationalIndexRequests = new Map<
   string,
   Promise<SiteOperationalReportIndexCacheEntry>
 >();
+const operationalIndexRequestGenerations = new Map<string, number>();
 const operationalIndexListeners = new Map<
   string,
   Set<(entry: SiteOperationalReportIndexCacheEntry | null) => void>
@@ -38,6 +39,16 @@ const hydratedOwnerIds = new Set<string>();
 
 function buildOwnerSiteKey(ownerId: string, siteId: string) {
   return `${ownerId}::${siteId}`;
+}
+
+function getOperationalIndexRequestGeneration(requestKey: string) {
+  return operationalIndexRequestGenerations.get(requestKey) ?? 0;
+}
+
+function nextOperationalIndexRequestGeneration(requestKey: string) {
+  const nextGeneration = getOperationalIndexRequestGeneration(requestKey) + 1;
+  operationalIndexRequestGenerations.set(requestKey, nextGeneration);
+  return nextGeneration;
 }
 
 function notifyOperationalIndexListeners(ownerId: string, siteId: string) {
@@ -240,16 +251,29 @@ export async function fetchAndCacheOperationalReportIndex(
     }
   }
 
-  const request = fetchSafetyOperationalReportIndex(token, siteId)
+  const requestGeneration = nextOperationalIndexRequestGeneration(requestKey);
+  let request!: Promise<SiteOperationalReportIndexCacheEntry>;
+  request = fetchSafetyOperationalReportIndex(token, siteId, {
+    force: options?.force,
+  })
     .then((response) => {
       const nextCache = mapBackendResponse(response);
+      if (getOperationalIndexRequestGeneration(requestKey) !== requestGeneration) {
+        const latestRequest = operationalIndexRequests.get(requestKey);
+        if (latestRequest && latestRequest !== request) {
+          return latestRequest;
+        }
+        return normalizeCacheEntry(operationalIndexCache.get(requestKey)) ?? nextCache;
+      }
       operationalIndexCache.set(requestKey, nextCache);
       notifyOperationalIndexListeners(ownerId, siteId);
       void persistOwnerState(ownerId);
       return nextCache;
     })
     .finally(() => {
-      operationalIndexRequests.delete(requestKey);
+      if (operationalIndexRequests.get(requestKey) === request) {
+        operationalIndexRequests.delete(requestKey);
+      }
     });
 
   operationalIndexRequests.set(requestKey, request);
@@ -260,7 +284,10 @@ export async function invalidateOperationalReportIndex(
   ownerId: string,
   siteId: string,
 ) {
-  operationalIndexCache.delete(buildOwnerSiteKey(ownerId, siteId));
+  const requestKey = buildOwnerSiteKey(ownerId, siteId);
+  nextOperationalIndexRequestGeneration(requestKey);
+  operationalIndexCache.delete(requestKey);
+  operationalIndexRequests.delete(requestKey);
   notifyOperationalIndexListeners(ownerId, siteId);
   await persistOwnerState(ownerId);
 }
@@ -269,6 +296,7 @@ export async function clearOperationalReportIndexCaches() {
   const keys = [...operationalIndexListeners.keys()];
   operationalIndexCache.clear();
   operationalIndexRequests.clear();
+  operationalIndexRequestGenerations.clear();
   hydratedOwnerIds.clear();
   keys.forEach((key) => {
     const listeners = operationalIndexListeners.get(key);

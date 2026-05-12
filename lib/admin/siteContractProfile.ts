@@ -22,7 +22,11 @@ type SiteContractFieldSource = Pick<
   | 'total_rounds'
 >;
 
-type SiteMemoWithContractFields = Pick<SafetySite, 'memo'> & Partial<SiteContractFieldSource>;
+type SiteMemoWithContractFields = Pick<SafetySite, 'memo'> &
+  Partial<SiteContractFieldSource> & {
+    quarterlyMaterialTracking?: Array<Partial<SiteQuarterlyMaterialRecord>>;
+    quarterly_material_tracking?: Array<Record<string, unknown>>;
+  };
 
 interface StoredSiteMetaEnvelope {
   contractProfile?: Partial<SiteContractProfile>;
@@ -132,16 +136,21 @@ function normalizeQuarterlyMaterialValues(value: unknown): string[] {
 }
 
 function normalizeQuarterlyMaterialRecord(
-  value: Partial<SiteQuarterlyMaterialRecord> | null | undefined,
+  value: Partial<SiteQuarterlyMaterialRecord> | Record<string, unknown> | null | undefined,
 ): SiteQuarterlyMaterialRecord | null {
   if (!value) return null;
+  const raw = value as Record<string, unknown>;
 
-  const quarterKey = normalizeQuarterKey(value.quarterKey);
+  const quarterKey = normalizeQuarterKey(value.quarterKey ?? raw.quarter_key);
   if (!quarterKey) return null;
 
   return {
-    educationMaterials: normalizeQuarterlyMaterialValues(value.educationMaterials),
-    measurementMaterials: normalizeQuarterlyMaterialValues(value.measurementMaterials),
+    educationMaterials: normalizeQuarterlyMaterialValues(
+      value.educationMaterials ?? raw.education_materials,
+    ),
+    measurementMaterials: normalizeQuarterlyMaterialValues(
+      value.measurementMaterials ?? raw.measurement_materials,
+    ),
     quarterKey,
   };
 }
@@ -458,13 +467,27 @@ export function parseSiteQuarterlyMaterialTracking(
 ): SiteQuarterlyMaterialRecord[] {
   const memo = typeof siteOrMemo === 'string' || siteOrMemo == null ? siteOrMemo : siteOrMemo.memo;
   const envelope = parseEnvelope(memo);
-  if (!Array.isArray(envelope?.quarterlyMaterialTracking)) {
-    return [];
+  const memoRecords = Array.isArray(envelope?.quarterlyMaterialTracking)
+    ? envelope.quarterlyMaterialTracking
+        .map((item) => normalizeQuarterlyMaterialRecord(item as Record<string, unknown>))
+        .filter((item): item is SiteQuarterlyMaterialRecord => Boolean(item))
+    : [];
+  const directRecords =
+    typeof siteOrMemo === 'string' || siteOrMemo == null
+      ? []
+      : (siteOrMemo.quarterly_material_tracking ?? siteOrMemo.quarterlyMaterialTracking ?? [])
+          .map((item) => normalizeQuarterlyMaterialRecord(item as Record<string, unknown>))
+          .filter((item): item is SiteQuarterlyMaterialRecord => Boolean(item));
+
+  if (memoRecords.length === 0) {
+    return directRecords;
   }
 
-  return envelope.quarterlyMaterialTracking
-    .map((item) => normalizeQuarterlyMaterialRecord(item))
-    .filter((item): item is SiteQuarterlyMaterialRecord => Boolean(item));
+  const memoQuarterKeys = new Set(memoRecords.map((item) => item.quarterKey));
+  return [
+    ...memoRecords,
+    ...directRecords.filter((item) => !memoQuarterKeys.has(item.quarterKey)),
+  ];
 }
 
 export function getSiteQuarterlyMaterialRecord(

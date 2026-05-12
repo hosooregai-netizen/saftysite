@@ -56,6 +56,10 @@ export function mapSafetyReportListItemToMailboxReportOption(
   const reportKey = item.report_key;
   const workflowStatus = item.workflow_status || item.status || null;
   return {
+    assigneeName:
+      matchedSite?.assigned_user?.name ||
+      matchedSite?.assigned_users?.map((user) => user.name).filter(Boolean).join(', ') ||
+      '',
     attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey, workflowStatus }),
     attachmentUnavailableReason: getReportAttachmentUnavailableReason({
       originalPdfAvailable,
@@ -75,6 +79,7 @@ export function mapSafetyReportListItemToMailboxReportOption(
     reportTitle: item.report_title,
     siteId: item.site_id,
     siteName: matchedSite?.site_name || item.site_id,
+    totalRound: item.total_round ?? matchedSite?.total_rounds ?? null,
     updatedAt: item.updated_at,
     visitDate: item.visit_date,
     visitRound: item.visit_round ?? null,
@@ -98,6 +103,7 @@ export function mapAdminReportRowToMailboxReportOption(
   const workflowStatus = row.workflowStatus || row.status || null;
 
   return {
+    assigneeName: row.assigneeName || matchedSite?.assigned_user?.name || '',
     attachmentReady: isReportAttachmentReady({ originalPdfAvailable, reportKey, workflowStatus }),
     attachmentUnavailableReason: getReportAttachmentUnavailableReason({
       originalPdfAvailable,
@@ -120,9 +126,10 @@ export function mapAdminReportRowToMailboxReportOption(
     reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
     siteId: row.siteId || matchedSelectedSite?.id || '',
     siteName: row.siteName || matchedSite?.site_name || row.siteId,
+    totalRound: row.totalRound ?? matchedSite?.total_rounds ?? null,
     updatedAt: row.updatedAt || null,
     visitDate: row.visitDate || null,
-    visitRound: null,
+    visitRound: row.visitRound ?? null,
     workflowStatus,
   };
 }
@@ -140,6 +147,7 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
     const merged = {
       ...existing,
       ...option,
+      assigneeName: option.assigneeName || existing.assigneeName,
       headquarterId: option.headquarterId || existing.headquarterId,
       headquarterName: option.headquarterName || existing.headquarterName,
       originalPdfAvailable: option.originalPdfAvailable || existing.originalPdfAvailable,
@@ -147,6 +155,7 @@ export function mergeMailboxReportOptions(options: MailboxReportOption[]) {
       recipientEmail: option.recipientEmail || existing.recipientEmail,
       siteId: option.siteId || existing.siteId,
       siteName: option.siteName || existing.siteName,
+      totalRound: option.totalRound ?? existing.totalRound,
       updatedAt: option.updatedAt || existing.updatedAt,
       visitDate: option.visitDate || existing.visitDate,
       visitRound: option.visitRound ?? existing.visitRound,
@@ -218,6 +227,7 @@ export function mergeCanonicalMailboxReportOptions(options: MailboxReportOption[
       attachmentReady: preferred.attachmentReady || other.attachmentReady,
       attachmentUnavailableReason:
         preferred.attachmentUnavailableReason || other.attachmentUnavailableReason,
+      assigneeName: preferred.assigneeName || other.assigneeName,
       headquarterId: preferred.headquarterId || other.headquarterId,
       headquarterName: preferred.headquarterName || other.headquarterName,
       originalPdfAvailable: preferred.originalPdfAvailable || other.originalPdfAvailable,
@@ -226,6 +236,7 @@ export function mergeCanonicalMailboxReportOptions(options: MailboxReportOption[
       recipientEmail: preferred.recipientEmail || other.recipientEmail,
       siteId: preferred.siteId || other.siteId,
       siteName: preferred.siteName || other.siteName,
+      totalRound: preferred.totalRound ?? other.totalRound,
       updatedAt: preferred.updatedAt || other.updatedAt,
       visitDate: preferred.visitDate || other.visitDate,
       visitRound: preferred.visitRound ?? other.visitRound,

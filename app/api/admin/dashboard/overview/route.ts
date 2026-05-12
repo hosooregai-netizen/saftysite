@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   fetchAdminOverviewServer,
+  fetchSafetySitesServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
@@ -16,12 +17,16 @@ export const runtime = 'nodejs';
 
 export async function GET(request: Request): Promise<Response> {
   try {
+    const includeFullRows = new URL(request.url).searchParams.get('include_full_rows') === 'true';
     const mergedOverview = await readOrCreateAdminOverviewRouteResponse(request, async () => {
       const token = readRequiredAdminToken(request);
-      const response = await fetchAdminOverviewServer(token, request);
+      const [response, sites] = await Promise.all([
+        fetchAdminOverviewServer(token, request, { includeFullRows }),
+        fetchSafetySitesServer(token, request),
+      ]);
       const mappedOverview = mapBackendOverviewResponse(response);
       const upstreamPreservedOverview = applyOverviewUpstreamFallbacks(response, mappedOverview);
-      const overlay = buildAdminOverviewPolicyOverlay(upstreamPreservedOverview);
+      const overlay = buildAdminOverviewPolicyOverlay(upstreamPreservedOverview, { sites });
       const nextOverview = mergeAdminOverviewPolicyOverlay(upstreamPreservedOverview, overlay);
       return nextOverview;
     });

@@ -5,6 +5,7 @@ import {
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
 import { mapBackendScheduleListResponse } from '@/server/admin/upstreamMappers';
+import { rememberWorkerScheduleMirrorRows } from '@/server/admin/workerScheduleMirror';
 
 export const runtime = 'nodejs';
 
@@ -15,16 +16,20 @@ export async function GET(request: Request): Promise<Response> {
     const response = await fetchWorkerSchedulesServer(
       token,
       {
+        include_all: url.searchParams.get('include_all') === 'true',
         limit: Math.max(1, Math.min(300, Number(url.searchParams.get('limit') || '200'))),
         month: url.searchParams.get('month') || '',
         offset: Math.max(0, Number(url.searchParams.get('offset') || '0')),
-        siteId: url.searchParams.get('siteId') || '',
+        site_id: url.searchParams.get('siteId') || url.searchParams.get('site_id') || '',
         status: url.searchParams.get('status') || '',
       },
       request,
     );
 
-    return NextResponse.json(mapBackendScheduleListResponse(response));
+    const mapped = mapBackendScheduleListResponse(response);
+    rememberWorkerScheduleMirrorRows(mapped.rows);
+
+    return NextResponse.json(mapped);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

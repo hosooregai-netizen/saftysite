@@ -39,3 +39,71 @@ test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   assert.equal(snapshot?.headquartersAddress, '1 Test-ro, Seoul');
   assert.equal(payload.schedule_id, 'schedule-9');
 });
+
+test('buildSafetyReportUpsertInput omits unknown first-round schedule links', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession(
+    {
+      scheduleId: 'schedule-stale',
+      meta: {
+        siteName: 'Site Alpha',
+        reportDate: '2026-04-01',
+        reportTitle: 'Report 1',
+        drafter: 'Inspector',
+      },
+    },
+    site.id,
+    1,
+  );
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+
+  assert.equal(payload.visit_round, 1);
+  assert.equal(payload.schedule_id, null);
+});
+
+test('buildSafetyReportUpsertInput keeps schedule links when the schedule round matches', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession(
+    {
+      scheduleId: 'schedule-1',
+      scheduleRoundNo: 1,
+      meta: {
+        siteName: 'Site Alpha',
+        reportDate: '2026-04-01',
+        reportTitle: 'Report 1',
+        drafter: 'Inspector',
+      },
+    },
+    site.id,
+    1,
+  );
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+
+  assert.equal(payload.visit_round, 1);
+  assert.equal(payload.schedule_id, 'schedule-1');
+});
+
+test('buildSafetyReportUpsertInput drops schedule links when the schedule round changed', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession(
+    {
+      scheduleId: 'schedule-2',
+      scheduleRoundNo: 2,
+      meta: {
+        siteName: 'Site Alpha',
+        reportDate: '2026-04-01',
+        reportTitle: 'Report 1',
+        drafter: 'Inspector',
+      },
+    },
+    site.id,
+    1,
+  );
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+
+  assert.equal(payload.visit_round, 1);
+  assert.equal(payload.schedule_id, null);
+});

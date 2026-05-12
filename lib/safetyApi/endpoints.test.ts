@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   fetchAssignedSafetySites,
+  fetchSafetyContentItems,
+  fetchSafetyInspectionMasterContentItems,
   fetchSafetySiteDetail,
 } from './endpoints';
 
@@ -145,6 +147,87 @@ test('fetchSafetySiteDetail requests the site detail contract', async () => {
     assert.equal(site.site_name, 'Detailed Site');
     assert.equal(site.headquarter_detail?.address, 'HQ Address');
     assert.equal(site.site_contact_email, 'site@example.com');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchSafetyContentItems can request only selected content types', async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = async (input) => {
+    requestedUrls.push(String(input));
+    return new Response(
+      JSON.stringify([
+        {
+          id: `content-${requestedUrls.length}`,
+          content_type: String(input).includes('doc7_reference_material')
+            ? 'doc7_reference_material'
+            : 'measurement_template',
+          title: 'Content',
+          code: null,
+          body: {},
+          body_included: true,
+          preview_text: '',
+          attachment_summary: '-',
+          tags: [],
+          sort_order: 0,
+          effective_from: null,
+          effective_to: null,
+          is_active: true,
+          created_at: '2026-05-04T00:00:00Z',
+          updated_at: '2026-05-04T00:00:00Z',
+        },
+      ]),
+      {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      },
+    );
+  };
+
+  try {
+    const rows = await fetchSafetyContentItems('content-type-filter-test-token', {
+      contentTypes: ['doc7_reference_material', 'measurement_template'],
+    });
+
+    assert.equal(rows.length, 2);
+    assert.deepEqual(requestedUrls, [
+      '/api/safety/content-items?active_only=true&limit=1000&offset=0&content_type=doc7_reference_material',
+      '/api/safety/content-items?active_only=true&limit=1000&offset=0&content_type=measurement_template',
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetchSafetyInspectionMasterContentItems avoids unrelated content CRUD types', async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedTypes: string[] = [];
+
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input), 'https://local.test');
+    requestedTypes.push(url.searchParams.get('content_type') ?? '');
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  try {
+    await fetchSafetyInspectionMasterContentItems('inspection-master-filter-test-token');
+
+    assert.deepEqual(requestedTypes.sort(), [
+      'correction_result_option',
+      'disaster_case',
+      'doc7_reference_material',
+      'hazard_countermeasure_catalog',
+      'legal_reference',
+      'measurement_template',
+      'safety_news',
+    ].sort());
+    assert.equal(requestedTypes.includes('campaign_template'), false);
   } finally {
     globalThis.fetch = originalFetch;
   }

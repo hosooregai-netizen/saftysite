@@ -209,6 +209,7 @@ export function useAdminDashboardDataLoaders({
         const token = getToken();
         const reports = await fetchSafetyReportList(token, {
           activeOnly: true,
+          force: options?.force,
           limit: ADMIN_REPORT_LIST_LIMIT,
         });
         const nextHeadquarters = options?.headquarters ?? data.headquarters;

@@ -102,16 +102,6 @@ export function SiteManagementMainPanel({
     ] || '미입력';
   const headquarterName =
     headquarter?.name || site.headquarter_detail?.name || site.headquarter?.name || '-';
-  const headquarterManagementNumber =
-    headquarter?.management_number ||
-    site.headquarter_detail?.management_number ||
-    site.management_number ||
-    '-';
-  const headquarterOpeningNumber =
-    headquarter?.opening_number ||
-    site.headquarter_detail?.opening_number ||
-    site.site_code ||
-    '-';
   const siteManagerContacts = normalizeSafetySiteManagers(site);
   const clientContacts = normalizeSafetyClientContacts(site);
   const assigneeDisplay = assignedUsers.length > 0 ? assignedUsers.join(', ') : '-';
@@ -147,22 +137,17 @@ export function SiteManagementMainPanel({
         <div className={styles.siteMainCardGrid}>
           <article className={styles.detailCard}>
             <div className={styles.detailCardHeader}>
-              <h3 className={styles.detailCardTitle}>건설사/현장 식별</h3>
+              <h3 className={styles.detailCardTitle}>현장 개요</h3>
             </div>
             <div className={styles.detailList}>
               <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>건설사명</span>
-                <strong className={styles.detailItemValue}>{headquarterName}</strong>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>사업장관리번호 / 사업개시번호</span>
-                <strong className={styles.detailItemValue}>
-                  {headquarterManagementNumber} / {headquarterOpeningNumber}
-                </strong>
-              </div>
-              <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>현장명</span>
                 <strong className={styles.detailItemValue}>{site.site_name || '-'}</strong>
+              </div>
+              <div className={styles.detailItem}>
+                <span className={styles.detailItemLabel}>운영 상태</span>
+                <strong className={styles.detailItemValue}>{getSiteStatusLabel(site.status)}</strong>
+                <span className={styles.detailItemMeta}>{statusMeta}</span>
               </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>건설 현장 주소</span>
@@ -173,18 +158,9 @@ export function SiteManagementMainPanel({
 
           <article className={styles.detailCard}>
             <div className={styles.detailCardHeader}>
-              <h3 className={styles.detailCardTitle}>운영/담당</h3>
+              <h3 className={styles.detailCardTitle}>담당 정보</h3>
             </div>
             <div className={styles.detailList}>
-              <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>운영 상태</span>
-                <strong className={styles.detailItemValue}>{getSiteStatusLabel(site.status)}</strong>
-                <span className={styles.detailItemMeta}>{statusMeta}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <span className={styles.detailItemLabel}>고용부 관할(지)청</span>
-                <strong className={styles.detailItemValue}>{site.labor_office || '-'}</strong>
-              </div>
               <div className={styles.detailItem}>
                 <span className={styles.detailItemLabel}>현장 책임자</span>
                 <div className={styles.detailItemValue}>

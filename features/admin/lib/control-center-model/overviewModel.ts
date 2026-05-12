@@ -16,6 +16,7 @@ import {
 import type { SafetyReport, SafetyReportListItem } from '@/types/backend';
 import type { ControllerDashboardData } from '@/types/controller';
 import {
+  extractCurrentQuarterKey,
   formatDateOnly,
   formatDateTime,
   formatQuarterKey,
@@ -41,6 +42,7 @@ import {
   isDispatchManagementUnsentRow,
   isCurrentSiteManagementWindow,
   isPriorityQuarterlySiteScope,
+  isSiteInCurrentQuarterWindow,
 } from './overviewPolicies';
 import type { AdminOverviewModel } from './types';
 import type { SafetyAdminPriorityQuarterlyManagementRow } from '@/types/admin';
@@ -69,6 +71,15 @@ function buildAdminSiteMainHref(siteId: string, headquarterId?: string | null) {
     headquarterId,
     siteId,
   });
+}
+
+function normalizeProjectAmount(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function resolveSiteEndingDate(site: ControllerDashboardData['sites'][number]) {
@@ -115,7 +126,7 @@ function extractQuarterKeyFromText(value: string) {
     return `${directMatched[1]}-Q${directMatched[2]}`;
   }
 
-  const labelMatched = value.match(/(\d{4})\s*년\s*([1-4])\s*분기/);
+  const labelMatched = value.match(/(\d{4})\s*(?:년)?\s*([1-4])\s*분기/);
   if (labelMatched) {
     return `${labelMatched[1]}-Q${labelMatched[2]}`;
   }
@@ -124,9 +135,14 @@ function extractQuarterKeyFromText(value: string) {
 }
 
 function inferQuarterKeyFromRow(row: EnrichedControllerReportRow) {
-  return extractQuarterKeyFromText(
+  const textQuarterKey = extractQuarterKeyFromText(
     [row.routeParam, row.periodLabel, row.reportTitle].filter(Boolean).join(' '),
   );
+  if (textQuarterKey) return textQuarterKey;
+
+  return extractCurrentQuarterKey(row.visitDate) ||
+    extractCurrentQuarterKey(row.reportDate) ||
+    extractCurrentQuarterKey(row.updatedAt);
 }
 
 function buildPriorityQuarterlyManagementRows(
@@ -203,7 +219,7 @@ function buildPriorityQuarterlyManagementRows(
         href: buildSiteQuarterlyListHref(site.id),
         latestGuidanceDate: latestGuidanceRow?.visitDate || '',
         latestGuidanceRound: latestGuidanceRow?.visitRound ?? null,
-        projectAmount: site.project_amount ?? null,
+        projectAmount: normalizeProjectAmount(site.project_amount),
         quarterlyDispatchStatus,
         quarterlyReflectionStatus,
         quarterlyReportHref: quarterlyRow?.href || '',
@@ -231,19 +247,43 @@ function buildQuarterlySummary(
   const quarterKey = formatQuarterKey(today);
   const quarterLabel = formatQuarterLabel(today);
   const materialCountsBySite = buildQuarterlyMaterialCountsBySite(materialSourceReports, quarterKey);
+  const quarterlyMaterialScopeSites = activeSites.filter((site) =>
+    isSiteInCurrentQuarterWindow(site, today),
+  );
   const materialBucketCounts = { both_missing: 0, complete: 0, education_missing: 0, measurement_missing: 0 };
   let educationReadyCount = 0;
   let measurementReadyCount = 0;
+  const buildSiteMemoMaterialRequirement = (values: string[] = []) => {
+    const countedCount = countFilledQuarterlyMaterials(values);
+    return {
+      filledCount: countedCount,
+      missingCount: Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - countedCount),
+      requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT,
+      rawCount: countedCount,
+      distinctCount: countedCount,
+      countedCount,
+      source: 'site_memo',
+      reducedReasons: [],
+    };
+  };
 
-  const missingSiteRows = activeSites.flatMap((site) => {
+  const missingSiteRows = quarterlyMaterialScopeSites.flatMap((site) => {
     const reportMaterialCounts = materialCountsBySite.get(site.id);
-    const materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
-    const educationFilledCount =
-      reportMaterialCounts?.educationKeys.size ??
-      countFilledQuarterlyMaterials(materialRecord?.educationMaterials ?? []);
-    const measurementFilledCount =
-      reportMaterialCounts?.measurementKeys.size ??
-      countFilledQuarterlyMaterials(materialRecord?.measurementMaterials ?? []);
+    let materialRecord = reportMaterialCounts == null ? getSiteQuarterlyMaterialRecord(site, quarterKey) : null;
+    const educationRequirement =
+      reportMaterialCounts && reportMaterialCounts.education.rawCount > 0
+        ? reportMaterialCounts.education
+        : buildSiteMemoMaterialRequirement(
+            (materialRecord ??= getSiteQuarterlyMaterialRecord(site, quarterKey)).educationMaterials,
+          );
+    const measurementRequirement =
+      reportMaterialCounts && reportMaterialCounts.measurement.rawCount > 0
+        ? reportMaterialCounts.measurement
+        : buildSiteMemoMaterialRequirement(
+            (materialRecord ??= getSiteQuarterlyMaterialRecord(site, quarterKey)).measurementMaterials,
+          );
+    const educationFilledCount = educationRequirement.countedCount;
+    const measurementFilledCount = measurementRequirement.countedCount;
     const educationMissingCount = Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - educationFilledCount);
     const measurementMissingCount = Math.max(0, QUARTERLY_MATERIAL_REQUIRED_COUNT - measurementFilledCount);
 
@@ -258,13 +298,13 @@ function buildQuarterlySummary(
     if (educationMissingCount === 0 && measurementMissingCount === 0) return [];
 
     return [{
-      education: { filledCount: educationFilledCount, missingCount: educationMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
+      education: { ...educationRequirement, filledCount: educationFilledCount, missingCount: educationMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       headquarterName: site.headquarter_detail?.name || site.headquarter?.name || '-',
       href: getAdminSectionHref('headquarters', {
         headquarterId: site.headquarter_id,
         siteId: site.id,
       }),
-      measurement: { filledCount: measurementFilledCount, missingCount: measurementMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
+      measurement: { ...measurementRequirement, filledCount: measurementFilledCount, missingCount: measurementMissingCount, requiredCount: QUARTERLY_MATERIAL_REQUIRED_COUNT },
       missingLabels: [
         educationMissingCount > 0 ? `교육자료 ${educationFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}` : '',
         measurementMissingCount > 0 ? `계측자료 ${measurementFilledCount}/${QUARTERLY_MATERIAL_REQUIRED_COUNT}` : '',
@@ -284,12 +324,12 @@ function buildQuarterlySummary(
 
   return {
     coverageRows: [
-      { itemCount: educationReadyCount, label: '교육자료', missingSiteCount: Math.max(0, activeSites.length - educationReadyCount) },
-      { itemCount: measurementReadyCount, label: '계측자료', missingSiteCount: Math.max(0, activeSites.length - measurementReadyCount) },
+      { itemCount: educationReadyCount, label: '교육자료', missingSiteCount: Math.max(0, quarterlyMaterialScopeSites.length - educationReadyCount) },
+      { itemCount: measurementReadyCount, label: '계측자료', missingSiteCount: Math.max(0, quarterlyMaterialScopeSites.length - measurementReadyCount) },
       {
-        itemCount: activeSites.length - activeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
+        itemCount: quarterlyMaterialScopeSites.length - quarterlyMaterialScopeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
         label: '계약정보',
-        missingSiteCount: activeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
+        missingSiteCount: quarterlyMaterialScopeSites.filter((site) => !hasSiteContractProfile(parseSiteContractProfile(site))).length,
       },
     ],
     metricMeta: `${quarterLabel} 교육/계측 각 4건 기준`,
@@ -304,7 +344,7 @@ function buildQuarterlySummary(
       missingSiteRows,
       quarterKey,
       quarterLabel,
-      totalSiteCount: activeSites.length,
+      totalSiteCount: quarterlyMaterialScopeSites.length,
     },
   };
 }
@@ -498,15 +538,20 @@ export function buildAdminOverviewModel(
   const siteById = new Map(data.sites.map((site) => [site.id, site]));
   const dispatchOverviewRows = buildDispatchManagementRows(overviewRows, siteById, today);
   const overviewSites = data.sites.filter((site) => isCurrentSiteManagementWindow(site, today));
-  const siteStatusSummary = buildSiteStatusSummary(data, overviewSites);
-  const activeSites = overviewSites.filter((site) => normalizeSiteLifecycleStatus(site) === 'active');
+  const activeSites = overviewSites.filter((site) => normalizeSiteLifecycleStatus(site, today) === 'active');
+  const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
+  const siteStatusSummary = buildSiteStatusSummary(
+    data,
+    overviewSites,
+    today,
+    new Set(endingSoonRows.map((row) => row.siteId)),
+  );
   const { coverageRows, metricMeta, quarterlyMaterialSummary } = buildQuarterlySummary(
     activeSites,
     materialSourceReports,
     today,
   );
   const attention = buildAttentionRows(data, overviewRows, dispatchOverviewRows, today);
-  const { endingSoonRows, endingSoonSummary } = buildEndingSoonSummary(activeSites, today);
   const priorityQuarterlyManagementRows = buildPriorityQuarterlyManagementRows(
     data.sites,
     overviewRows,
@@ -521,6 +566,8 @@ export function buildAdminOverviewModel(
   });
 
   return {
+    alertsTotalCount: 0,
+    completionRowsTotalCount: 0,
     coverageRows,
     deadlineSignalSummary: attention.deadlineSignalSummary,
     deadlineRows: attention.deadlineRows,

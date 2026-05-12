@@ -6,6 +6,7 @@ import {
   mergeAdminOverviewPolicyOverlay,
 } from './overviewPolicyOverlay';
 import type { SafetyAdminOverviewResponse } from '@/types/admin';
+import type { SafetySite } from '@/types/backend';
 
 function buildBaseOverview(): SafetyAdminOverviewResponse {
   return {
@@ -21,7 +22,9 @@ function buildBaseOverview(): SafetyAdminOverviewResponse {
       title: 'Alert',
       type: 'schedule_conflict',
     }],
+    alertsTotalCount: 1,
     completionRows: [{ href: '/sites/s1', headquarterName: 'HQ', missingItems: ['contact'], siteId: 's1', siteName: 'Site 1' }],
+    completionRowsTotalCount: 1,
     coverageRows: [{ itemCount: 1, label: 'Coverage', missingSiteCount: 0 }],
     deadlineSignalSummary: {
       entries: [{ count: 1, href: '/reports?dispatchStatus=warning', key: 'd_plus_4_6', label: 'D+4~6' }],
@@ -48,7 +51,7 @@ function buildBaseOverview(): SafetyAdminOverviewResponse {
     priorityTargetSiteRows: [{ dispatchAlertsEnabled: true, dispatchPolicyEnabled: true, headquarterName: 'HQ', href: '/reports', openReportCount: 1, projectAmount: 1000, recipientEmail: 'x@example.com', siteId: 's1', siteName: 'Site 1', totalContractAmount: 1000 }],
     quarterlyMaterialSummary: {
       entries: [{ count: 1, href: '/reports?quarter=2026-Q2', key: 'missing', label: 'Missing' }],
-      missingSiteRows: [{ education: { filledCount: 0, missingCount: 1, requiredCount: 1 }, headquarterName: 'HQ', href: '/sites/s1', measurement: { filledCount: 0, missingCount: 1, requiredCount: 1 }, missingLabels: ['education'], quarterKey: '2026-Q2', quarterLabel: '2026 Q2', siteId: 's1', siteName: 'Site 1' }],
+      missingSiteRows: [{ education: { filledCount: 0, missingCount: 1, requiredCount: 1, rawCount: 0, distinctCount: 0, countedCount: 0, source: 'site_memo', reducedReasons: [] }, headquarterName: 'HQ', href: '/sites/s1', measurement: { filledCount: 0, missingCount: 1, requiredCount: 1, rawCount: 0, distinctCount: 0, countedCount: 0, source: 'site_memo', reducedReasons: [] }, missingLabels: ['education'], quarterKey: '2026-Q2', quarterLabel: '2026 Q2', siteId: 's1', siteName: 'Site 1' }],
       quarterKey: '2026-Q2',
       quarterLabel: '2026 Q2',
       totalSiteCount: 1,
@@ -79,6 +82,8 @@ function buildBaseOverview(): SafetyAdminOverviewResponse {
 test('merge keeps overview response top-level shape and only patches site status driven fields', () => {
   const base = buildBaseOverview();
   const overlay = {
+    endingSoonRows: base.endingSoonRows,
+    endingSoonSummary: base.endingSoonSummary,
     siteStatusSummary: {
       entries: [
         { count: 10, href: '/headquarters?siteStatus=active', key: 'active', label: 'Active' },
@@ -123,4 +128,69 @@ test('build reuses upstream site status summary without extra source fetch requi
   assert.notStrictEqual(overlay.siteStatusSummary, base.siteStatusSummary);
   assert.deepEqual(overlay.siteStatusSummary, base.siteStatusSummary);
   assert.notStrictEqual(overlay.siteStatusSummary.entries, base.siteStatusSummary.entries);
+});
+
+test('build replaces stale upstream site status summary from live sites', () => {
+  const base = buildBaseOverview();
+  const sites = [
+    {
+      id: 'active-1',
+      headquarter_id: 'hq-1',
+      site_name: 'Active 1',
+      status: 'active',
+      contract_status: 'active',
+      contract_start_date: '2026-04-01',
+      contract_end_date: '2026-06-01',
+      project_start_date: null,
+      project_end_date: null,
+      headquarter: { id: 'hq-1', name: 'HQ' },
+      headquarter_detail: null,
+    },
+    {
+      id: 'ending-1',
+      headquarter_id: 'hq-1',
+      site_name: 'Ending 1',
+      status: 'active',
+      contract_status: 'active',
+      contract_start_date: '2026-04-01',
+      contract_end_date: '2026-05-10',
+      project_start_date: null,
+      project_end_date: null,
+      headquarter: { id: 'hq-1', name: 'HQ' },
+      headquarter_detail: null,
+    },
+    {
+      id: 'paused-1',
+      headquarter_id: 'hq-1',
+      site_name: 'Paused 1',
+      status: 'paused',
+      contract_status: 'paused',
+      contract_start_date: '2026-04-01',
+      contract_end_date: '2026-06-01',
+      project_start_date: null,
+      project_end_date: null,
+      headquarter: { id: 'hq-1', name: 'HQ' },
+      headquarter_detail: null,
+    },
+  ] as SafetySite[];
+
+  const overlay = buildAdminOverviewPolicyOverlay(base, {
+    sites,
+    today: new Date('2026-05-04T00:00:00+09:00'),
+  });
+  const merged = mergeAdminOverviewPolicyOverlay(base, overlay);
+
+  assert.deepEqual(
+    merged.siteStatusSummary.entries.map((entry) => [entry.key, entry.label, entry.count]),
+    [
+      ['active', '진행중', 1],
+      ['paused', '중지', 1],
+      ['ending_soon', '종료예정', 1],
+    ],
+  );
+  assert.equal(merged.siteStatusSummary.totalSiteCount, 3);
+  assert.equal(merged.endingSoonRows.length, 1);
+  assert.equal(merged.endingSoonRows[0]?.siteId, 'ending-1');
+  assert.equal(merged.metricCards[3]?.label, '종료예정');
+  assert.match(merged.metricCards[3]?.value ?? '', /^1/);
 });

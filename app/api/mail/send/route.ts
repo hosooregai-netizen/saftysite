@@ -4,6 +4,7 @@ import {
   SafetyServerApiError,
   sendSafetyMailServer,
 } from '@/server/admin/safetyApiServer';
+import { invalidateAdminOverviewAndReportsRouteCaches } from '@/server/admin/adminRouteInvalidation';
 import { mapBackendMailMessage } from '@/server/admin/upstreamMappers';
 import {
   isOversizeMailAttachmentError,
@@ -19,18 +20,22 @@ export async function POST(request: Request): Promise<Response> {
     const attachments = await materializeMailSendAttachments(
       Array.isArray(payload.attachments) ? payload.attachments : [],
     );
-    return NextResponse.json(
-      mapBackendMailMessage(
-        await sendSafetyMailServer(
-          token,
-          {
-            ...payload,
-            attachments,
-          },
-          request,
-        ),
-      ),
+    const result = await sendSafetyMailServer(
+      token,
+      {
+        ...payload,
+        attachments,
+      },
+      request,
     );
+    const hasReportPayload =
+      Boolean(payload.report_key || payload.reportKey) ||
+      (Array.isArray(payload.report_keys) && payload.report_keys.length > 0) ||
+      (Array.isArray(payload.reportKeys) && payload.reportKeys.length > 0);
+    if (hasReportPayload) {
+      invalidateAdminOverviewAndReportsRouteCaches();
+    }
+    return NextResponse.json(mapBackendMailMessage(result));
   } catch (error) {
     if (error instanceof SafetyServerApiError && isOversizeMailAttachmentError(error)) {
       return NextResponse.json({ error: error.message }, { status: 400 });

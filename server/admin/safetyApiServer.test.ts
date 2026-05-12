@@ -54,11 +54,25 @@ test('getServerRequestTimeoutMs treats mail send as long running', () => {
   assert.equal(getServerRequestTimeoutMs('/mail/send', {}), 45000);
 });
 
+test('getServerRequestTimeoutMs treats photo asset uploads as long running', () => {
+  assert.equal(getServerRequestTimeoutMs('/photo-assets/upload', {}), 45000);
+  assert.equal(getServerRequestTimeoutMs('/photo-assets/upload', { body: new FormData() }), 45000);
+});
+
 test('getServerRequestTimeoutMs treats original pdf downloads as file downloads', () => {
   assert.equal(
     getServerRequestTimeoutMs('/reports/by-key/report-1/original-pdf', {}),
     120000,
   );
+});
+
+test('getServerRequestTimeoutMs treats photo asset downloads as file downloads', () => {
+  assert.equal(getServerRequestTimeoutMs('/photo-assets/asset-1/download', {}), 120000);
+  assert.equal(getServerRequestTimeoutMs('/photo-assets/asset-1/download?x=1', {}), 120000);
+});
+
+test('getServerRequestTimeoutMs keeps photo asset list reads on the default timeout', () => {
+  assert.equal(getServerRequestTimeoutMs('/photo-assets?limit=100', {}), 15000);
 });
 
 test('getServerRequestTimeoutMs keeps ordinary reads on the default timeout', () => {
@@ -138,6 +152,9 @@ test('fetchAssignedSafetySitesServer requests assignment summaries and expands p
         contract_contact_name: null,
         manager_phone: null,
         site_contact_email: null,
+        site_managers: [],
+        primary_site_manager: null,
+        client_contacts: [],
         is_high_risk_site: false,
         is_active: true,
         lifecycle_status: 'active',

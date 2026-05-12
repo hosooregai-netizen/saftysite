@@ -8,6 +8,7 @@ import {
   updateWorkerScheduleServer,
 } from '@/server/admin/safetyApiServer';
 import { mapBackendSchedule } from '@/server/admin/upstreamMappers';
+import { mirrorWorkerScheduleToSiteMemo } from '@/server/admin/workerScheduleMirror';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,24 @@ function normalizeStatus(value: unknown): SafetyInspectionSchedule['status'] | u
   }
 }
 
+function hasPayloadKey(payload: Record<string, unknown>, ...keys: string[]) {
+  return keys.some((key) => Object.prototype.hasOwnProperty.call(payload, key));
+}
+
+function readOptionalText(
+  payload: Record<string, unknown>,
+  camelKey: string,
+  snakeKey: string,
+) {
+  if (Object.prototype.hasOwnProperty.call(payload, camelKey)) {
+    return normalizeText(payload[camelKey]);
+  }
+  if (Object.prototype.hasOwnProperty.call(payload, snakeKey)) {
+    return normalizeText(payload[snakeKey]);
+  }
+  return undefined;
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ scheduleId: string }> },
@@ -36,29 +55,55 @@ export async function PATCH(
     const token = readRequiredSafetyAuthToken(request);
     const { scheduleId } = await context.params;
     const rawPayload = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const updatePayload: Record<string, unknown> = {};
+    const actualVisitDate = readOptionalText(rawPayload, 'actualVisitDate', 'actual_visit_date');
+    const linkedReportKey = readOptionalText(rawPayload, 'linkedReportKey', 'linked_report_key');
+    const plannedDate = readOptionalText(rawPayload, 'plannedDate', 'planned_date');
+    const selectionReasonLabel = readOptionalText(
+      rawPayload,
+      'selectionReasonLabel',
+      'selection_reason_label',
+    );
+    const selectionReasonMemo = readOptionalText(
+      rawPayload,
+      'selectionReasonMemo',
+      'selection_reason_memo',
+    );
+
+    if (actualVisitDate !== undefined) {
+      updatePayload.actual_visit_date = actualVisitDate;
+    }
+    if (linkedReportKey !== undefined) {
+      updatePayload.linked_report_key = linkedReportKey;
+    }
+    if (plannedDate !== undefined) {
+      updatePayload.planned_date = plannedDate;
+    }
+    if (selectionReasonLabel !== undefined) {
+      updatePayload.selection_reason_label = selectionReasonLabel;
+    }
+    if (selectionReasonMemo !== undefined) {
+      updatePayload.selection_reason_memo = selectionReasonMemo;
+    }
+    if (hasPayloadKey(rawPayload, 'status')) {
+      const status = normalizeStatus(rawPayload.status);
+      if (status) {
+        updatePayload.status = status;
+      }
+    }
+
     const updated = await updateWorkerScheduleServer(
       token,
       decodeURIComponent(scheduleId),
-      {
-        actual_visit_date:
-          normalizeText(rawPayload.actualVisitDate) || normalizeText(rawPayload.actual_visit_date),
-        linked_report_key:
-          normalizeText(rawPayload.linkedReportKey) || normalizeText(rawPayload.linked_report_key),
-        planned_date: normalizeText(rawPayload.plannedDate) || normalizeText(rawPayload.planned_date),
-        selection_reason_label:
-          normalizeText(rawPayload.selectionReasonLabel) ||
-          normalizeText(rawPayload.selection_reason_label),
-        selection_reason_memo:
-          normalizeText(rawPayload.selectionReasonMemo) ||
-          normalizeText(rawPayload.selection_reason_memo),
-        status: normalizeStatus(rawPayload.status),
-      },
+      updatePayload,
       request,
     );
+    const mapped = mapBackendSchedule(updated);
+    await mirrorWorkerScheduleToSiteMemo(token, mapped, request);
     invalidateAdminDirectorySnapshot();
     invalidateAdminScheduleSnapshot();
     invalidateAdminOverviewAndReportsRouteCaches();
-    return NextResponse.json(mapBackendSchedule(updated));
+    return NextResponse.json(mapped);
   } catch (error) {
     if (error instanceof SafetyServerApiError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

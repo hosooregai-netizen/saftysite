@@ -1,15 +1,19 @@
 export type ExcelRowActionType = 'create' | 'update_headquarter' | 'update_site';
 export type ExcelScopeSourceSection = 'headquarters' | 'sites';
+export type ExcelImportKind = 'generic' | 'k2b_guidance';
 export type ExcelRowExclusionReasonCode =
   | 'different_headquarter'
   | 'different_site'
   | 'scope_unresolved'
-  | 'scope_ambiguous';
+  | 'scope_ambiguous'
+  | 'missing_required_field'
+  | 'ambiguous_match';
 
 export interface ExcelImportScope {
   sourceSection: ExcelScopeSourceSection;
   headquarterId?: string | null;
   siteId?: string | null;
+  importKind?: ExcelImportKind;
 }
 
 export interface ExcelImportScopeSummary extends ExcelImportScope {
@@ -103,6 +107,11 @@ export interface ExcelApplyResultRow {
   matchedUserId?: string;
   matchedUserEmail?: string;
   placeholderCreated?: boolean;
+  scheduleId?: string | null;
+  scheduleCreated?: boolean;
+  reportKey?: string | null;
+  reportCreated?: boolean;
+  reportReused?: boolean;
   message: string;
 }
 
@@ -117,6 +126,10 @@ export interface ExcelApplyResult {
     createdPlaceholderUserCount?: number;
     ambiguousWorkerMatchCount?: number;
     createdAssignmentCount?: number;
+    createdScheduleCount?: number;
+    reusedScheduleCount?: number;
+    createdReportCount?: number;
+    reusedReportCount?: number;
   };
   rows: ExcelApplyResultRow[];
 }

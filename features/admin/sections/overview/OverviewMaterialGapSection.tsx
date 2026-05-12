@@ -15,10 +15,28 @@ interface OverviewMaterialGapSectionProps {
   currentPage: number;
   quarterLabel: string;
   rows: Array<{
-    education: { filledCount: number; missingCount: number; requiredCount: number };
+    education: {
+      filledCount: number;
+      missingCount: number;
+      requiredCount: number;
+      rawCount: number;
+      distinctCount: number;
+      countedCount: number;
+      source: string;
+      reducedReasons: string[];
+    };
     headquarterName: string;
     href: string;
-    measurement: { filledCount: number; missingCount: number; requiredCount: number };
+    measurement: {
+      filledCount: number;
+      missingCount: number;
+      requiredCount: number;
+      rawCount: number;
+      distinctCount: number;
+      countedCount: number;
+      source: string;
+      reducedReasons: string[];
+    };
     siteId: string;
     siteName: string;
   }>;
@@ -99,8 +117,12 @@ export function OverviewMaterialGapSection({
                         <td>{row.headquarterName}</td>
                         <td><span className={styles.overviewTableStatus}>{`${row.education.missingCount}건`}</span></td>
                         <td><span className={styles.overviewTableStatus}>{`${row.measurement.missingCount}건`}</span></td>
-                        <td><span className={styles.overviewTableMetric}>{`${row.education.filledCount}/${row.education.requiredCount}`}</span></td>
-                        <td><span className={styles.overviewTableMetric}>{`${row.measurement.filledCount}/${row.measurement.requiredCount}`}</span></td>
+                        <td>
+                          <span className={styles.overviewTableMetric}>{`${row.education.filledCount}/${row.education.requiredCount}`}</span>
+                        </td>
+                        <td>
+                          <span className={styles.overviewTableMetric}>{`${row.measurement.filledCount}/${row.measurement.requiredCount}`}</span>
+                        </td>
                         <td><span className={styles.overviewTableStatus}>{`${missingTotal}건`}</span></td>
                       </tr>
                     );

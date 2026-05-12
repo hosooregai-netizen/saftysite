@@ -16,6 +16,7 @@ import { toNullableText } from '@/lib/admin';
 export interface HeadquarterFormState {
   address: string;
   business_registration_no: string;
+  contact_email: string;
   contact_name: string;
   contact_phone: string;
   corporate_registration_no: string;
@@ -30,6 +31,7 @@ export interface HeadquarterFormState {
 const EMPTY_FORM: HeadquarterFormState = {
   address: '',
   business_registration_no: '',
+  contact_email: '',
   contact_name: '',
   contact_phone: '',
   corporate_registration_no: '',
@@ -52,6 +54,7 @@ function buildNormalizedPayload(form: HeadquarterFormState) {
   return {
     address: toNullableText(form.address),
     business_registration_no: toNullableText(form.business_registration_no),
+    contact_email: toNullableText(form.contact_email),
     contact_name: toNullableText(form.contact_name),
     corporate_registration_no: toNullableText(form.corporate_registration_no),
     license_no: toNullableText(form.license_no),
@@ -102,6 +105,7 @@ export function useHeadquartersSectionState(busy: boolean) {
     const nextForm = {
       address: item.address ?? '',
       business_registration_no: item.business_registration_no ?? '',
+      contact_email: item.contact_email ?? '',
       contact_name: item.contact_name ?? '',
       corporate_registration_no: item.corporate_registration_no ?? '',
       license_no: item.license_no ?? '',

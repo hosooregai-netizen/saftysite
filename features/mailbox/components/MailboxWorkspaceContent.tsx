@@ -36,7 +36,6 @@ export function MailboxWorkspaceContent({
   selectedAccountId,
   selectedReport,
   selectedReports,
-  selectedTemplateId,
   selectableAccounts,
   showMailboxConnectGate,
   tab,
@@ -49,7 +48,6 @@ export function MailboxWorkspaceContent({
   threadTotal,
   threads,
   view,
-  onApplyTemplate,
   onAttachmentSelect,
   onBackToList,
   onBlurRecipient,
@@ -126,8 +124,6 @@ export function MailboxWorkspaceContent({
         selectedReport={selectedReport}
         selectedReports={selectedReports}
         selectableAccounts={selectableAccounts}
-        selectedTemplateId={selectedTemplateId}
-        onApplyTemplate={onApplyTemplate}
         onAttachmentSelect={onAttachmentSelect}
         onBlurRecipient={onBlurRecipient}
         onChangeAccountId={onChangeAccountId}

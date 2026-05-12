@@ -22,6 +22,8 @@ export async function GET(request: Request): Promise<Response> {
         offset: Number(url.searchParams.get('offset') || '0'),
         query: url.searchParams.get('query') || '',
         siteId: url.searchParams.get('site_id') || '',
+        sortBy: url.searchParams.get('sort_by') || '',
+        sortDir: url.searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc',
         status: url.searchParams.get('status') || '',
       },
       request,

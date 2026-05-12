@@ -16,6 +16,15 @@ import {
   alignScheduleRowsWithLegacyReports,
 } from '@/server/admin/legacyReportAlignment';
 import { getLegacyAdminReportsSnapshot } from '@/server/admin/legacyAdminReportsSnapshot';
+import {
+  fetchAdminScheduleCalendarServer,
+  fetchAdminScheduleQueueServer,
+} from '@/server/admin/safetyApiServer';
+import {
+  mapBackendAdminScheduleCalendarResponse,
+  mapBackendAdminScheduleQueueResponse,
+} from '@/server/admin/upstreamMappers';
+import { getWorkerScheduleMirrorRows } from '@/server/admin/workerScheduleMirror';
 
 /**
  * Schedule snapshot is a legacy/shared helper layer.
@@ -54,6 +63,229 @@ function isFresh(snapshot: ScheduleSourceSnapshot | null) {
   return Date.now() - refreshedAt < SNAPSHOT_TTL_MS;
 }
 
+function getScheduleIdKey(row: SafetyInspectionSchedule) {
+  return row.id ? `id:${row.id}` : '';
+}
+
+function getScheduleSiteRoundKey(row: SafetyInspectionSchedule) {
+  return row.siteId && row.roundNo > 0 ? `site-round:${row.siteId}:${row.roundNo}` : '';
+}
+
+function parseTime(value: string) {
+  if (!value) return 0;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function fillScheduleFallbackFields(
+  primary: SafetyInspectionSchedule,
+  fallback: SafetyInspectionSchedule,
+): SafetyInspectionSchedule {
+  return {
+    ...primary,
+    assigneeName: primary.assigneeName || fallback.assigneeName,
+    assigneeUserId: primary.assigneeUserId || fallback.assigneeUserId,
+    headquarterId: primary.headquarterId || fallback.headquarterId,
+    headquarterName: primary.headquarterName || fallback.headquarterName,
+    siteId: primary.siteId || fallback.siteId,
+    siteName: primary.siteName || fallback.siteName,
+    totalRounds: primary.totalRounds || fallback.totalRounds,
+    windowEnd: primary.windowEnd || fallback.windowEnd,
+    windowStart: primary.windowStart || fallback.windowStart,
+  };
+}
+
+function chooseScheduleSnapshotRow(
+  memoRow: SafetyInspectionSchedule,
+  backendRow: SafetyInspectionSchedule,
+) {
+  const memoConfirmedAt = parseTime(memoRow.selectionConfirmedAt);
+  const backendConfirmedAt = parseTime(backendRow.selectionConfirmedAt);
+
+  if (memoConfirmedAt && backendConfirmedAt && memoConfirmedAt !== backendConfirmedAt) {
+    return memoConfirmedAt > backendConfirmedAt
+      ? fillScheduleFallbackFields(memoRow, backendRow)
+      : fillScheduleFallbackFields(backendRow, memoRow);
+  }
+
+  if (!memoRow.plannedDate && backendRow.plannedDate) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+  if (memoRow.plannedDate && !backendRow.plannedDate) {
+    return fillScheduleFallbackFields(memoRow, backendRow);
+  }
+  if (!memoRow.linkedReportKey && backendRow.linkedReportKey) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+  if (!memoRow.actualVisitDate && backendRow.actualVisitDate) {
+    return fillScheduleFallbackFields(backendRow, memoRow);
+  }
+
+  return fillScheduleFallbackFields(memoRow, backendRow);
+}
+
+export function mergeAdminScheduleSnapshotRows(input: {
+  backendRows: SafetyInspectionSchedule[];
+  memoRows: SafetyInspectionSchedule[];
+}) {
+  const mergedByKey = new Map<string, SafetyInspectionSchedule>();
+  const aliasToKey = new Map<string, string>();
+  const registerAliases = (row: SafetyInspectionSchedule, primaryKey: string) => {
+    const idKey = getScheduleIdKey(row);
+    const siteRoundKey = getScheduleSiteRoundKey(row);
+    if (idKey) aliasToKey.set(idKey, primaryKey);
+    if (siteRoundKey) aliasToKey.set(siteRoundKey, primaryKey);
+  };
+
+  input.memoRows.forEach((row) => {
+    const key = getScheduleIdKey(row) || getScheduleSiteRoundKey(row);
+    if (!key) return;
+    mergedByKey.set(key, row);
+    registerAliases(row, key);
+  });
+
+  input.backendRows.forEach((backendRow) => {
+    const key =
+      aliasToKey.get(getScheduleIdKey(backendRow)) ||
+      aliasToKey.get(getScheduleSiteRoundKey(backendRow)) ||
+      getScheduleIdKey(backendRow) ||
+      getScheduleSiteRoundKey(backendRow);
+    if (!key) return;
+    const memoRow = mergedByKey.get(key);
+    const mergedRow = memoRow ? chooseScheduleSnapshotRow(memoRow, backendRow) : backendRow;
+    mergedByKey.set(key, mergedRow);
+    registerAliases(mergedRow, key);
+  });
+
+  return Array.from(mergedByKey.values());
+}
+
+export interface AdminScheduleBackendLoaders {
+  calendar?: typeof fetchAdminScheduleCalendarServer;
+  queue?: typeof fetchAdminScheduleQueueServer;
+}
+
+const DEFAULT_BACKEND_SCHEDULE_LOADERS: Required<AdminScheduleBackendLoaders> = {
+  calendar: fetchAdminScheduleCalendarServer,
+  queue: fetchAdminScheduleQueueServer,
+};
+
+function compareText(left: string, right: string, direction: 'asc' | 'desc') {
+  const compared = left.localeCompare(right, 'ko');
+  return direction === 'asc' ? compared : -compared;
+}
+
+function compareNumber(left: number, right: number, direction: 'asc' | 'desc') {
+  return direction === 'asc' ? left - right : right - left;
+}
+
+function sortQueueSnapshotRows(
+  rows: SafetyInspectionSchedule[],
+  sortBy = 'windowStart',
+  sortDir: 'asc' | 'desc' = 'asc',
+) {
+  return [...rows].sort((left, right) => {
+    switch (sortBy) {
+      case 'assigneeName':
+        return compareText(left.assigneeName, right.assigneeName, sortDir);
+      case 'roundNo':
+        return compareNumber(left.roundNo, right.roundNo, sortDir);
+      case 'siteName':
+        return compareText(left.siteName, right.siteName, sortDir);
+      case 'status':
+        return compareText(left.status, right.status, sortDir);
+      case 'windowEnd':
+        return compareText(left.windowEnd, right.windowEnd, sortDir);
+      case 'plannedDate':
+      case 'windowStart':
+      default: {
+        const primary = compareText(left.windowStart || left.plannedDate, right.windowStart || right.plannedDate, sortDir);
+        if (primary !== 0) return primary;
+        const byRound = compareNumber(left.roundNo, right.roundNo, 'asc');
+        if (byRound !== 0) return byRound;
+        return compareText(left.siteName, right.siteName, 'asc');
+      }
+    }
+  });
+}
+
+async function fetchBackendAdminScheduleCalendarRows(
+  token: string,
+  filters: {
+    assigneeUserId?: string;
+    month?: string;
+    query?: string;
+    siteId?: string;
+    status?: string;
+  },
+  request: Request | null,
+  loaders: AdminScheduleBackendLoaders = DEFAULT_BACKEND_SCHEDULE_LOADERS,
+) {
+  try {
+    const params = {
+      assignee_user_id: filters.assigneeUserId || '',
+      month: filters.month || '',
+      query: filters.query || '',
+      site_id: filters.siteId || '',
+      status: filters.status || '',
+    };
+    const calendar = await (loaders.calendar ?? DEFAULT_BACKEND_SCHEDULE_LOADERS.calendar)(
+      token,
+      params,
+      request,
+    );
+    return mapBackendAdminScheduleCalendarResponse(calendar).rows;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchBackendAdminScheduleQueueRows(
+  token: string,
+  filters: {
+    assigneeUserId?: string;
+    limit?: number;
+    month?: string;
+    offset?: number;
+    query?: string;
+    siteId?: string;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
+    status?: string;
+  },
+  request: Request | null,
+  loaders: AdminScheduleBackendLoaders = DEFAULT_BACKEND_SCHEDULE_LOADERS,
+) {
+  try {
+    const params = {
+      assignee_user_id: filters.assigneeUserId || '',
+      limit: Math.max(1, Math.min(5000, filters.limit ?? 50)),
+      month: filters.month || '',
+      offset: Math.max(0, filters.offset ?? 0),
+      query: filters.query || '',
+      site_id: filters.siteId || '',
+      sort_by: filters.sortBy || '',
+      sort_dir: filters.sortDir || '',
+      status: filters.status || '',
+    };
+    const queue = await (loaders.queue ?? DEFAULT_BACKEND_SCHEDULE_LOADERS.queue)(
+      token,
+      params,
+      request,
+    );
+    const mapped = mapBackendAdminScheduleQueueResponse(queue);
+    return {
+      rows: mapped.rows,
+      total: mapped.total,
+    };
+  } catch {
+    return {
+      rows: [],
+      total: 0,
+    };
+  }
+}
+
 export async function refreshAdminScheduleSnapshot(
   token: string,
   request: Request | null = null,
@@ -69,10 +301,11 @@ export async function refreshAdminScheduleSnapshot(
         ...directorySnapshot.data,
         contentItems: [],
       };
+      const memoRows = buildAdminScheduleRows(data, today);
       const snapshot: ScheduleSourceSnapshot = {
         data,
         refreshedAt: new Date().toISOString(),
-        rows: alignScheduleRowsWithLegacyReports(buildAdminScheduleRows(data, today), {
+        rows: alignScheduleRowsWithLegacyReports(memoRows, {
           legacyRows: legacyReports,
           sites: data.sites,
           today,
@@ -134,19 +367,28 @@ export async function buildAdminScheduleCalendarSnapshotResponse(
   },
   request: Request | null = null,
   today = new Date(),
+  loaders: AdminScheduleBackendLoaders = DEFAULT_BACKEND_SCHEDULE_LOADERS,
 ): Promise<SafetyAdminScheduleCalendarResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
-  const rows = buildAdminCalendarSchedules(snapshot.rows, filters, today);
-  const unselectedRows = buildAdminQueueSchedules(snapshot.rows, filters, today);
+  const workerMirrorRows = getWorkerScheduleMirrorRows();
+  const sourceRows = mergeAdminScheduleSnapshotRows({
+    backendRows: [
+      ...(await fetchBackendAdminScheduleCalendarRows(token, filters, request, loaders)),
+      ...workerMirrorRows,
+    ],
+    memoRows: snapshot.rows,
+  });
+  const rows = buildAdminCalendarSchedules(sourceRows, filters, today);
+  const unselectedRows = buildAdminQueueSchedules(sourceRows, filters, today);
   const allSelectedRows = buildAdminCalendarSchedules(
-    snapshot.rows,
+    sourceRows,
     { ...filters, month: 'all' },
     today,
   );
 
   return {
     allSelectedTotal: allSelectedRows.length,
-    availableMonths: buildFilteredAvailableMonths(snapshot.rows, filters, today),
+    availableMonths: buildFilteredAvailableMonths(sourceRows, filters, today),
     month: filters.month || '',
     monthTotal: rows.length,
     refreshedAt: snapshot.refreshedAt,
@@ -164,15 +406,36 @@ export async function buildAdminScheduleQueueSnapshotResponse(
     offset?: number;
     query?: string;
     siteId?: string;
+    sortBy?: string;
+    sortDir?: 'asc' | 'desc';
     status?: string;
   },
   request: Request | null = null,
   today = new Date(),
+  loaders: AdminScheduleBackendLoaders = DEFAULT_BACKEND_SCHEDULE_LOADERS,
 ): Promise<SafetyAdminScheduleQueueResponse> {
   const snapshot = await getAdminScheduleSnapshot(token, request, today);
+  const workerMirrorRows = getWorkerScheduleMirrorRows();
+  const backendQueue = await fetchBackendAdminScheduleQueueRows(
+    token,
+    filters,
+    request,
+    loaders,
+  );
+  const sourceRows = mergeAdminScheduleSnapshotRows({
+    backendRows: [
+      ...backendQueue.rows,
+      ...workerMirrorRows,
+    ],
+    memoRows: snapshot.rows,
+  });
   const offset = Math.max(0, filters.offset ?? 0);
   const limit = Math.max(1, Math.min(5000, filters.limit ?? 50));
-  const rows = buildAdminQueueSchedules(snapshot.rows, filters, today);
+  const rows = sortQueueSnapshotRows(
+    buildAdminQueueSchedules(sourceRows, filters, today),
+    filters.sortBy,
+    filters.sortDir,
+  );
 
   return {
     limit,
@@ -180,7 +443,7 @@ export async function buildAdminScheduleQueueSnapshotResponse(
     offset,
     refreshedAt: snapshot.refreshedAt,
     rows: rows.slice(offset, offset + limit),
-    total: rows.length,
+    total: Math.max(rows.length, backendQueue.total),
   };
 }
 

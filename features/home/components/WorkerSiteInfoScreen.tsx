@@ -719,20 +719,6 @@ export function WorkerSiteInfoScreen({
                             />
                           </label>
                           <label className={styles.formField}>
-                            <span className={styles.formLabel}>고용부 관할(지)청</span>
-                            <input
-                              className="app-input"
-                              value={siteForm.labor_office}
-                              onChange={(event) =>
-                                setSiteForm((current) => ({
-                                  ...current,
-                                  labor_office: event.target.value,
-                                }))
-                              }
-                              disabled={isSaving}
-                            />
-                          </label>
-                          <label className={styles.formField}>
                             <span className={styles.formLabel}>공사 금액</span>
                             <input
                               className="app-input"

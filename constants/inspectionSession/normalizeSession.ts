@@ -117,6 +117,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
     ...session,
     id: normalizeText(source.id) || session.id,
     scheduleId: normalizeText(source.scheduleId) || null,
+    scheduleRoundNo: normalizeReportNumber(source.scheduleRoundNo),
     currentSection: normalizeSectionKey(source.currentSection),
     reportNumber: normalizedReportNumber,
     meta: {

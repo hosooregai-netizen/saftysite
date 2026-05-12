@@ -12,8 +12,11 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
   const syncRequestIdRef = useRef(0);
   const hasLoadedRemoteMasterDataRef = useRef(false);
   const masterDataPromiseRef = useRef<Promise<SafetyMasterData> | null>(null);
+  const reportIndexRequestGenerationRef = useRef<Map<string, number>>(new Map());
   const reportIndexRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
+  const sessionLoadRequestGenerationRef = useRef<Map<string, number>>(new Map());
   const sessionLoadRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
+  const siteReportsLoadRequestGenerationRef = useRef<Map<string, number>>(new Map());
   const siteReportsLoadRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
   const loadedSiteReportsRef = useRef<Set<string>>(new Set());
 
@@ -22,8 +25,11 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
       hasLoadedRemoteMasterDataRef,
       loadedSiteReportsRef,
       masterDataPromiseRef,
+      reportIndexRequestGenerationRef,
       reportIndexRequestsRef,
+      sessionLoadRequestGenerationRef,
       sessionLoadRequestsRef,
+      siteReportsLoadRequestGenerationRef,
       siteReportsLoadRequestsRef,
       syncRequestIdRef,
     }),

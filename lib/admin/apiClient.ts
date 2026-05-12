@@ -1,6 +1,10 @@
 'use client';
 
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  invalidateSafetyReportReadCaches,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type {
   SafetyAdminDirectoryLookupsResponse,
   ReportControllerReview,
@@ -156,6 +160,12 @@ export function updateAdminReportDispatch(
   return requestAdminApi<SafetyReport>(`/reports/${encodeURIComponent(reportKey)}/dispatch`, {
     method: 'PATCH',
     body: JSON.stringify(dispatch),
+  }).then((report) => {
+    invalidateSafetyReportReadCaches(readSafetyAuthToken(), {
+      reportKey: report.report_key || reportKey,
+      siteId: report.site_id,
+    });
+    return report;
   });
 }
 
@@ -422,6 +432,8 @@ export function fetchAdminScheduleQueue(input: {
   offset?: number;
   query?: string;
   siteId?: string;
+  sortBy?: string;
+  sortDir?: TableSortDirection;
   status?: string;
 }, options: RequestInit = {}) {
   return requestAdminApi<SafetyAdminScheduleQueueResponse>(
@@ -432,6 +444,8 @@ export function fetchAdminScheduleQueue(input: {
       offset: input.offset,
       query: input.query,
       site_id: input.siteId,
+      sort_by: input.sortBy,
+      sort_dir: input.sortDir,
       status: input.status,
     })}`,
     options,

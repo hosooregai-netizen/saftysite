@@ -230,6 +230,8 @@ export function buildControllerReportRows(
       status: report.status,
       updatedAt: report.updated_at,
       visitDate: normalizeMapperText(report.visit_date),
+      visitRound: report.visit_round,
+      totalRound: report.total_round ?? site?.total_rounds ?? null,
       controllerReview,
       dispatch,
       periodLabel,

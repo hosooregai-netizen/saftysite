@@ -85,6 +85,132 @@ test('canonical admin selected report hydration uses exact report_key rows', asy
   assert.equal(selected?.originalPdfAvailable, true);
 });
 
+test('canonical admin selected report hydrates site detail when recipient email is missing', async () => {
+  const selected = await fetchCanonicalAdminMailboxSelectedReport({
+    adminSiteById: new Map([
+      [
+        'site-1',
+        {
+          ...buildSiteMap().get('site-1'),
+          site_contact_email: '',
+        } as SafetySite,
+      ],
+    ]),
+    fetchReports: async () => ({
+      limit: 1,
+      offset: 0,
+      rows: [buildRow()],
+      total: 1,
+    }),
+    fetchSite: async (siteId) => ({
+      ...buildSiteMap().get(siteId),
+      site_contact_email: 'site-manager@example.com',
+    } as SafetySite),
+    reportKey: 'report-current-1',
+    siteId: 'site-1',
+  });
+
+  assert.equal(selected?.recipientEmail, 'site-manager@example.com');
+});
+
+test('canonical admin open report picker options hydrate site detail for recipient emails', async () => {
+  const fetchSiteCalls: string[] = [];
+  const reportCalls: Array<Record<string, unknown>> = [];
+  const response = await fetchCanonicalAdminMailboxReportOptions({
+    adminSiteById: new Map(),
+    fetchReports: async (input) => {
+      reportCalls.push(input as Record<string, unknown>);
+      return {
+        limit: 20,
+        offset: 0,
+        rows: [buildRow()],
+        total: 1,
+      };
+    },
+    fetchSite: async (siteId) => {
+      fetchSiteCalls.push(siteId);
+      return {
+        ...buildSiteMap().get(siteId),
+        site_contact_email: 'site-picker@example.com',
+      } as SafetySite;
+    },
+    page: 1,
+    reportPickerOpen: true,
+    reportSearch: '',
+    reportSiteFilter: '',
+  });
+
+  assert.equal(reportCalls[0]?.limit, 20);
+  assert.deepEqual(fetchSiteCalls, ['site-1']);
+  assert.equal(response.options[0]?.recipientEmail, 'site-picker@example.com');
+});
+
+test('canonical admin closed report picker options skip site detail hydration', async () => {
+  const fetchSiteCalls: string[] = [];
+  const adminSiteById = new Map<string, SafetySite>([
+    [
+      'site-1',
+      {
+        ...buildSiteMap().get('site-1'),
+        site_contact_email: 'cached-site@example.com',
+      } as SafetySite,
+    ],
+    [
+      'site-2',
+      {
+        ...buildSiteMap().get('site-1'),
+        id: 'site-2',
+        site_contact_email: '',
+        site_name: 'Second site',
+      } as SafetySite,
+    ],
+  ]);
+
+  const response = await fetchCanonicalAdminMailboxReportOptions({
+    adminSiteById,
+    fetchReports: async () => ({
+      limit: 500,
+      offset: 0,
+      rows: [
+        buildRow({
+          reportKey: 'report-current-cached',
+          reportTitle: 'Cached site report',
+          routeParam: 'report-current-cached',
+          siteId: 'site-1',
+        }),
+        buildRow({
+          reportKey: 'report-current-missing',
+          reportTitle: 'Missing recipient report',
+          routeParam: 'report-current-missing',
+          siteId: 'site-2',
+          siteName: 'Second site',
+          updatedAt: '2026-04-24T23:00:00+09:00',
+          visitDate: '2025-06-24',
+        }),
+      ],
+      total: 2,
+    }),
+    fetchSite: async (siteId) => {
+      fetchSiteCalls.push(siteId);
+      return {
+        ...buildSiteMap().get('site-1'),
+        id: siteId,
+        site_contact_email: 'should-not-load@example.com',
+      } as SafetySite;
+    },
+    page: 1,
+    reportPickerOpen: false,
+    reportSearch: '',
+    reportSiteFilter: '',
+  });
+
+  const optionsByReportKey = new Map(response.options.map((option) => [option.reportKey, option]));
+
+  assert.deepEqual(fetchSiteCalls, []);
+  assert.equal(optionsByReportKey.get('report-current-cached')?.recipientEmail, 'cached-site@example.com');
+  assert.equal(optionsByReportKey.get('report-current-missing')?.recipientEmail, '');
+});
+
 test('canonical admin initial options prefer original PDF rows for duplicate report identities', async () => {
   const response = await fetchCanonicalAdminMailboxReportOptions({
     adminSiteById: buildSiteMap(),

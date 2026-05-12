@@ -12,7 +12,6 @@ import {
 } from './MailboxRecipientField';
 import { MailboxSendProgress } from './MailboxSendProgress';
 import localStyles from './MailboxPanel.module.css';
-import { MAIL_REPORT_TEMPLATES } from './mailboxReportTemplates';
 
 interface MailboxComposeAccountOption {
   id: string;
@@ -51,9 +50,7 @@ interface MailboxComposeSectionProps {
   selectableAccounts: MailboxComposeAccountOption[];
   selectedReport: MailboxComposeSelectedReport | null;
   selectedReports: MailboxComposeSelectedReport[];
-  selectedTemplateId: string;
   submitDisabled: boolean;
-  onApplyTemplate: (templateId?: string) => void;
   onAttachmentSelect: (event: ChangeEvent<HTMLInputElement>) => void;
   onBlurRecipient: () => void;
   onChangeAccountId: (accountId: string) => void;
@@ -91,9 +88,7 @@ export function MailboxComposeSection({
   selectableAccounts,
   selectedReport,
   selectedReports,
-  selectedTemplateId,
   submitDisabled,
-  onApplyTemplate,
   onAttachmentSelect,
   onBlurRecipient,
   onChangeAccountId,
@@ -116,9 +111,6 @@ export function MailboxComposeSection({
       <div className={localStyles.mailTableHeader}>
         <div className={localStyles.mailTableHeaderMeta}>
           <strong className={localStyles.panelTitle}>{composeTitle}</strong>
-          <span className={localStyles.panelDescription}>
-            보고서 선택, 수신자 입력, 제목과 본문 작성, 첨부 보강을 한 화면에서 처리합니다.
-          </span>
         </div>
         {hasMultipleAccounts ? (
           <div className={localStyles.composeHeaderActions}>
@@ -141,6 +133,34 @@ export function MailboxComposeSection({
       </div>
 
       <div className={localStyles.composeSectionBody}>
+        <div className={localStyles.composeSupportActions}>
+          <button
+            type="button"
+            className="app-button app-button-primary"
+            onClick={onOpenReportPicker}
+          >
+            보고서 선택
+          </button>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={() => attachmentInputRef.current?.click()}
+          >
+            파일 첨부
+          </button>
+          <input ref={attachmentInputRef} type="file" multiple hidden onChange={onAttachmentSelect} />
+        </div>
+        <MailboxComposeSupport
+          attachments={attachments}
+          composeMode={composeMode}
+          isDemoMode={isDemoMode}
+          isSendingMail={isSendingMail}
+          selectedReport={selectedReport}
+          selectedReports={selectedReports}
+          onClearSelectedReport={onClearSelectedReport}
+          onRemoveAttachment={onRemoveAttachment}
+        />
+
         <MailboxRecipientField
           inputValue={compose.toInput}
           suggestionIndex={recipientSuggestionIndex}
@@ -155,23 +175,6 @@ export function MailboxComposeSection({
           onRemoveRecipient={onRemoveRecipient}
           onSelectSuggestion={onSelectRecipientSuggestion}
         />
-
-        {composeMode === 'report' ? (
-          <label className={localStyles.fieldWide}>
-            <span className={localStyles.fieldLabel}>템플릿</span>
-            <select
-              className="app-select"
-              value={selectedTemplateId}
-              onChange={(event) => onApplyTemplate(event.target.value)}
-            >
-              {MAIL_REPORT_TEMPLATES.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
 
         <label className={localStyles.fieldWide}>
           <span className={localStyles.fieldLabel}>제목</span>
@@ -200,19 +203,6 @@ export function MailboxComposeSection({
               }
             />
           </div>
-          <MailboxComposeSupport
-            attachmentInputRef={attachmentInputRef}
-            attachments={attachments}
-            composeMode={composeMode}
-            isDemoMode={isDemoMode}
-            isSendingMail={isSendingMail}
-            selectedReport={selectedReport}
-            selectedReports={selectedReports}
-            onAttachmentSelect={onAttachmentSelect}
-            onClearSelectedReport={onClearSelectedReport}
-            onOpenReportPicker={onOpenReportPicker}
-            onRemoveAttachment={onRemoveAttachment}
-          />
         </div>
 
         <div className={localStyles.composeFooter}>

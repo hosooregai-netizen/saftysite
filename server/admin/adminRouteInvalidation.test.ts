@@ -17,6 +17,13 @@ test('invalidates overview and reports route caches for report mutations', () =>
   });
 });
 
+test('invalidates overview and reports route caches for schedule mutations', () => {
+  assert.deepEqual(resolveAdminRouteInvalidationTargets(['schedules', 'schedule-1'], 'PATCH'), {
+    overview: true,
+    reports: true,
+  });
+});
+
 test('invalidates overview and reports route caches for directory mutations', () => {
   assert.deepEqual(resolveAdminRouteInvalidationTargets(['sites', 'site-1', 'dispatch-policy'], 'PATCH'), {
     overview: true,

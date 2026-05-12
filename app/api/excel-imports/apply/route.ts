@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { refreshAdminAnalyticsSnapshot } from '@/server/admin/analyticsSnapshot';
 import { refreshAdminScheduleSnapshot } from '@/server/admin/scheduleSnapshot';
 import {
+  applyExcelImportServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
@@ -32,6 +33,16 @@ export async function POST(request: Request): Promise<Response> {
       payload.source_section === 'sites' || payload.sourceSection === 'sites'
         ? 'sites'
         : 'headquarters';
+    const importKind =
+      payload.import_kind === 'k2b_guidance' ||
+      payload.importKind === 'k2b_guidance' ||
+      (payload.scope &&
+      typeof payload.scope === 'object' &&
+      payload.scope &&
+      ((payload.scope as Record<string, unknown>).importKind === 'k2b_guidance' ||
+        (payload.scope as Record<string, unknown>).import_kind === 'k2b_guidance'))
+        ? 'k2b_guidance'
+        : 'generic';
     const headquarterId =
       typeof payload.headquarter_id === 'string'
         ? payload.headquarter_id
@@ -58,10 +69,30 @@ export async function POST(request: Request): Promise<Response> {
         { status: 400 },
       );
     }
+    if (importKind === 'k2b_guidance') {
+      const result = await applyExcelImportServer(
+        token,
+        {
+          ...payload,
+          import_kind: importKind,
+          scope: {
+            headquarter_id: headquarterId,
+            import_kind: importKind,
+            site_id: siteId,
+            source_section: sourceSection,
+          },
+        },
+        request,
+      );
+      await refreshAdminAnalyticsSnapshot(token, request);
+      await refreshAdminScheduleSnapshot(token, request).catch(() => undefined);
+      return NextResponse.json(result);
+    }
     const result = await applyLocalExcelWorkbook(token, request, {
       jobId,
       scope: {
         headquarterId,
+        importKind,
         siteId,
         sourceSection,
       },

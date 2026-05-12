@@ -18,25 +18,30 @@ import {
   startOfToday,
 } from './dates';
 
-export const DISPATCH_MANAGEMENT_MAX_UNSENT_DAYS = 30;
+export const DISPATCH_MANAGEMENT_MAX_UNSENT_DAYS = 15;
 export const PRIORITY_PROJECT_AMOUNT = 2_000_000_000;
 
-type SiteLike = Pick<
-  SafetySite,
-  | 'contract_date'
-  | 'contract_status'
-  | 'contract_end_date'
-  | 'contract_signed_date'
-  | 'contract_start_date'
-  | 'headquarter_detail'
-  | 'is_active'
-  | 'last_visit_date'
-  | 'lifecycle_status'
-  | 'project_amount'
-  | 'project_end_date'
-  | 'project_start_date'
-  | 'status'
->;
+type SiteLike = Omit<
+  Pick<
+    SafetySite,
+    | 'contract_date'
+    | 'contract_status'
+    | 'contract_end_date'
+    | 'contract_signed_date'
+    | 'contract_start_date'
+    | 'headquarter_detail'
+    | 'is_active'
+    | 'last_visit_date'
+    | 'lifecycle_status'
+    | 'project_amount'
+    | 'project_end_date'
+    | 'project_start_date'
+    | 'status'
+  >,
+  'project_amount'
+> & {
+  project_amount?: number | string | null;
+};
 
 type DispatchManagementReportLike = {
   dispatchCompleted?: boolean | null;
@@ -77,6 +82,15 @@ const DEADLINE_BUCKETS = [
 
 function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeAmount(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function pickDate(...values: Array<string | null | undefined>) {
@@ -169,7 +183,7 @@ export function isManageableSiteScope(site: SiteLike | null | undefined, today: 
   if (!site) return false;
   void today;
 
-  const lifecycleStatus = normalizeSiteLifecycleStatus(site);
+  const lifecycleStatus = normalizeSiteLifecycleStatus(site, today);
   if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') return false;
 
   const headquarterStatus = normalizeHeadquarterLifecycleStatus(site.headquarter_detail);
@@ -187,7 +201,7 @@ export function isCurrentSiteManagementWindow(site: SiteLike | null | undefined,
 export function isDispatchManagementSiteScope(site: SiteLike | null | undefined, today: Date) {
   if (!site || !isManageableSiteScope(site, today)) return false;
   return (
-    normalizeSiteLifecycleStatus(site) === 'active' &&
+    normalizeSiteLifecycleStatus(site, today) === 'active' &&
     isSiteInCurrentQuarterWindow(site, today)
   );
 }
@@ -225,16 +239,20 @@ export function isPriorityQuarterlySiteScope({
   site,
   today,
 }: PriorityQuarterlyScopeInput) {
-  if (!isManageableSiteScope(site, today)) return false;
-  if ((site.project_amount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
-  return normalizeSiteLifecycleStatus(site) === 'active' && isSiteInCurrentQuarterWindow(site, today);
+  const status = normalizeText(site.status);
+  const lifecycleStatus = normalizeText(site.lifecycle_status);
+  if (status === 'closed' || status === 'deleted') return false;
+  if (lifecycleStatus === 'closed' || lifecycleStatus === 'deleted') return false;
+  if (site.is_active === false) return false;
+  if ((normalizeAmount(site.project_amount) ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
+  return isSiteInCurrentQuarterWindow(site, today);
 }
 
 export function isPriorityQuarterlyManagementRowScope(
   row: SafetyAdminPriorityQuarterlyManagementRow,
   today: Date,
 ) {
-  if ((row.projectAmount ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
+  if ((normalizeAmount(row.projectAmount) ?? 0) < PRIORITY_PROJECT_AMOUNT) return false;
   return normalizeText(row.currentQuarterKey) === formatQuarterKey(today);
 }
 
@@ -255,10 +273,10 @@ export function compareDispatchManagementUnsentRows(
   right: SafetyAdminUnsentReportRow,
 ) {
   return (
-    Number(Boolean(right.mailReady)) -
-      Number(Boolean(left.mailReady)) ||
     right.unsentDays - left.unsentDays ||
     compareDateAscending(left.visitDate, right.visitDate) ||
+    Number(Boolean(right.mailReady)) -
+      Number(Boolean(left.mailReady)) ||
     normalizeText(left.siteName).localeCompare(normalizeText(right.siteName), 'ko') ||
     normalizeText(left.reportTitle).localeCompare(normalizeText(right.reportTitle), 'ko') ||
     normalizeText(left.reportKey).localeCompare(normalizeText(right.reportKey), 'ko')

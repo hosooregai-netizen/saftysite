@@ -114,16 +114,6 @@ export function HeadquarterEditorModal({
                 maxLength={50}
               />
             </label>
-            <label className={styles.modalField}>
-              <span className={styles.label}>건설업면허/등록번호</span>
-              <input
-                className="app-input"
-                value={form.license_no}
-                onChange={(event) => onFormChange({ ...form, license_no: event.target.value })}
-                disabled={busy}
-                maxLength={50}
-              />
-            </label>
           </div>
         </section>
 
@@ -135,7 +125,7 @@ export function HeadquarterEditorModal({
           </div>
           <div className={styles.modalGrid}>
             <label className={styles.modalField}>
-              <span className={styles.label}>건설사 대표자명</span>
+              <span className={styles.label}>건설사 담당자명</span>
               <input
                 className="app-input"
                 value={form.contact_name}
@@ -145,7 +135,7 @@ export function HeadquarterEditorModal({
               />
             </label>
             <label className={styles.modalField}>
-              <span className={styles.label}>대표 전화</span>
+              <span className={styles.label}>건설사 담당자 연락처</span>
               <input
                 className="app-input"
                 value={form.contact_phone}
@@ -154,8 +144,19 @@ export function HeadquarterEditorModal({
                 maxLength={50}
               />
             </label>
-            <label className={styles.modalFieldWide}>
-              <span className={styles.label}>건설사 주소</span>
+            <label className={styles.modalField}>
+              <span className={styles.label}>건설사 담당자 이메일</span>
+              <input
+                className="app-input"
+                type="email"
+                value={form.contact_email}
+                onChange={(event) => onFormChange({ ...form, contact_email: event.target.value })}
+                disabled={busy}
+                maxLength={200}
+              />
+            </label>
+            <label className={styles.modalField}>
+              <span className={styles.label}>본사 주소</span>
               <input
                 className="app-input"
                 value={form.address}

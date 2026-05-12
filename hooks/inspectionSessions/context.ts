@@ -57,6 +57,7 @@ export interface InspectionSessionsContextValue {
       meta?: Partial<InspectionReportMeta>;
       reportNumber?: number;
       scheduleId?: string | null;
+      scheduleRoundNo?: number | null;
       document4FollowUps?: InspectionSession['document4FollowUps'];
       technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
     }
@@ -71,7 +72,7 @@ export interface InspectionSessionsContextValue {
   ) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   deleteSessions: (predicate: (session: InspectionSession) => boolean) => void;
-  saveNow: () => Promise<void>;
+  saveNow: (options?: { throwOnError?: boolean }) => Promise<void>;
   getSessionById: (sessionId: string) => InspectionSession | null;
   getSessionsBySiteId: (siteId: string) => InspectionSession[];
   getSiteById: (siteId: string) => InspectionSite | null;

@@ -9,6 +9,7 @@ import {
 import { compareDispatchManagementUnsentRows } from '@/features/admin/lib/control-center-model/overviewPolicies';
 import {
   fetchAdminSessionCacheOnce,
+  getAdminSessionCacheGeneration,
   readAdminSessionCache,
   writeAdminSessionCache,
 } from '@/features/admin/lib/adminSessionCache';
@@ -33,6 +34,78 @@ import {
 } from './overviewSectionHelpers';
 
 const OVERVIEW_CACHE_KEY = 'overview';
+const PRIORITY_QUARTERLY_EXCEPTION_ORDER: Record<
+  NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number]['exceptionStatus'],
+  number
+> = {
+  reflection_missing: 0,
+  dispatch_overdue: 1,
+  dispatch_pending: 2,
+  ok: 3,
+};
+
+function normalizeKeyPart(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function getPriorityQuarterlyManagementRowKey(
+  row: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+) {
+  const siteId = normalizeKeyPart(row.siteId);
+  const quarterKey = normalizeKeyPart(row.currentQuarterKey);
+  return siteId && quarterKey ? `${siteId}:${quarterKey}` : '';
+}
+
+function comparePriorityQuarterlyManagementRows(
+  left: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+  right: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']>[number],
+) {
+  return (
+    (PRIORITY_QUARTERLY_EXCEPTION_ORDER[left.exceptionStatus] ?? 99) -
+      (PRIORITY_QUARTERLY_EXCEPTION_ORDER[right.exceptionStatus] ?? 99) ||
+    (right.projectAmount ?? 0) - (left.projectAmount ?? 0) ||
+    left.siteName.localeCompare(right.siteName, 'ko')
+  );
+}
+
+function mergePriorityQuarterlyManagementRows(
+  responseRows: SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] | undefined,
+  fallbackRows: SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] | undefined,
+): SafetyAdminOverviewResponse['priorityQuarterlyManagementRows'] {
+  const upstreamRows = responseRows ?? [];
+  const localRows = fallbackRows ?? [];
+  if (upstreamRows.length === 0) {
+    return localRows;
+  }
+
+  const upstreamQuarterKeys = new Set(
+    upstreamRows
+      .map((row) => normalizeKeyPart(row.currentQuarterKey))
+      .filter(Boolean),
+  );
+  const mergedRows: NonNullable<SafetyAdminOverviewResponse['priorityQuarterlyManagementRows']> = [];
+  const seenKeys = new Set<string>();
+
+  upstreamRows.forEach((row) => {
+    const rowKey = getPriorityQuarterlyManagementRowKey(row);
+    if (rowKey) {
+      if (seenKeys.has(rowKey)) return;
+      seenKeys.add(rowKey);
+    }
+    mergedRows.push(row);
+  });
+
+  localRows.forEach((row) => {
+    const quarterKey = normalizeKeyPart(row.currentQuarterKey);
+    if (upstreamQuarterKeys.size > 0 && !upstreamQuarterKeys.has(quarterKey)) return;
+    const rowKey = getPriorityQuarterlyManagementRowKey(row);
+    if (rowKey && seenKeys.has(rowKey)) return;
+    if (rowKey) seenKeys.add(rowKey);
+    mergedRows.push(row);
+  });
+
+  return mergedRows.sort(comparePriorityQuarterlyManagementRows);
+}
 
 function parseYearPrefix(value: string) {
   const matched = value.trim().match(/^(\d{4})/);
@@ -72,6 +145,115 @@ function pickRowsForCurrentYear<T>(
   }
 
   return fallbackRows.filter((row) => resolveYear(row) === fallbackYear);
+}
+
+function countMaterialMissingEntries(
+  summary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+) {
+  return summary.entries.reduce((total, entry) => {
+    if (entry.key === 'education_missing' || entry.key === 'measurement_missing' || entry.key === 'both_missing') {
+      return total + entry.count;
+    }
+    return total;
+  }, 0);
+}
+
+function shouldUseFallbackMaterialRows(
+  responseSummary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+  fallbackSummary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+) {
+  const responseRows = responseSummary.missingSiteRows;
+  const fallbackRows = fallbackSummary.missingSiteRows;
+  const expectedMissingRows = countMaterialMissingEntries(responseSummary);
+  const fallbackMissingRows = countMaterialMissingEntries(fallbackSummary);
+  const hasStaleSummaryScope =
+    fallbackSummary.totalSiteCount > 0 &&
+    responseSummary.totalSiteCount !== fallbackSummary.totalSiteCount &&
+    responseRows.length === fallbackRows.length &&
+    expectedMissingRows === fallbackMissingRows;
+
+  return (
+    (fallbackRows.length > responseRows.length &&
+      (responseRows.length === 0 || expectedMissingRows > responseRows.length)) ||
+    hasStaleSummaryScope
+  );
+}
+
+function shouldUseFallbackEndingSoonRows(
+  responseRows: SafetyAdminOverviewResponse['endingSoonRows'],
+  responseSummary: SafetyAdminOverviewResponse['endingSoonSummary'],
+  fallbackRows: SafetyAdminOverviewResponse['endingSoonRows'],
+) {
+  return (
+    fallbackRows.length > responseRows.length &&
+    (responseRows.length === 0 || responseSummary.totalSiteCount > responseRows.length)
+  );
+}
+
+export function mergeOverviewResponseWithFallback(
+  overviewResponse: SafetyAdminOverviewResponse | null,
+  fallbackOverview: SafetyAdminOverviewResponse,
+) {
+  if (!overviewResponse) return fallbackOverview;
+
+  const responseEndingSoonRows = Array.isArray(overviewResponse.endingSoonRows)
+    ? overviewResponse.endingSoonRows
+    : [];
+  const responseEndingSoonSummary =
+    overviewResponse.endingSoonSummary && hasEndingSoonSummary(overviewResponse.endingSoonSummary)
+      ? overviewResponse.endingSoonSummary
+      : fallbackOverview.endingSoonSummary;
+  const useFallbackEndingSoonRows = shouldUseFallbackEndingSoonRows(
+    responseEndingSoonRows,
+    responseEndingSoonSummary,
+    fallbackOverview.endingSoonRows,
+  );
+  const useFallbackMaterialRows = shouldUseFallbackMaterialRows(
+    overviewResponse.quarterlyMaterialSummary,
+    fallbackOverview.quarterlyMaterialSummary,
+  );
+
+  return {
+    ...overviewResponse,
+    alertsTotalCount:
+      overviewResponse.alertsTotalCount ?? Math.max(overviewResponse.alerts.length, fallbackOverview.alertsTotalCount),
+    completionRowsTotalCount:
+      overviewResponse.completionRowsTotalCount ??
+      Math.max(overviewResponse.completionRows.length, fallbackOverview.completionRowsTotalCount),
+    deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
+      ? overviewResponse.deadlineSignalSummary
+      : fallbackOverview.deadlineSignalSummary,
+    endingSoonRows: useFallbackEndingSoonRows
+      ? fallbackOverview.endingSoonRows
+      : responseEndingSoonRows,
+    endingSoonSummary: useFallbackEndingSoonRows
+      ? fallbackOverview.endingSoonSummary
+      : responseEndingSoonSummary,
+    quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
+      ? useFallbackMaterialRows
+        ? fallbackOverview.quarterlyMaterialSummary
+        : {
+            ...overviewResponse.quarterlyMaterialSummary,
+            quarterKey:
+              overviewResponse.quarterlyMaterialSummary.quarterKey ||
+              fallbackOverview.quarterlyMaterialSummary.quarterKey,
+            quarterLabel:
+              overviewResponse.quarterlyMaterialSummary.quarterLabel ||
+              fallbackOverview.quarterlyMaterialSummary.quarterLabel,
+          }
+      : fallbackOverview.quarterlyMaterialSummary,
+    siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
+      ? overviewResponse.siteStatusSummary
+      : fallbackOverview.siteStatusSummary,
+    unsentReportRows:
+      overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
+        ? overviewResponse.unsentReportRows
+        : fallbackOverview.unsentReportRows,
+    priorityQuarterlyManagementRows: mergePriorityQuarterlyManagementRows(
+      overviewResponse.priorityQuarterlyManagementRows,
+      fallbackOverview.priorityQuarterlyManagementRows,
+    ),
+  } satisfies SafetyAdminOverviewResponse;
 }
 
 export function useAdminOverviewSectionState(
@@ -143,10 +325,20 @@ export function useAdminOverviewSectionState(
           currentUserId,
           OVERVIEW_CACHE_KEY,
           async () => {
+            const requestGeneration = getAdminSessionCacheGeneration(
+              currentUserId,
+              OVERVIEW_CACHE_KEY,
+            );
             const freshOverview = await fetchAdminOverview();
-            writeAdminSessionCache(currentUserId, OVERVIEW_CACHE_KEY, freshOverview);
+            if (
+              getAdminSessionCacheGeneration(currentUserId, OVERVIEW_CACHE_KEY) ===
+              requestGeneration
+            ) {
+              writeAdminSessionCache(currentUserId, OVERVIEW_CACHE_KEY, freshOverview);
+            }
             return freshOverview;
           },
+          { force: options?.force },
         );
         if (!isMountedRef.current || latestOverviewRequestKeyRef.current !== activeRequestKey) {
           return;
@@ -176,40 +368,10 @@ export function useAdminOverviewSectionState(
     void refreshOverview({ preferCached: false });
   }, [currentUserId, refreshOverview]);
 
-  const overview = useMemo(() => {
-    if (!overviewResponse) return fallbackOverview;
-    return {
-      ...overviewResponse,
-      deadlineSignalSummary: hasDeadlineSignalSummary(overviewResponse.deadlineSignalSummary)
-        ? overviewResponse.deadlineSignalSummary
-        : fallbackOverview.deadlineSignalSummary,
-      endingSoonRows:
-        Array.isArray(overviewResponse.endingSoonRows) && overviewResponse.endingSoonRows.length > 0
-          ? overviewResponse.endingSoonRows
-          : fallbackOverview.endingSoonRows,
-      endingSoonSummary: overviewResponse.endingSoonSummary && hasEndingSoonSummary(overviewResponse.endingSoonSummary)
-        ? overviewResponse.endingSoonSummary
-        : fallbackOverview.endingSoonSummary,
-      quarterlyMaterialSummary: hasQuarterlyMaterialSummary(overviewResponse.quarterlyMaterialSummary)
-        ? {
-            ...overviewResponse.quarterlyMaterialSummary,
-            quarterKey:
-              overviewResponse.quarterlyMaterialSummary.quarterKey ||
-              fallbackOverview.quarterlyMaterialSummary.quarterKey,
-            quarterLabel:
-              overviewResponse.quarterlyMaterialSummary.quarterLabel ||
-              fallbackOverview.quarterlyMaterialSummary.quarterLabel,
-          }
-        : fallbackOverview.quarterlyMaterialSummary,
-      siteStatusSummary: hasSiteStatusSummary(overviewResponse.siteStatusSummary)
-        ? overviewResponse.siteStatusSummary
-        : fallbackOverview.siteStatusSummary,
-      unsentReportRows:
-        overviewResponse.unsentReportRows.length > 0 || fallbackOverview.unsentReportRows.length === 0
-          ? overviewResponse.unsentReportRows
-          : fallbackOverview.unsentReportRows,
-    } satisfies SafetyAdminOverviewResponse;
-  }, [fallbackOverview, overviewResponse]);
+  const overview = useMemo(
+    () => mergeOverviewResponseWithFallback(overviewResponse, fallbackOverview),
+    [fallbackOverview, overviewResponse],
+  );
 
   const normalizedUnsentReportRows = useMemo(() => {
     const fallbackRowsByKey = new Map(fallbackOverview.unsentReportRows.map((row) => [row.reportKey, row]));
@@ -228,27 +390,23 @@ export function useAdminOverviewSectionState(
   }, [fallbackOverview.unsentReportRows, overview.unsentReportRows]);
 
   const normalizedPriorityQuarterlyManagementRows = useMemo(() => {
-    const sourceRows =
-      (overview.priorityQuarterlyManagementRows ?? []).length > 0 ||
-      (fallbackOverview.priorityQuarterlyManagementRows ?? []).length === 0
-        ? overview.priorityQuarterlyManagementRows ?? []
-        : fallbackOverview.priorityQuarterlyManagementRows ?? [];
+    const sourceRows = overview.priorityQuarterlyManagementRows ?? [];
     const fallbackRowsByKey = new Map(
       (fallbackOverview.priorityQuarterlyManagementRows ?? []).map((row) => [
-        `${row.siteId}:${row.currentQuarterKey}`,
+        getPriorityQuarterlyManagementRowKey(row),
         row,
       ]),
     );
 
     return sourceRows.map((row) => {
-      const fallbackRow = fallbackRowsByKey.get(`${row.siteId}:${row.currentQuarterKey}`);
+      const fallbackRow = fallbackRowsByKey.get(getPriorityQuarterlyManagementRowKey(row));
       const siteId = row.siteId || fallbackRow?.siteId || '';
       return {
         ...fallbackRow,
         ...row,
         href: siteId ? buildSiteQuarterlyListHref(siteId) : fallbackRow?.href || row.href,
-        quarterlyReportHref: fallbackRow?.quarterlyReportHref || row.quarterlyReportHref,
-        quarterlyReportKey: fallbackRow?.quarterlyReportKey || row.quarterlyReportKey,
+        quarterlyReportHref: row.quarterlyReportHref || fallbackRow?.quarterlyReportHref || '',
+        quarterlyReportKey: row.quarterlyReportKey || fallbackRow?.quarterlyReportKey || '',
       };
     });
   }, [
@@ -362,6 +520,8 @@ export function useAdminOverviewSectionState(
 
   const exportOverview = useCallback(async () => {
     const exportModel: AdminOverviewModel = {
+      alertsTotalCount: overview.alertsTotalCount,
+      completionRowsTotalCount: overview.completionRowsTotalCount,
       coverageRows: overview.coverageRows,
       deadlineSignalSummary: overview.deadlineSignalSummary,
       deadlineRows: overview.deadlineRows,

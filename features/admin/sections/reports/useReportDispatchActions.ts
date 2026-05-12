@@ -24,7 +24,7 @@ interface UseReportDispatchActionsInput {
   dispatchRow: ControllerReportRow | null;
   dispatchSmsMessage: string;
   dispatchSmsPhone: string;
-  fetchRows: () => Promise<void>;
+  fetchRows: (options?: { force?: boolean }) => Promise<void>;
   reviewForm: ReportReviewForm;
   reviewRow: ControllerReportRow | null;
   selectedRows: ControllerReportRow[];
@@ -69,7 +69,7 @@ export function useReportDispatchActions({
       invalidateOverviewRelatedCaches();
       setNotice('蹂닿퀬??寃??泥댄겕瑜???ν뻽?듬땲??');
       setReviewRow(null);
-      await fetchRows();
+      await fetchRows({ force: true });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '蹂닿퀬??寃????μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
     }
@@ -108,9 +108,10 @@ export function useReportDispatchActions({
         siteId: dispatchRow.siteId,
         subject: dispatchRow.reportTitle || dispatchRow.periodLabel || dispatchRow.reportKey,
       });
+      invalidateOverviewRelatedCaches();
       setNotice(result.message || '臾몄옄瑜?諛쒖넚?덉뒿?덈떎.');
       setDispatchRow(null);
-      await fetchRows();
+      await fetchRows({ force: true });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '臾몄옄 諛쒖넚???ㅽ뙣?덉뒿?덈떎.');
     } finally {
@@ -121,6 +122,7 @@ export function useReportDispatchActions({
     dispatchSmsMessage,
     dispatchSmsPhone,
     fetchRows,
+    invalidateOverviewRelatedCaches,
     setDispatchRow,
     setDispatchSmsSending,
     setError,
@@ -146,7 +148,7 @@ export function useReportDispatchActions({
         );
         invalidateOverviewRelatedCaches();
         setNotice('?좏깮??蹂닿퀬?쒖쓽 寃???곹깭瑜???ν뻽?듬땲??');
-        await fetchRows();
+        await fetchRows({ force: true });
       } catch (nextError) {
         setError(nextError instanceof Error ? nextError.message : '?쇨큵 寃??泥섎━???ㅽ뙣?덉뒿?덈떎.');
       }
@@ -171,7 +173,7 @@ export function useReportDispatchActions({
       );
       invalidateOverviewRelatedCaches();
       setNotice('?좏깮??蹂닿퀬?쒖쓽 ?대떦?먮? ?꾩옱 ?ъ슜?먮줈 吏?뺥뻽?듬땲??');
-      await fetchRows();
+      await fetchRows({ force: true });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '?대떦??吏?뺤뿉 ?ㅽ뙣?덉뒿?덈떎.');
     }
@@ -226,7 +228,7 @@ export function useReportDispatchActions({
       );
       invalidateOverviewRelatedCaches();
       setNotice('?좏깮??遺꾧린 蹂닿퀬?쒕? ?섎룞 諛쒖넚 ?꾨즺濡?泥섎━?덉뒿?덈떎.');
-      await fetchRows();
+      await fetchRows({ force: true });
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '?쇨큵 諛쒖넚 泥섎━???ㅽ뙣?덉뒿?덈떎.');
     }

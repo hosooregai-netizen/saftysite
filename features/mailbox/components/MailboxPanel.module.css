@@ -917,20 +917,6 @@
   background: #f3f7fb;
 }
 
-.reportPickerButton {
-  border-color: #213a61;
-  background: linear-gradient(180deg, #2a4872, #1f3454);
-  color: #fff;
-  box-shadow: none;
-}
-
-.reportPickerButton:hover,
-.reportPickerButton:focus-visible {
-  border-color: #182b47;
-  background: linear-gradient(180deg, #233e63, #172840);
-  color: #fff;
-}
-
 .colorInput {
   inline-size: 36px;
   block-size: 32px;
@@ -1010,7 +996,7 @@
 .composeSupportArea {
   display: grid;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 0;
   padding: 14px 16px;
   border: 1px solid var(--erp-line);
   border-radius: 2px;

@@ -59,16 +59,17 @@ export async function runMobileWorkerNavSmoke(config: ClientSmokePlaywrightConfi
       });
     });
 
-    await page.goto(`${harness.baseURL}/mobile`, { waitUntil: 'load' });
-    await harness.loginAs('agent@example.com');
-    await page.getByRole('heading', { name: '배정 현장' }).waitFor({ state: 'visible' });
-
-    const calendarLink = page.locator('a[href="/mobile/calendar"]').first();
-    await calendarLink.waitFor({ state: 'visible' });
     await page.goto(`${harness.baseURL}/mobile/calendar`, { waitUntil: 'load' });
+    await harness.loginAs('agent@example.com');
     await page.waitForURL(/\/mobile\/calendar$/);
     await harness.waitForRequestCount('GET /api/me/schedules', scheduleReadsBefore + 1);
     await page.getByRole('heading', { name: '일정', exact: true }).waitFor({ state: 'visible' });
+
+    const sitesLink = page.locator('a[href="/mobile"]').first();
+    await sitesLink.waitFor({ state: 'visible' });
+    await page.goto(`${harness.baseURL}/mobile`, { waitUntil: 'load' });
+    await page.waitForURL(/\/mobile$/);
+    await page.getByRole('heading', { name: '배정 현장' }).waitFor({ state: 'visible' });
 
     const mailboxLink = page.locator('a[href="/mobile/mailbox"]').first();
     await mailboxLink.waitFor({ state: 'visible' });

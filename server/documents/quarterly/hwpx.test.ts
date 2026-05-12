@@ -12,7 +12,10 @@ import {
   syncQuarterlySummaryReportSources,
 } from '@/lib/erpReports/quarterly';
 import type { QuarterlySummaryReport } from '@/types/erpReports';
-import { buildQuarterlyHwpxDocument } from './hwpx';
+import {
+  buildQuarterlyHwpxDocument,
+  selectQuarterlyMergedTemplateHolderVariant,
+} from './hwpx';
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
@@ -36,13 +39,6 @@ function collectDuplicateTableIds(xml: string) {
   return Array.from(new Set(tableIds.filter((id, index) => tableIds.indexOf(id) !== index)));
 }
 
-function collectCharacterTreatedTables(xml: string) {
-  const tables = xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
-  return tables
-    .filter((tableXml) => (tableXml.match(/<hp:pos\b[^>]*treatAsChar="(\d+)"/)?.[1] ?? '0') === '1')
-    .map((tableXml) => tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80));
-}
-
 function findTableByText(xml: string, text: string) {
   return (
     (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).find((tableXml) =>
@@ -60,11 +56,28 @@ function findTableCell(tableXml: string, rowAddr: number, colAddr: number) {
   );
 }
 
-function extractVertPositions(cellXml: string) {
-  return Array.from(
-    cellXml.matchAll(/\bvertpos="(\d+)"/g),
-    (match) => Number.parseInt(match[1], 10),
-  ).filter(Number.isFinite);
+function findCellContainingText(xml: string, text: string): string | null {
+  return (
+    (xml.match(/<hp:tc\b[\s\S]*?<\/hp:tc>/g) ?? []).find((cellXml) =>
+      cellXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+    ) ?? null
+  );
+}
+
+function findParagraphOpenTagContainingXml(sectionXml: string, containedXml: string) {
+  const containedIndex = sectionXml.indexOf(containedXml);
+  assert.notEqual(containedIndex, -1, 'expected contained XML to exist in section');
+  const paragraphStart = sectionXml.lastIndexOf('<hp:p', containedIndex);
+  assert.notEqual(paragraphStart, -1, 'expected containing paragraph start');
+  const paragraphOpenEnd = sectionXml.indexOf('>', paragraphStart);
+  assert.notEqual(paragraphOpenEnd, -1, 'expected containing paragraph open tag end');
+  return sectionXml.slice(paragraphStart, paragraphOpenEnd + 1);
+}
+
+function findFuturePlanTables(sectionXml: string) {
+  return (sectionXml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).filter((tableXml) =>
+    /future chunk hazard \d/.test(tableXml),
+  );
 }
 
 function extractAppendixSlice(sectionXml: string, marker: string) {
@@ -216,6 +229,14 @@ async function loadGeneratedZip(
   return JSZip.loadAsync(document.buffer);
 }
 
+test('selectQuarterlyMergedTemplateHolderVariant follows inspection accident template rules', () => {
+  const fixture = buildQuarterlyFixture();
+  assert.equal(selectQuarterlyMergedTemplateHolderVariant(fixture.sessions), 'v10');
+
+  fixture.sessions[1].document2Overview.accidentOccurred = 'yes';
+  assert.equal(selectQuarterlyMergedTemplateHolderVariant(fixture.sessions), 'v10-1');
+});
+
 test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when no appendix is selected', async () => {
   const fixture = buildQuarterlyFixture();
   const zip = await loadGeneratedZip(fixture, {});
@@ -231,6 +252,42 @@ test('buildQuarterlyHwpxDocument keeps the standalone quarterly structure when n
     findTableByText(sectionXml, '3.기술지도 이행현황') ?? '',
     /<hp:pos\b[^>]*treatAsChar="1"/,
   );
+});
+
+test('buildQuarterlyHwpxDocument leaves empty quarterly fields blank instead of rendering dashes', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    implementationRows: [
+      {
+        drafter: '',
+        findingCount: 0,
+        improvedCount: 0,
+        note: '',
+        progressRate: '',
+        reportDate: '',
+        reportNumber: 0,
+        reportTitle: '',
+        sessionId: '',
+      },
+    ],
+    siteSnapshot: {
+      ...fixture.report.siteSnapshot,
+      siteManagementNumber: '',
+    },
+  };
+
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const snapshotTable = findTableByText(sectionXml, report.siteSnapshot.siteName);
+  assert.ok(snapshotTable);
+  const siteManagementNumberCell = findTableCell(snapshotTable, 1, 4);
+  assert.ok(siteManagementNumberCell);
+  assert.doesNotMatch(siteManagementNumberCell, /<hp:t>-<\/hp:t>/);
+  assert.doesNotMatch(sectionXml, /<hp:t>-<\/hp:t>/);
 });
 
 test('buildQuarterlyHwpxDocument renders selected inspection bodies into the merged section template', async () => {
@@ -260,6 +317,35 @@ test('buildQuarterlyHwpxDocument renders selected inspection bodies into the mer
   );
 });
 
+test('buildQuarterlyHwpxDocument applies merged appendix text layout policy', async () => {
+  const fixture = buildQuarterlyFixture();
+  const longAppendixText =
+    'QUARTERLY APPENDIX NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA LAMBDA';
+  fixture.sessions[0].document8Plans = [
+    {
+      ...fixture.sessions[0].document8Plans[0],
+      countermeasure: 'quarterly appendix countermeasure',
+      hazard: longAppendixText,
+      processName: 'quarterly appendix process',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: fixture.sessions,
+    siteSessions: fixture.sessions,
+  });
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const appendixCell = findCellContainingText(sectionXml, longAppendixText);
+  assert.ok(appendixCell);
+  assert.match(appendixCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.equal(
+    (appendixCell.match(new RegExp(escapeRegExp(longAppendixText), 'g')) ?? []).length,
+    1,
+  );
+});
+
 test('buildQuarterlyHwpxDocument renders doc7 manual reference text inside the merged inspection appendix', async () => {
   const fixture = buildQuarterlyFixture();
   fixture.sessions[0].document7Findings = [
@@ -286,7 +372,7 @@ test('buildQuarterlyHwpxDocument renders doc7 manual reference text inside the m
   assert.match(flattenedText, /appendix-reference-hazard[\s\S]*appendix-reference-body/);
 });
 
-test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged section template', async () => {
+test('buildQuarterlyHwpxDocument renders v10-1 appendix content into the merged section template', async () => {
   const fixture = buildQuarterlyFixture();
   const accidentSession = fixture.sessions[0];
   accidentSession.document2Overview.accidentOccurred = 'yes';
@@ -298,16 +384,16 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
       carryForward: false,
       causativeAgentKey: '',
       emphasis: '',
-      hazardDescription: 'appendix-v91-hazard',
-      id: 'finding-v91',
-      improvementPlan: 'appendix-v91-plan',
+      hazardDescription: 'appendix-v101-hazard',
+      id: 'finding-v101',
+      improvementPlan: 'appendix-v101-plan',
       improvementRequest: '',
       inspector: '',
       hazardCountermeasureItemId: '',
       legalReferenceId: '',
-      legalReferenceTitle: 'law-v91',
+      legalReferenceTitle: 'law-v101',
       likelihood: '',
-      location: 'zone-v91',
+      location: 'zone-v101',
       photoUrl: '',
       photoUrl2: '',
       referenceCatalogAccidentType: '',
@@ -332,11 +418,61 @@ test('buildQuarterlyHwpxDocument renders v9-1 appendix content into the merged s
   assert.ok(contentHpf);
   assert.ok(sectionXml);
   assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
-  assert.match(sectionXml, /appendix-v91-hazard/);
+  assert.match(sectionXml, /appendix-v101-hazard/);
   assert.doesNotMatch(sectionXml, /\{#appendices\}/);
-  const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v91-hazard');
+  const appendixSlice = extractAppendixSlice(sectionXml, 'appendix-v101-hazard');
   assert.doesNotMatch(appendixSlice, /hidePageNum="1"/);
   assert.doesNotMatch(appendixSlice, /www\.safetysite\.co\.kr/);
+});
+
+test('buildQuarterlyHwpxDocument renders mixed v10 and v10-1 appendices per selected session', async () => {
+  const fixture = buildQuarterlyFixture();
+  const noAccidentSession = fixture.sessions[0];
+  const accidentSession = fixture.sessions[1];
+
+  noAccidentSession.document10Measurements = [
+    {
+      actionTaken: '',
+      id: 'measurement-no-accident',
+      instrumentType: 'normal-measure-marker',
+      measuredValue: '',
+      measurementLocation: '',
+      photoUrl: '',
+      safetyCriteria: '',
+    },
+  ];
+  accidentSession.document2Overview.accidentOccurred = 'yes';
+  accidentSession.document2Overview.accidentPhotoUrl = '';
+  accidentSession.document2Overview.accidentPhotoUrl2 = '';
+  accidentSession.document10Measurements = [
+    {
+      actionTaken: '',
+      id: 'measurement-accident',
+      instrumentType: 'accident-measure-marker',
+      measuredValue: '',
+      measurementLocation: '',
+      photoUrl: '',
+      safetyCriteria: '',
+    },
+  ];
+
+  const zip = await loadGeneratedZip(fixture, {
+    selectedSessions: [noAccidentSession, accidentSession],
+    siteSessions: fixture.sessions,
+  });
+  const contentHpf = await zip.file('Contents/content.hpf')?.async('string');
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(contentHpf);
+  assert.ok(sectionXml);
+  assert.doesNotMatch(contentHpf, /href="Contents\/section1\.xml"/);
+  assert.match(sectionXml, /normal-measure-marker/);
+  assert.match(sectionXml, /accident-measure-marker/);
+
+  const noAccidentSlice = extractAppendixSlice(sectionXml, 'normal-measure-marker');
+  const accidentSlice = extractAppendixSlice(sectionXml, 'accident-measure-marker');
+  assert.doesNotMatch(noAccidentSlice, /산업재해 추적관리/);
+  assert.match(accidentSlice, /산업재해 추적관리/);
 });
 
 test('buildQuarterlyHwpxDocument keeps merged appendix table ids unique', async () => {
@@ -436,8 +572,12 @@ test('buildQuarterlyHwpxDocument embeds OPS images even when the response is an 
   }
 });
 
-test('buildQuarterlyHwpxDocument reflows long future plan text inside the table cells', async () => {
+test('buildQuarterlyHwpxDocument keeps long future plan text on source lines', async () => {
   const fixture = buildQuarterlyFixture();
+  const hazard =
+    'QUARTERLY FUTURE PLAN HAZARD NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA';
+  const countermeasure =
+    'QUARTERLY FUTURE PLAN COUNTERMEASURE NO AUTO WRAP ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA';
   const report = {
     ...fixture.report,
     futurePlans: [
@@ -445,8 +585,8 @@ test('buildQuarterlyHwpxDocument reflows long future plan text inside the table 
         id: 'future-plan-long-text',
         hazardCountermeasureItemId: '',
         processName: '',
-        hazard: '위험요인 첫 줄\n위험요인 둘째 줄\n위험요인 셋째 줄',
-        countermeasure: '대책 첫 줄\n대책 둘째 줄\n대책 셋째 줄',
+        hazard,
+        countermeasure,
         note: '',
         source: 'manual' as const,
       },
@@ -466,6 +606,128 @@ test('buildQuarterlyHwpxDocument reflows long future plan text inside the table 
 
   assert.ok(hazardCell);
   assert.ok(countermeasureCell);
-  assert.ok(new Set(extractVertPositions(hazardCell)).size > 1);
-  assert.ok(new Set(extractVertPositions(countermeasureCell)).size > 1);
+  assert.equal((hazardCell.match(new RegExp(escapeRegExp(hazard), 'g')) ?? []).length, 1);
+  assert.equal(
+    (countermeasureCell.match(new RegExp(escapeRegExp(countermeasure), 'g')) ?? []).length,
+    1,
+  );
+  assert.match(hazardCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.match(countermeasureCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+  assert.doesNotMatch(hazardCell, /<hp:lineBreak\/>/);
+  assert.doesNotMatch(countermeasureCell, /<hp:lineBreak\/>/);
+  assert.doesNotMatch(hazardCell, /<hp:linesegarray\b/);
+  assert.doesNotMatch(countermeasureCell, /<hp:linesegarray\b/);
+  assert.equal((hazardCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((hazardCell.match(/<hp:run\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:run\b/g) ?? []).length, 1);
+});
+
+test('buildQuarterlyHwpxDocument preserves manual line breaks in future plan cells', async () => {
+  const fixture = buildQuarterlyFixture();
+  const hazard = 'manual hazard first line\nmanual hazard second line';
+  const countermeasure = 'manual countermeasure first line\nmanual countermeasure second line';
+  const report = {
+    ...fixture.report,
+    futurePlans: [
+      {
+        id: 'future-plan-manual-line-break',
+        hazardCountermeasureItemId: '',
+        processName: '',
+        hazard,
+        countermeasure,
+        note: '',
+        source: 'manual' as const,
+      },
+    ],
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const tables = sectionXml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? [];
+  assert.ok(tables.length >= 5);
+
+  const futurePlanTable = tables[4];
+  const hazardCell = findTableCell(futurePlanTable, 2, 0);
+  const countermeasureCell = findTableCell(futurePlanTable, 2, 1);
+
+  assert.ok(hazardCell);
+  assert.ok(countermeasureCell);
+  assert.match(hazardCell, /manual hazard first line<hp:lineBreak\/>manual hazard second line/);
+  assert.match(
+    countermeasureCell,
+    /manual countermeasure first line<hp:lineBreak\/>manual countermeasure second line/,
+  );
+  assert.doesNotMatch(hazardCell, /<hp:linesegarray\b/);
+  assert.doesNotMatch(countermeasureCell, /<hp:linesegarray\b/);
+  assert.equal((hazardCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((hazardCell.match(/<hp:run\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:p\b/g) ?? []).length, 1);
+  assert.equal((countermeasureCell.match(/<hp:run\b/g) ?? []).length, 1);
+});
+
+test('buildQuarterlyHwpxDocument keeps five future plans in one table', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    futurePlans: Array.from({ length: 5 }, (_item, index) => ({
+      id: `future-plan-five-${index + 1}`,
+      hazardCountermeasureItemId: '',
+      processName: '',
+      hazard: `future chunk hazard ${index + 1}`,
+      countermeasure: `future chunk countermeasure ${index + 1}`,
+      note: '',
+      source: 'manual' as const,
+    })),
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const futurePlanTables = findFuturePlanTables(sectionXml);
+  assert.equal(futurePlanTables.length, 1);
+  assert.equal((futurePlanTables[0].match(/<hp:tr>/g) ?? []).length, 7);
+  assert.ok(findTableCell(futurePlanTables[0], 6, 0));
+  assert.equal(findTableCell(futurePlanTables[0], 7, 0), null);
+});
+
+test('buildQuarterlyHwpxDocument chunks future plans into five-row page-broken tables', async () => {
+  const fixture = buildQuarterlyFixture();
+  const report = {
+    ...fixture.report,
+    futurePlans: Array.from({ length: 6 }, (_item, index) => ({
+      id: `future-plan-six-${index + 1}`,
+      hazardCountermeasureItemId: '',
+      processName: '',
+      hazard: `future chunk hazard ${index + 1}`,
+      countermeasure: `future chunk countermeasure ${index + 1}`,
+      note: '',
+      source: 'manual' as const,
+    })),
+  };
+  const document = await buildQuarterlyHwpxDocument(report, fixture.site);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const futurePlanTables = findFuturePlanTables(sectionXml);
+  assert.equal(futurePlanTables.length, 2);
+
+  const [firstTable, secondTable] = futurePlanTables;
+  assert.match(firstTable, /future chunk hazard 1/);
+  assert.match(firstTable, /future chunk hazard 5/);
+  assert.doesNotMatch(firstTable, /future chunk hazard 6/);
+  assert.match(secondTable, /future chunk hazard 6/);
+  assert.doesNotMatch(secondTable, /future chunk hazard 5/);
+
+  assert.match(findParagraphOpenTagContainingXml(sectionXml, secondTable), /pageBreak="1"/);
+  assert.equal((secondTable.match(/<hp:tr>/g) ?? []).length, 7);
+  for (let rowAddr = 2; rowAddr < 7; rowAddr += 1) {
+    assert.ok(findTableCell(secondTable, rowAddr, 0));
+    assert.ok(findTableCell(secondTable, rowAddr, 1));
+  }
+  assert.equal(findTableCell(secondTable, 7, 0), null);
 });

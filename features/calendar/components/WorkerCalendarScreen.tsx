@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AppModal from '@/components/ui/AppModal';
 import LoginPanel from '@/components/auth/LoginPanel';
@@ -20,9 +20,30 @@ import {
 } from '@/lib/auth/postLoginRedirect';
 import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
-import { fetchMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
+import {
+  applyScheduleReportUpdateToSession,
+  buildContractWindowFromScheduleRows,
+  buildContractWindowFromSafetySite,
+  buildScheduleReportSyncPlan,
+  resolveContractWindow,
+} from '@/features/schedule-report-sync/scheduleReportSync';
+import {
+  buildWorkerCalendarReportLookup,
+  buildWorkerCalendarRowsWithReportDates,
+  mergeWorkerCalendarReportItems,
+  resolveWorkerCalendarReportForSchedule,
+} from './workerCalendarReportMatching';
+import {
+  buildWorkerCalendarReportIndexSiteIds,
+  shouldUseWorkerCalendarReportItems,
+} from './workerCalendarLoading';
+import {
+  getScheduleDisplayPhase,
+  getScheduleStatusLabel,
+} from '@/lib/calendar/scheduleDisplayPhase';
 import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import styles from './WorkerCalendarScreen.module.css';
@@ -53,11 +74,14 @@ interface WorkerGuidanceSessionLink {
 }
 
 type CalendarViewMode = 'calendar' | 'list';
+type CalendarLoadState = 'idle' | 'loading' | 'ready' | 'error';
 type ScheduleListFilter =
   | 'all'
   | 'unselected'
   | 'selected'
   | SafetyInspectionSchedule['status'];
+
+const EMPTY_REPORT_ITEMS_BY_SITE_ID = new Map<string, InspectionReportListItem[]>();
 
 const EMPTY_DIALOG_STATE: ScheduleDialogState = {
   open: false,
@@ -120,59 +144,6 @@ function normalizeText(value: string | null | undefined) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function buildContractWindowFromSafetySite(
-  site: {
-    contract_date?: string | null;
-    contract_end_date?: string | null;
-    contract_signed_date?: string | null;
-    contract_start_date?: string | null;
-    project_end_date?: string | null;
-  } | null,
-) {
-  const windowStart =
-    normalizeText(site?.contract_start_date) ||
-    normalizeText(site?.contract_signed_date) ||
-    normalizeText(site?.contract_date);
-  let windowEnd =
-    normalizeText(site?.contract_end_date) ||
-    normalizeText(site?.project_end_date) ||
-    windowStart;
-  if (windowStart && windowEnd && windowEnd < windowStart) {
-    windowEnd = windowStart;
-  }
-  return {
-    windowEnd,
-    windowStart,
-  };
-}
-
-function getReportPriorityScore(item: InspectionReportListItem) {
-  let score = 0;
-  if (item.status === 'published') score += 40;
-  else if (item.status === 'submitted') score += 30;
-  else if (item.status === 'draft') score += 20;
-  if (item.publishedAt) score += 10;
-  else if (item.submittedAt) score += 8;
-  if (item.visitDate) score += 4;
-  if (item.lastAutosavedAt) score += 2;
-  return score;
-}
-
-function buildReportItemsByRound(rows: InspectionReportListItem[]) {
-  const nextMap = new Map<number, InspectionReportListItem>();
-  rows.forEach((row) => {
-    if (typeof row.visitRound !== 'number' || !Number.isFinite(row.visitRound) || row.visitRound <= 0) {
-      return;
-    }
-    const roundNo = Math.trunc(row.visitRound);
-    const current = nextMap.get(roundNo) ?? null;
-    if (!current || getReportPriorityScore(row) >= getReportPriorityScore(current)) {
-      nextMap.set(roundNo, row);
-    }
-  });
-  return nextMap;
-}
-
 function formatWorkerRoundLabel(row: SafetyInspectionSchedule) {
   const totalRounds = row.totalRounds && row.totalRounds > 0 ? row.totalRounds : row.roundNo;
   return `${row.roundNo} / ${totalRounds}회차`;
@@ -184,37 +155,42 @@ function isDateWithinWindow(value: string, windowStart: string, windowEnd: strin
 }
 
 function buildWindowErrorMessage(
-  schedule: Pick<SafetyInspectionSchedule, 'roundNo' | 'siteName' | 'windowEnd' | 'windowStart'>,
+  input: { siteName: string; windowEnd: string; windowStart: string },
 ) {
-  return `${schedule.siteName} ${schedule.roundNo}회차는 계약 기간 ${schedule.windowStart} ~ ${schedule.windowEnd} 안에서만 선택할 수 있습니다.`;
+  if (!input.windowStart || !input.windowEnd) {
+    return `${input.siteName || '선택한 현장'}은 계약 기간이 설정되어 있지 않아 방문일을 저장할 수 없습니다.`;
+  }
+  return `${input.siteName || '선택한 현장'}은 계약 기간 ${input.windowStart} ~ ${input.windowEnd} 안에서만 선택할 수 있습니다.`;
 }
 
 function getStatusLabel(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return '미선택';
-  switch (row.status) {
+  return getScheduleStatusLabel(row);
+}
+
+function getScheduleToneClassName(row: SafetyInspectionSchedule) {
+  const displayPhase = getScheduleDisplayPhase(row);
+  if (displayPhase === 'planned' && row.isOverdue) {
+    return styles.scheduleToneWarning;
+  }
+  switch (displayPhase) {
     case 'completed':
-      return '완료';
-    case 'canceled':
-      return '취소';
+      return styles.scheduleToneCompleted;
+    case 'in_progress':
+      return styles.scheduleToneInProgress;
     case 'postponed':
-      return '보류';
+      return styles.scheduleTonePostponed;
+    case 'canceled':
+      return styles.scheduleToneCanceled;
+    case 'planned':
     default:
-      return '진행';
+      return styles.scheduleTonePlanned;
   }
 }
 
 function getStatusClassName(row: SafetyInspectionSchedule) {
   if (!row.plannedDate) return styles.statusPending;
-  switch (row.status) {
-    case 'completed':
-      return styles.statusCompleted;
-    case 'canceled':
-      return styles.statusCanceled;
-    case 'postponed':
-      return styles.statusPostponed;
-    default:
-      return styles.statusPlanned;
-  }
+  return getScheduleToneClassName(row);
 }
 
 export function WorkerCalendarScreen() {
@@ -224,6 +200,7 @@ export function WorkerCalendarScreen() {
   const [month, setMonth] = useState(readStringParam(searchParams, 'month', getMonthToken()));
   const [rows, setRows] = useState<SafetyInspectionSchedule[]>([]);
   const [loading, setLoading] = useState(false);
+  const [calendarLoadState, setCalendarLoadState] = useState<CalendarLoadState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [listFilter, setListFilter] = useState<ScheduleListFilter>(
     readEnumParam(
@@ -234,9 +211,15 @@ export function WorkerCalendarScreen() {
     ),
   );
   const [notice, setNotice] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [dialog, setDialog] = useState<ScheduleDialogState>(EMPTY_DIALOG_STATE);
   const [dialogSubmittingAction, setDialogSubmittingAction] = useState<'save' | 'launch' | null>(null);
+  const calendarLoadRequestIdRef = useRef(0);
+  const inFlightCalendarLoadKeyRef = useRef('');
+  const lastCompletedCalendarLoadKeyRef = useRef('');
+  const [loadedReportIndexSiteIds, setLoadedReportIndexSiteIds] = useState<Set<string>>(() => new Set());
+  const [reportIndexLoadedAfterMs, setReportIndexLoadedAfterMs] = useState(0);
   const [contractWindowsBySiteId, setContractWindowsBySiteId] = useState<
     Record<string, { windowEnd: string; windowStart: string }>
   >({});
@@ -247,18 +230,29 @@ export function WorkerCalendarScreen() {
     ensureAssignedSafetySite,
     ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
+    getSessionById,
     getSessionsBySiteId,
     getReportIndexBySiteId,
     isAuthenticated,
     isReady,
     login,
     logout,
+    saveNow,
     sites,
+    updateSession,
   } = useInspectionSessions();
 
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
   const selectedSiteId = searchParams.get('siteId') || '';
   const viewMode: CalendarViewMode = searchParams.get('view') === 'list' ? 'list' : 'calendar';
+
+  const beginCalendarTransition = useCallback(() => {
+    setRows([]);
+    setLoadedReportIndexSiteIds(new Set());
+    setReportIndexLoadedAfterMs(0);
+    setLoading(true);
+    setCalendarLoadState('loading');
+  }, []);
 
   const replaceCalendarRoute = useCallback((input: {
     listFilter?: ScheduleListFilter;
@@ -270,6 +264,9 @@ export function WorkerCalendarScreen() {
     const nextListFilter = input.listFilter ?? listFilter;
     const nextSiteId = input.siteId ?? selectedSiteId;
     const nextView = input.view ?? viewMode;
+    if (nextMonth !== month || nextSiteId !== selectedSiteId) {
+      beginCalendarTransition();
+    }
     const nextSearchParams = new URLSearchParams();
     if (nextMonth && nextMonth !== getMonthToken()) {
       nextSearchParams.set('month', nextMonth);
@@ -285,7 +282,7 @@ export function WorkerCalendarScreen() {
     }
     const query = nextSearchParams.toString();
     router.replace(query ? `/calendar?${query}` : '/calendar');
-  }, [listFilter, month, router, selectedSiteId, viewMode]);
+  }, [beginCalendarTransition, listFilter, month, router, selectedSiteId, viewMode]);
 
   useEffect(() => {
     setMonth(readStringParam(searchParams, 'month', getMonthToken()));
@@ -319,38 +316,120 @@ export function WorkerCalendarScreen() {
     }
   }, [currentUser, isAdminView, router, selectedSiteId]);
 
-  useEffect(() => {
-    if (!isAuthenticated || isAdminView) return;
-    let cancelled = false;
-    void (async () => {
+  const reloadCalendarRows = useCallback(
+    async (input?: { month?: string; siteId?: string }) => {
+      const loadMonth = input?.month ?? month;
+      const loadSiteId = input?.siteId ?? selectedSiteId;
+      const loadKey = `${loadMonth}\0${loadSiteId}`;
+      const loadStartedAt = Date.now();
+      const requestId = ++calendarLoadRequestIdRef.current;
+      inFlightCalendarLoadKeyRef.current = loadKey;
+
+      setLoading(true);
+      setCalendarLoadState('loading');
+      setError(null);
+      setRows([]);
+      setLoadedReportIndexSiteIds(new Set());
+      setReportIndexLoadedAfterMs(0);
+
       try {
-        setLoading(true);
-        setError(null);
-        const response = await fetchMySchedules({
-          month,
-          siteId: selectedSiteId,
+        const response = await fetchAllMySchedules({
+          month: loadMonth,
+          siteId: loadSiteId,
         });
-        if (!cancelled) {
-          setRows(response.rows);
+        const reportSiteIds = buildWorkerCalendarReportIndexSiteIds({
+          rows: response.rows,
+          selectedSiteId: loadSiteId,
+          sites,
+        });
+
+        if (calendarLoadRequestIdRef.current !== requestId) {
+          return response;
         }
+
+        setRows(response.rows);
+        setCalendarLoadState('ready');
+        lastCompletedCalendarLoadKeyRef.current = loadKey;
+        const refreshReportIndexes = () => {
+          void Promise.allSettled(
+            reportSiteIds.map((siteId) =>
+              ensureSiteReportIndexLoaded(siteId, { force: true }),
+            ),
+          ).then(() => {
+            if (calendarLoadRequestIdRef.current !== requestId) return;
+            setLoadedReportIndexSiteIds(new Set(reportSiteIds));
+            setReportIndexLoadedAfterMs(loadStartedAt);
+          });
+        };
+        window.setTimeout(refreshReportIndexes, 1200);
+        return response;
       } catch (nextError) {
-        if (!cancelled) {
+        if (calendarLoadRequestIdRef.current === requestId) {
           setError(nextError instanceof Error ? nextError.message : '내 일정을 불러오지 못했습니다.');
+          setCalendarLoadState('error');
         }
+        throw nextError;
       } finally {
-        if (!cancelled) {
+        if (calendarLoadRequestIdRef.current === requestId) {
+          if (inFlightCalendarLoadKeyRef.current === loadKey) {
+            inFlightCalendarLoadKeyRef.current = '';
+          }
           setLoading(false);
         }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAdminView, isAuthenticated, month, selectedSiteId]);
+    },
+    [ensureSiteReportIndexLoaded, month, selectedSiteId, sites],
+  );
 
+  useEffect(() => {
+    if (!isAuthenticated || isAdminView) return;
+    const loadKey = `${month}\0${selectedSiteId}`;
+    if (
+      lastCompletedCalendarLoadKeyRef.current === loadKey ||
+      inFlightCalendarLoadKeyRef.current === loadKey
+    ) {
+      return;
+    }
+    void reloadCalendarRows().catch(() => undefined);
+  }, [
+    isAdminView,
+    isAuthenticated,
+    month,
+    reloadCalendarRows,
+    selectedSiteId,
+  ]);
+
+  const reportItemsBySiteId = useMemo(() => {
+    const nextMap = new Map<string, InspectionReportListItem[]>();
+    sites.forEach((site) => {
+      const reportIndex = getReportIndexBySiteId(site.id);
+      const indexedReports = shouldUseWorkerCalendarReportItems({
+        readySiteIds: loadedReportIndexSiteIds,
+        fetchedAt: reportIndex?.fetchedAt,
+        loadedAfterMs: reportIndexLoadedAfterMs,
+        siteId: site.id,
+        status: reportIndex?.status,
+      })
+        ? reportIndex?.items ?? []
+        : [];
+      nextMap.set(site.id, mergeWorkerCalendarReportItems(indexedReports));
+    });
+    return nextMap;
+  }, [getReportIndexBySiteId, loadedReportIndexSiteIds, reportIndexLoadedAfterMs, sites]);
+  const calendarRows = useMemo(
+    () =>
+      buildWorkerCalendarRowsWithReportDates({
+        contractWindowsBySiteId,
+        reportsBySiteId: EMPTY_REPORT_ITEMS_BY_SITE_ID,
+        rows,
+        selectedSiteId,
+        sites,
+      }),
+    [contractWindowsBySiteId, rows, selectedSiteId, sites],
+  );
   const selectedRows = useMemo(
     () =>
-      [...rows]
+      [...calendarRows]
         .filter((row) => Boolean(row.plannedDate))
         .sort(
           (left, right) =>
@@ -358,10 +437,10 @@ export function WorkerCalendarScreen() {
             left.roundNo - right.roundNo ||
             left.siteName.localeCompare(right.siteName, 'ko'),
         ),
-    [rows],
+    [calendarRows],
   );
   const listRows = useMemo(() => {
-    const mergedRows = sortScheduledRows(rows);
+    const mergedRows = sortScheduledRows(calendarRows);
     switch (listFilter) {
       case 'unselected':
         return mergedRows.filter((row) => !row.plannedDate);
@@ -375,8 +454,9 @@ export function WorkerCalendarScreen() {
       default:
         return mergedRows;
     }
-  }, [listFilter, rows]);
+  }, [calendarRows, listFilter]);
   const calendar = useMemo(() => buildCalendarDays(month), [month]);
+  const isCalendarLoading = loading || calendarLoadState === 'loading';
   const rowsByDate = useMemo(() => {
     const map = new Map<string, SafetyInspectionSchedule[]>();
     selectedRows.forEach((row) => {
@@ -388,17 +468,13 @@ export function WorkerCalendarScreen() {
     });
     return map;
   }, [selectedRows]);
-  const reportItemsByRoundBySiteId = useMemo(() => {
-    const nextMap = new Map<string, Map<number, InspectionReportListItem>>();
-    sites.forEach((site) => {
-      const reportIndex = getReportIndexBySiteId(site.id);
-      nextMap.set(
-        site.id,
-        reportIndex?.status === 'loaded' ? buildReportItemsByRound(reportIndex.items) : new Map(),
-      );
+  const reportLookupBySiteId = useMemo(() => {
+    const nextMap = new Map<string, ReturnType<typeof buildWorkerCalendarReportLookup>>();
+    reportItemsBySiteId.forEach((items, siteId) => {
+      nextMap.set(siteId, buildWorkerCalendarReportLookup(items));
     });
     return nextMap;
-  }, [getReportIndexBySiteId, sites]);
+  }, [reportItemsBySiteId]);
   const dialogSiteOptions = useMemo<WorkerDialogSiteOption[]>(() => {
     return [...sites]
       .filter((site) => !selectedSiteId || site.id === selectedSiteId)
@@ -407,7 +483,7 @@ export function WorkerCalendarScreen() {
         const totalRounds =
           typeof site.totalRounds === 'number' && site.totalRounds > 0 ? site.totalRounds : 0;
         const progressedRounds = new Set<number>();
-        rows
+        calendarRows
           .filter((row) => row.siteId === site.id)
           .forEach((row) => {
             if (
@@ -433,13 +509,16 @@ export function WorkerCalendarScreen() {
         };
       });
   }, [
-    rows,
+    calendarRows,
     selectedSiteId,
     sites,
   ]);
   const dialogSelectedSchedule = useMemo(
-    () => rows.find((row) => row.id === dialog.scheduleId) ?? null,
-    [dialog.scheduleId, rows],
+    () =>
+      rows.find((row) => row.id === dialog.scheduleId) ??
+      calendarRows.find((row) => row.id === dialog.scheduleId) ??
+      null,
+    [calendarRows, dialog.scheduleId, rows],
   );
   const dialogRoundRows = useMemo(() => {
     if (dialogSelectedSchedule) {
@@ -458,16 +537,46 @@ export function WorkerCalendarScreen() {
       ),
     ).slice(0, 1);
   }, [dialog.siteId, dialogSelectedSchedule, rows]);
+  const dialogScheduleContractWindow = useMemo(
+    () =>
+      dialog.siteId
+        ? buildContractWindowFromScheduleRows(
+            calendarRows.filter((row) => row.siteId === dialog.siteId),
+          )
+        : { windowEnd: '', windowStart: '' },
+    [calendarRows, dialog.siteId],
+  );
+  const dialogContractWindow = dialog.siteId
+    ? resolveContractWindow(
+        contractWindowsBySiteId[dialog.siteId] ?? null,
+        dialogScheduleContractWindow,
+      )
+    : null;
+  const dialogSiteName =
+    dialogSelectedSchedule?.siteName ||
+    dialogSiteOptions.find((option) => option.siteId === dialog.siteId)?.label ||
+    '';
   const dialogWindowError =
-    dialogSelectedSchedule &&
-    dialog.plannedDate &&
-    !isDateWithinWindow(
-      dialog.plannedDate,
-      dialogSelectedSchedule.windowStart,
-      dialogSelectedSchedule.windowEnd,
-    )
-      ? buildWindowErrorMessage(dialogSelectedSchedule)
+    dialog.open && dialog.plannedDate && dialog.siteId
+      ? !dialogContractWindow?.windowStart || !dialogContractWindow.windowEnd
+        ? buildWindowErrorMessage({
+            siteName: dialogSiteName,
+            windowEnd: '',
+            windowStart: '',
+          })
+        : !isDateWithinWindow(
+              dialog.plannedDate,
+              dialogContractWindow.windowStart,
+              dialogContractWindow.windowEnd,
+            )
+          ? buildWindowErrorMessage({
+              siteName: dialogSiteName,
+              windowEnd: dialogContractWindow.windowEnd,
+              windowStart: dialogContractWindow.windowStart,
+            })
+          : ''
       : '';
+  const dialogBottomError = dialogError || dialogWindowError;
   useEffect(() => {
     if (!dialog.open || dialog.siteId || dialogSiteOptions.length === 0) return;
     setDialog((current) => ({
@@ -494,38 +603,28 @@ export function WorkerCalendarScreen() {
   }, [dialog.open, dialog.siteId, ensureSiteReportIndexLoaded]);
 
   useEffect(() => {
-    if (!dialog.open) return;
-    const missingSiteIds = dialogSiteOptions
-      .map((option) => option.siteId)
-      .filter((siteId) => !contractWindowsBySiteId[siteId]);
-    if (missingSiteIds.length === 0) {
-      return;
-    }
+    if (!dialog.open || !dialog.siteId) return;
+    const currentWindow = contractWindowsBySiteId[dialog.siteId];
+    if (currentWindow?.windowStart && currentWindow.windowEnd) return;
+
     let cancelled = false;
-    void (async () => {
-      const nextEntries = await Promise.all(
-        missingSiteIds.map(async (siteId) => {
-          const assignedSite = await ensureAssignedSafetySite(siteId);
-          return [siteId, buildContractWindowFromSafetySite(assignedSite)] as const;
-        }),
-      );
-      if (cancelled) {
-        return;
-      }
-      setContractWindowsBySiteId((current) => {
-        const next = { ...current };
-        nextEntries.forEach(([siteId, contractWindow]) => {
-          next[siteId] = contractWindow;
-        });
-        return next;
-      });
-    })();
+    void ensureAssignedSafetySite(dialog.siteId)
+      .then((assignedSite) => {
+        if (cancelled) return;
+        setContractWindowsBySiteId((current) => ({
+          ...current,
+          [dialog.siteId]: buildContractWindowFromSafetySite(assignedSite),
+        }));
+      })
+      .catch(() => undefined);
+
     return () => {
       cancelled = true;
     };
-  }, [contractWindowsBySiteId, dialog.open, dialogSiteOptions, ensureAssignedSafetySite]);
+  }, [contractWindowsBySiteId, dialog.open, dialog.siteId, ensureAssignedSafetySite]);
 
   const closeDialog = () => {
+    setDialogError(null);
     setDialog(EMPTY_DIALOG_STATE);
   };
 
@@ -540,19 +639,31 @@ export function WorkerCalendarScreen() {
       (selectedSiteId && dialogSiteOptions.some((option) => option.siteId === selectedSiteId)
         ? selectedSiteId
         : dialogSiteOptions[0]?.siteId || '');
+    const existingDateSchedule =
+      requestedSchedule ??
+      sortSchedules(
+        calendarRows.filter(
+          (row) =>
+            row.plannedDate === nextPlannedDate &&
+            (!defaultSiteId || row.siteId === defaultSiteId),
+        ),
+      )[0] ??
+      null;
 
     setSelectedDate(nextPlannedDate);
+    setDialogError(null);
     setDialog({
       open: true,
       plannedDate: nextPlannedDate,
-      scheduleId: requestedSchedule?.id || '',
-      selectionReasonLabel: requestedSchedule?.selectionReasonLabel || '',
-      selectionReasonMemo: requestedSchedule?.selectionReasonMemo || '',
-      siteId: requestedSchedule?.siteId || defaultSiteId,
+      scheduleId: existingDateSchedule?.id || '',
+      selectionReasonLabel: existingDateSchedule?.selectionReasonLabel || '',
+      selectionReasonMemo: existingDateSchedule?.selectionReasonMemo || '',
+      siteId: existingDateSchedule?.siteId || defaultSiteId,
     });
   };
 
   const handleDialogSiteSelect = (siteId: string) => {
+    setDialogError(null);
     setDialog((current) => ({
       ...current,
       scheduleId: '',
@@ -562,7 +673,7 @@ export function WorkerCalendarScreen() {
     }));
   };
 
-  const upsertScheduleRow = (schedule: SafetyInspectionSchedule) => {
+  const upsertScheduleRow = useCallback((schedule: SafetyInspectionSchedule) => {
     setRows((current) => {
       const nextRows = current.filter(
         (row) =>
@@ -571,13 +682,105 @@ export function WorkerCalendarScreen() {
       );
       return [...nextRows, schedule];
     });
+  }, []);
+
+  const upsertScheduleRows = useCallback((schedules: SafetyInspectionSchedule[]) => {
+    if (schedules.length === 0) return;
+    setRows((current) => {
+      const nextRows = current.filter(
+        (row) =>
+          !schedules.some(
+            (schedule) =>
+              schedule.id === row.id ||
+              (schedule.siteId === row.siteId && schedule.roundNo === row.roundNo),
+          ),
+      );
+      return [...nextRows, ...schedules];
+    });
+  }, []);
+
+  const buildSiteScheduleRows = (siteId: string, changedSchedule: SafetyInspectionSchedule) => {
+    const byRound = new Map<number, SafetyInspectionSchedule>();
+    rows
+      .filter((row) => row.siteId === siteId)
+      .forEach((row) => {
+        byRound.set(row.roundNo, row);
+      });
+    byRound.set(changedSchedule.roundNo, changedSchedule);
+    return Array.from(byRound.values());
+  };
+
+  const persistScheduleReportSync = async (changedSchedule: SafetyInspectionSchedule) => {
+    const scheduleResponse = await fetchAllMySchedules({
+      includeAll: true,
+      siteId: changedSchedule.siteId,
+    });
+    const siteSchedules = [
+      ...scheduleResponse.rows.filter((row) => row.id !== changedSchedule.id),
+      changedSchedule,
+    ];
+    const reportIndex = getReportIndexBySiteId(changedSchedule.siteId);
+    const contractWindow = resolveContractWindow(
+      contractWindowsBySiteId[changedSchedule.siteId] ?? null,
+      buildContractWindowFromScheduleRows(siteSchedules),
+    );
+    const plan = buildScheduleReportSyncPlan({
+      buildReportTitle: buildDefaultReportTitle,
+      changedSchedule: {
+        actualVisitDate: changedSchedule.actualVisitDate,
+        linkedReportKey: changedSchedule.linkedReportKey,
+        plannedDate: changedSchedule.plannedDate,
+        scheduleId: changedSchedule.id,
+      },
+      contractWindow,
+      reports: reportIndex?.status === 'loaded' ? reportIndex.items : [],
+      schedules: siteSchedules.length > 0
+        ? siteSchedules
+        : buildSiteScheduleRows(changedSchedule.siteId, changedSchedule),
+    });
+
+    if (!plan.ok) {
+      throw new Error(plan.message);
+    }
+
+    const savedSchedules: SafetyInspectionSchedule[] = [];
+    for (const update of plan.scheduleUpdates) {
+      const saved = await updateMySchedule(update.scheduleId, {
+        linkedReportKey: update.linkedReportKey,
+        plannedDate: update.plannedDate,
+      });
+      savedSchedules.push(saved);
+    }
+    upsertScheduleRows(savedSchedules);
+
+    for (const update of plan.reportUpdates) {
+      if (!getSessionById(update.reportKey)) {
+        await ensureSessionLoaded(update.reportKey);
+      }
+      if (!getSessionById(update.reportKey)) {
+        throw new Error('연결된 보고서를 불러오지 못해 일정과 보고서를 함께 정리하지 못했습니다.');
+      }
+      updateSession(update.reportKey, (current) =>
+        applyScheduleReportUpdateToSession(current, update),
+      );
+    }
+    if (plan.reportUpdates.length > 0) {
+      await saveNow({ throwOnError: true });
+    }
+
+    return (
+      savedSchedules.find((schedule) => schedule.id === changedSchedule.id) ??
+      changedSchedule
+    );
   };
 
   const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
-    const selectedReport = reportItemsByRoundBySiteId.get(schedule.siteId)?.get(schedule.roundNo) ?? null;
+    const reportLookup =
+      reportLookupBySiteId.get(schedule.siteId) ?? buildWorkerCalendarReportLookup([]);
+    const selectedReport = resolveWorkerCalendarReportForSchedule(schedule, reportLookup);
     if (selectedReport) {
       return {
-        actualVisitDate: schedule.actualVisitDate || normalizeText(selectedReport.visitDate),
+        actualVisitDate: normalizeText(schedule.actualVisitDate),
         linkedReportKey: normalizeText(selectedReport.reportKey),
         sessionId: normalizeText(selectedReport.reportKey),
       } satisfies WorkerGuidanceSessionLink;
@@ -609,7 +812,10 @@ export function WorkerCalendarScreen() {
     try {
       const token = readSafetyAuthToken();
       if (token) {
-        const seed = await fetchTechnicalGuidanceSeed(token, site.id);
+        const seed = await fetchTechnicalGuidanceSeed(token, site.id, {
+          targetVisitDate: schedule.plannedDate,
+          targetVisitRound: schedule.roundNo,
+        });
         document4FollowUps = seed.open_followups.map((item) => ({
           id: item.id,
           sourceSessionId: item.source_session_id ?? undefined,
@@ -649,6 +855,7 @@ export function WorkerCalendarScreen() {
       },
       reportNumber: schedule.roundNo,
       scheduleId: schedule.id,
+      scheduleRoundNo: schedule.roundNo,
       technicalGuidanceRelations,
     });
     return {
@@ -663,14 +870,15 @@ export function WorkerCalendarScreen() {
       return schedule;
     }
 
-    const response = await fetchMySchedules({
-      limit: 300,
-      month,
+    const response = await fetchAllMySchedules({
+      includeAll: true,
       siteId: schedule.siteId,
     });
-    const persisted = response.rows.find(
-      (row) => row.siteId === schedule.siteId && row.roundNo === schedule.roundNo,
-    );
+    const persisted =
+      response.rows.find((row) => row.id === schedule.id) ??
+      response.rows.find(
+        (row) => row.siteId === schedule.siteId && row.roundNo === schedule.roundNo,
+      );
 
     setRows((current) => {
       const nextRows = current.filter(
@@ -695,22 +903,27 @@ export function WorkerCalendarScreen() {
   ) => {
     const nextLinkedReportKey =
       normalizeText(reportLinkUpdate?.linkedReportKey) || normalizeText(reportLinkUpdate?.sessionId);
-    const nextActualVisitDate =
-      normalizeText(schedule.actualVisitDate) || normalizeText(reportLinkUpdate?.actualVisitDate);
+    const nextActualVisitDate = normalizeText(schedule.actualVisitDate);
+    const nextPlannedDate = normalizeText(schedule.plannedDate);
     const mergedSchedule: SafetyInspectionSchedule = {
       ...schedule,
       actualVisitDate: nextActualVisitDate,
       linkedReportKey: normalizeText(schedule.linkedReportKey) || nextLinkedReportKey,
+      plannedDate: nextPlannedDate || schedule.plannedDate,
     };
+    const currentLinkedReportKey = normalizeText(schedule.linkedReportKey);
+    const shouldPersistLink =
+      nextLinkedReportKey &&
+      (nextLinkedReportKey !== currentLinkedReportKey ||
+        nextPlannedDate !== normalizeText(schedule.plannedDate));
 
-    if (!nextLinkedReportKey || nextLinkedReportKey === normalizeText(schedule.linkedReportKey)) {
+    if (!shouldPersistLink) {
       return mergedSchedule;
     }
 
     const saved = await updateMySchedule(schedule.id, {
-      actualVisitDate: nextActualVisitDate,
       linkedReportKey: nextLinkedReportKey,
-      plannedDate: schedule.plannedDate,
+      plannedDate: nextPlannedDate || schedule.plannedDate,
       selectionReasonLabel,
       selectionReasonMemo,
       status: schedule.status,
@@ -720,6 +933,7 @@ export function WorkerCalendarScreen() {
       ...saved,
       actualVisitDate: saved.actualVisitDate || nextActualVisitDate,
       linkedReportKey: saved.linkedReportKey || nextLinkedReportKey,
+      plannedDate: saved.plannedDate || nextPlannedDate || schedule.plannedDate,
       windowEnd: saved.windowEnd || schedule.windowEnd,
       windowStart: saved.windowStart || schedule.windowStart,
     };
@@ -730,16 +944,12 @@ export function WorkerCalendarScreen() {
   const saveScheduleSelection = async (schedule: SafetyInspectionSchedule | null) => {
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
-    const linkedReportKey = '';
-    const actualVisitDate = '';
 
-    const persistedSchedule = schedule?.plannedDate
+    const persistedSchedule = schedule
       ? await resolvePersistedScheduleForSave(schedule)
-      : schedule;
-    const saved = schedule?.plannedDate && persistedSchedule
+      : null;
+    const saved = persistedSchedule
       ? await updateMySchedule(persistedSchedule.id, {
-          actualVisitDate,
-          linkedReportKey,
           plannedDate: dialog.plannedDate,
           selectionReasonLabel,
           selectionReasonMemo,
@@ -752,30 +962,20 @@ export function WorkerCalendarScreen() {
         });
     const updated: SafetyInspectionSchedule = {
       ...saved,
-      actualVisitDate: saved.actualVisitDate || actualVisitDate,
-      linkedReportKey: saved.linkedReportKey || linkedReportKey,
+      actualVisitDate: saved.actualVisitDate || persistedSchedule?.actualVisitDate || schedule?.actualVisitDate || '',
+      linkedReportKey: saved.linkedReportKey || persistedSchedule?.linkedReportKey || schedule?.linkedReportKey || '',
       windowEnd: saved.windowEnd || persistedSchedule?.windowEnd || schedule?.windowEnd || '',
       windowStart: saved.windowStart || persistedSchedule?.windowStart || schedule?.windowStart || '',
     };
     upsertScheduleRow(updated);
 
-    const reportLinkUpdate = await ensureDraftSessionForSchedule(updated);
-    const finalized = reportLinkUpdate
-      ? await persistScheduleReportLink(
-          updated,
-          reportLinkUpdate,
-          selectionReasonLabel,
-          selectionReasonMemo,
-        )
-      : updated;
-    if (finalized !== updated) {
-      upsertScheduleRow(finalized);
-    }
-    setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+    await ensureSiteReportIndexLoaded(updated.siteId, { force: true }).catch(() => undefined);
+    const synced = await persistScheduleReportSync(updated);
+    await ensureSiteReportIndexLoaded(synced.siteId, { force: true }).catch(() => undefined);
+    setSelectedDate(synced.plannedDate || updated.plannedDate || dialog.plannedDate);
 
     return {
-      finalized,
-      reportLinkUpdate,
+      finalized: synced,
       selectionReasonLabel,
       selectionReasonMemo,
     };
@@ -783,25 +983,32 @@ export function WorkerCalendarScreen() {
 
   const handleSaveSchedule = async () => {
     if (!dialog.siteId) {
-      setError('현장을 먼저 선택해 주세요.');
+      setDialogError('현장을 먼저 선택해 주세요.');
       return;
     }
     const schedule = dialogRoundRows.find((row) => row.id === dialog.scheduleId) ?? null;
     if (!dialog.plannedDate) {
-      setError('방문 날짜를 먼저 선택해 주세요.');
+      setDialogError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
     if (dialogWindowError) {
-      setError(dialogWindowError);
+      setDialogError(dialogWindowError);
       return;
     }
     const selectionReasonLabel = dialog.selectionReasonLabel.trim();
     const selectionReasonMemo = dialog.selectionReasonMemo.trim();
 
     try {
-      setError(null);
+      setDialogSubmittingAction('save');
+      setDialogError(null);
       const { finalized } = await saveScheduleSelection(schedule);
-      setSelectedDate(finalized.plannedDate || dialog.plannedDate);
+      const targetDate = finalized.plannedDate || dialog.plannedDate;
+      const targetMonth = targetDate.slice(0, 7) || month;
+      await reloadCalendarRows({ month: targetMonth, siteId: selectedSiteId });
+      if (targetMonth !== month) {
+        setMonth(targetMonth);
+      }
+      setSelectedDate(targetDate);
       setNotice(
         selectionReasonLabel || selectionReasonMemo
           ? `${finalized.siteName} ${finalized.roundNo}회차 방문 일정과 사유를 저장했습니다.`
@@ -809,13 +1016,15 @@ export function WorkerCalendarScreen() {
       );
       closeDialog();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+      setDialogError(nextError instanceof Error ? nextError.message : '일정을 저장하지 못했습니다.');
+    } finally {
+      setDialogSubmittingAction(null);
     }
   };
 
   const handleLaunchTechnicalGuidance = async () => {
     if (!dialog.siteId) {
-      setError('현장을 먼저 선택해 주세요.');
+      setDialogError('현장을 먼저 선택해 주세요.');
       return;
     }
 
@@ -823,36 +1032,54 @@ export function WorkerCalendarScreen() {
 
     const isReadOnlySchedule = schedule?.status === 'completed' || schedule?.status === 'canceled';
     if (!isReadOnlySchedule && !dialog.plannedDate) {
-      setError('방문 날짜를 먼저 선택해 주세요.');
+      setDialogError('방문 날짜를 먼저 선택해 주세요.');
       return;
     }
     if (!isReadOnlySchedule && dialogWindowError) {
-      setError(dialogWindowError);
+      setDialogError(dialogWindowError);
       return;
     }
 
     try {
       setDialogSubmittingAction('launch');
-      setError(null);
+      setDialogError(null);
 
       const savedSelection = isReadOnlySchedule && schedule
-        ? { finalized: schedule, reportLinkUpdate: await ensureDraftSessionForSchedule(schedule) }
+        ? {
+            finalized: schedule,
+            selectionReasonLabel: dialog.selectionReasonLabel.trim(),
+            selectionReasonMemo: dialog.selectionReasonMemo.trim(),
+          }
         : await saveScheduleSelection(schedule);
-      const reportLinkUpdate = savedSelection.reportLinkUpdate;
+      const reportLinkUpdate = await ensureDraftSessionForSchedule(savedSelection.finalized);
+      if (!reportLinkUpdate?.linkedReportKey && !reportLinkUpdate?.sessionId) {
+        throw new Error('방문 일정에 연결할 기술지도 보고서를 생성하지 못했습니다.');
+      }
+      const finalized = await persistScheduleReportLink(
+        savedSelection.finalized,
+        reportLinkUpdate,
+        savedSelection.selectionReasonLabel,
+        savedSelection.selectionReasonMemo,
+      );
       const sessionId =
         normalizeText(reportLinkUpdate?.sessionId) ||
         normalizeText(reportLinkUpdate?.linkedReportKey) ||
-        normalizeText(savedSelection.finalized.linkedReportKey);
+        normalizeText(finalized.linkedReportKey);
 
       if (!sessionId) {
         throw new Error('연결된 기술지도 보고서를 찾지 못했습니다.');
       }
 
+      if (getSessionById(sessionId)) {
+        await saveNow({ throwOnError: true });
+        await ensureSiteReportIndexLoaded(finalized.siteId, { force: true }).catch(() => undefined);
+      }
+      await persistScheduleReportSync(finalized);
       await ensureSessionLoaded(sessionId).catch(() => undefined);
       closeDialog();
       router.push(`/sessions/${encodeURIComponent(sessionId)}`);
     } catch (nextError) {
-      setError(
+      setDialogError(
         nextError instanceof Error
           ? nextError.message
           : '연결된 기술지도 보고서를 열지 못했습니다.',
@@ -954,21 +1181,33 @@ export function WorkerCalendarScreen() {
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth((current) => shiftMonthToken(current, -1))}
+                        onClick={() => {
+                          beginCalendarTransition();
+                          setMonth((current) => shiftMonthToken(current, -1));
+                        }}
                       >
                         이전 달
                       </button>
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth(getMonthToken())}
+                        onClick={() => {
+                          const targetMonth = getMonthToken();
+                          if (targetMonth !== month) {
+                            beginCalendarTransition();
+                          }
+                          setMonth(targetMonth);
+                        }}
                       >
                         이번 달
                       </button>
                       <button
                         type="button"
                         className="app-button app-button-secondary"
-                        onClick={() => setMonth((current) => shiftMonthToken(current, 1))}
+                        onClick={() => {
+                          beginCalendarTransition();
+                          setMonth((current) => shiftMonthToken(current, 1));
+                        }}
                       >
                         다음 달
                       </button>
@@ -980,7 +1219,10 @@ export function WorkerCalendarScreen() {
                         className="app-input"
                         type="month"
                         value={month}
-                        onChange={(event) => setMonth(event.target.value || getMonthToken())}
+                        onChange={(event) => {
+                          beginCalendarTransition();
+                          setMonth(event.target.value || getMonthToken());
+                        }}
                       />
                     </label>
                     <label className={styles.field}>
@@ -1023,7 +1265,7 @@ export function WorkerCalendarScreen() {
                     ) : null}
                   </div>
 
-                  {loading ? <div className={styles.emptyState}>일정을 불러오는 중입니다.</div> : null}
+                  {isCalendarLoading ? <div className={styles.emptyState}>일정을 불러오는 중입니다.</div> : null}
 
                   {viewMode === 'calendar' ? (
                     <div className={styles.layout}>
@@ -1056,7 +1298,7 @@ export function WorkerCalendarScreen() {
                                   onClick={() =>
                                     openScheduleDialog({
                                       plannedDate: day.token,
-                                      schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                      schedule: dayRows[0] ?? null,
                                     })
                                   }
                                   onKeyDown={(event) => {
@@ -1064,7 +1306,7 @@ export function WorkerCalendarScreen() {
                                       event.preventDefault();
                                       openScheduleDialog({
                                         plannedDate: day.token,
-                                        schedule: dayRows.length === 1 ? dayRows[0] : null,
+                                        schedule: dayRows[0] ?? null,
                                       });
                                     }
                                   }}
@@ -1075,7 +1317,7 @@ export function WorkerCalendarScreen() {
                                       <button
                                         key={row.id}
                                         type="button"
-                                        className={`${styles.calendarEvent} ${styles.calendarEventButton}`}
+                                        className={`${styles.calendarEvent} ${getScheduleToneClassName(row)} ${styles.calendarEventButton}`}
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           openScheduleDialog({
@@ -1088,7 +1330,9 @@ export function WorkerCalendarScreen() {
                                       </button>
                                     ))}
                                     {dayRows.length > 3 ? (
-                                      <span className={styles.calendarEvent}>+ {dayRows.length - 3}건</span>
+                                      <span className={`${styles.calendarEvent} ${styles.calendarEventMore}`}>
+                                        + {dayRows.length - 3}건
+                                      </span>
                                     ) : null}
                                   </div>
                                 </div>
@@ -1202,7 +1446,7 @@ export function WorkerCalendarScreen() {
                 dialogSubmittingAction !== null
               }
             >
-              방문 일정 저장
+              {dialogSubmittingAction === 'save' ? '일정 저장 중...' : '방문 일정 저장'}
             </button>
           </>
         }
@@ -1214,12 +1458,13 @@ export function WorkerCalendarScreen() {
               className="app-input"
               type="date"
               value={dialog.plannedDate}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   plannedDate: event.target.value,
-                }))
-              }
+                }));
+              }}
             />
           </label>
 
@@ -1257,12 +1502,13 @@ export function WorkerCalendarScreen() {
             <input
               className="app-input"
               value={dialog.selectionReasonLabel}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonLabel: event.target.value,
-                }))
-              }
+                }));
+              }}
               placeholder="예: 현장 요청, 장비 반입 대기"
             />
           </label>
@@ -1273,25 +1519,25 @@ export function WorkerCalendarScreen() {
               className="app-textarea"
               rows={4}
               value={dialog.selectionReasonMemo}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDialogError(null);
                 setDialog((current) => ({
                   ...current,
                   selectionReasonMemo: event.target.value,
-                }))
-              }
+                }));
+              }}
               placeholder="방문 일정을 이 날짜로 선택한 배경을 자세히 적어 주세요."
             />
           </label>
 
-          {dialogSelectedSchedule ? (
-            <>
-              <div className={styles.dialogHint}>
-                계약 기간: {dialogSelectedSchedule.windowStart} ~ {dialogSelectedSchedule.windowEnd}
-              </div>
-              {dialogWindowError ? (
-                <div className={styles.dialogError}>{dialogWindowError}</div>
-              ) : null}
-            </>
+          {dialog.siteId ? (
+            <div className={styles.dialogHint}>
+              계약 기간: {dialogContractWindow?.windowStart || '-'} ~ {dialogContractWindow?.windowEnd || '-'}
+            </div>
+          ) : null}
+
+          {dialogBottomError ? (
+            <div className={styles.dialogError}>{dialogBottomError}</div>
           ) : null}
         </div>
       </AppModal>

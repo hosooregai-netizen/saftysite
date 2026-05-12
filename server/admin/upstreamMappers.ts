@@ -86,6 +86,21 @@ function normalizeCount(value: unknown, fallback = 0) {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function normalizeNumericValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizePositiveInteger(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : null;
+}
+
 function asBackendRecord<T extends Record<string, unknown>>(value: unknown): T | null {
   return value && typeof value === 'object' ? (value as T) : null;
 }
@@ -158,6 +173,8 @@ export function mapBackendAdminReportRow(
     status: normalizeText(record.workflow_status) || normalizeText(record.status),
     updatedAt: normalizeText(record.updated_at),
     visitDate: normalizeText(record.visit_date),
+    visitRound: normalizePositiveInteger(record.visit_round),
+    totalRound: normalizePositiveInteger(record.total_round),
     workflowStatus: normalizeText(record.workflow_status),
     lifecycleStatus: normalizeText(record.lifecycle_status),
   });
@@ -472,6 +489,40 @@ function syncDispatchSummaryRows(
   );
 }
 
+function normalizeQuarterlyMaterialSummaryScope(
+  summary: SafetyAdminOverviewResponse['quarterlyMaterialSummary'],
+  priorityRows: SafetyAdminPriorityQuarterlyManagementRow[],
+): SafetyAdminOverviewResponse['quarterlyMaterialSummary'] {
+  void priorityRows;
+  return summary;
+}
+
+function mapBackendQuarterlyMaterialRequirement(row: {
+  filled_count: number;
+  missing_count: number;
+  required_count: number;
+  raw_count?: number;
+  distinct_count?: number;
+  counted_count?: number;
+  source?: string;
+  reduced_reasons?: string[];
+}): SafetyAdminOverviewResponse['quarterlyMaterialSummary']['missingSiteRows'][number]['education'] {
+  const filledCount = normalizeCount(row.filled_count);
+  const countedCount = normalizeCount(row.counted_count, filledCount);
+  return {
+    filledCount,
+    missingCount: normalizeCount(row.missing_count),
+    requiredCount: normalizeCount(row.required_count, 4),
+    rawCount: normalizeCount(row.raw_count, countedCount),
+    distinctCount: normalizeCount(row.distinct_count, countedCount),
+    countedCount,
+    source: normalizeText(row.source),
+    reducedReasons: Array.isArray(row.reduced_reasons)
+      ? row.reduced_reasons.map((item) => normalizeText(item)).filter(Boolean)
+      : [],
+  };
+}
+
 export function mapBackendOverviewResponse(
   response: SafetyBackendAdminOverviewResponse,
 ): SafetyAdminOverviewResponse {
@@ -591,10 +642,7 @@ export function mapBackendOverviewResponse(
         Number.isFinite(row.latest_guidance_round)
           ? row.latest_guidance_round
           : null,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
         'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
       quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||
@@ -605,9 +653,43 @@ export function mapBackendOverviewResponse(
       siteName: normalizeText(row.site_name),
     }))
     .filter((row) => isPriorityQuarterlyManagementRowScope(row, today));
+  const mappedQuarterlyMaterialSummary = normalizeQuarterlyMaterialSummaryScope(
+    {
+      entries: quarterlyMaterialEntries.map((entry) => ({
+        count: entry.count,
+        href: normalizeText(entry.href),
+        key: normalizeText(entry.key),
+        label: normalizeText(entry.label),
+      })),
+      missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
+        education: mapBackendQuarterlyMaterialRequirement(row.education),
+        headquarterName: normalizeText(row.headquarter_name),
+        href: normalizeText(row.href),
+        measurement: mapBackendQuarterlyMaterialRequirement(row.measurement),
+        missingLabels: Array.isArray(row.missing_labels)
+          ? row.missing_labels.map((item) => normalizeText(item))
+          : [],
+        quarterKey: normalizeText(row.quarter_key),
+        quarterLabel: normalizeText(row.quarter_label),
+        siteId: normalizeText(row.site_id),
+        siteName: normalizeText(row.site_name),
+      })),
+      quarterKey: normalizeText(quarterlyMaterialSummary.quarter_key),
+      quarterLabel: normalizeText(quarterlyMaterialSummary.quarter_label),
+      totalSiteCount:
+        typeof quarterlyMaterialSummary.total_site_count === 'number'
+          ? quarterlyMaterialSummary.total_site_count
+          : 0,
+    },
+    mappedPriorityQuarterlyManagementRows,
+  );
 
   return {
     alerts: response.alerts.map((item) => mapBackendAlert(item)),
+    alertsTotalCount:
+      typeof response.alerts_total_count === 'number'
+        ? Math.max(response.alerts_total_count, response.alerts.length)
+        : response.alerts.length,
     completionRows: response.completion_rows.map((row) => ({
       href: normalizeText(row.href),
       headquarterName: normalizeText(row.headquarter_name),
@@ -615,6 +697,10 @@ export function mapBackendOverviewResponse(
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
     })),
+    completionRowsTotalCount:
+      typeof response.completion_rows_total_count === 'number'
+        ? Math.max(response.completion_rows_total_count, response.completion_rows.length)
+        : response.completion_rows.length,
     coverageRows: response.coverage_rows.map((row) => ({
       itemCount: row.item_count,
       label: normalizeText(row.label),
@@ -653,10 +739,7 @@ export function mapBackendOverviewResponse(
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
@@ -702,10 +785,7 @@ export function mapBackendOverviewResponse(
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
@@ -715,51 +795,14 @@ export function mapBackendOverviewResponse(
           ? row.total_contract_amount
           : null,
     })),
-    quarterlyMaterialSummary: {
-      entries: quarterlyMaterialEntries.map((entry) => ({
-        count: entry.count,
-        href: normalizeText(entry.href),
-        key: normalizeText(entry.key),
-        label: normalizeText(entry.label),
-      })),
-      missingSiteRows: quarterlyMaterialMissingSiteRows.map((row) => ({
-        education: {
-          filledCount: row.education.filled_count,
-          missingCount: row.education.missing_count,
-          requiredCount: row.education.required_count,
-        },
-        headquarterName: normalizeText(row.headquarter_name),
-        href: normalizeText(row.href),
-        measurement: {
-          filledCount: row.measurement.filled_count,
-          missingCount: row.measurement.missing_count,
-          requiredCount: row.measurement.required_count,
-        },
-        missingLabels: Array.isArray(row.missing_labels)
-          ? row.missing_labels.map((item) => normalizeText(item))
-          : [],
-        quarterKey: normalizeText(row.quarter_key),
-        quarterLabel: normalizeText(row.quarter_label),
-        siteId: normalizeText(row.site_id),
-        siteName: normalizeText(row.site_name),
-      })),
-      quarterKey: normalizeText(quarterlyMaterialSummary.quarter_key),
-      quarterLabel: normalizeText(quarterlyMaterialSummary.quarter_label),
-      totalSiteCount:
-        typeof quarterlyMaterialSummary.total_site_count === 'number'
-          ? quarterlyMaterialSummary.total_site_count
-          : 0,
-    },
+    quarterlyMaterialSummary: mappedQuarterlyMaterialSummary,
     recipientMissingSiteRows: recipientMissingSiteRows.map((row) => ({
       dispatchAlertsEnabled: Boolean(row.dispatch_alerts_enabled),
       dispatchPolicyEnabled: Boolean(row.dispatch_policy_enabled),
       headquarterName: normalizeText(row.headquarter_name),
       href: normalizeText(row.href),
       openReportCount: typeof row.open_report_count === 'number' ? row.open_report_count : 0,
-      projectAmount:
-        typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-          ? row.project_amount
-          : null,
+      projectAmount: normalizeNumericValue(row.project_amount),
       recipientEmail: normalizeText(row.recipient_email),
       siteId: normalizeText(row.site_id),
       siteName: normalizeText(row.site_name),
@@ -1180,12 +1223,14 @@ function mapBackendExcelImportScopeSummary(scope: {
   source_section?: string | null;
   headquarter_id?: string | null;
   site_id?: string | null;
+  import_kind?: string | null;
   label?: string | null;
 } | null | undefined): ExcelImportScopeSummary {
   return {
     sourceSection: normalizeText(scope?.source_section) === 'sites' ? 'sites' : 'headquarters',
     headquarterId: normalizeText(scope?.headquarter_id) || null,
     siteId: normalizeText(scope?.site_id) || null,
+    importKind: normalizeText(scope?.import_kind) === 'k2b_guidance' ? 'k2b_guidance' : 'generic',
     label: normalizeText(scope?.label) || '전체',
   };
 }
@@ -1276,6 +1321,10 @@ export function mapBackendExcelApplyResult(
       createdPlaceholderUserCount: response.summary?.created_placeholder_user_count ?? 0,
       ambiguousWorkerMatchCount: response.summary?.ambiguous_worker_match_count ?? 0,
       createdAssignmentCount: response.summary?.created_assignment_count ?? 0,
+      createdScheduleCount: response.summary?.created_schedule_count ?? 0,
+      reusedScheduleCount: response.summary?.reused_schedule_count ?? 0,
+      createdReportCount: response.summary?.created_report_count ?? 0,
+      reusedReportCount: response.summary?.reused_report_count ?? 0,
     },
     rows: Array.isArray(response.rows)
       ? response.rows.map((row) => ({
@@ -1292,6 +1341,11 @@ export function mapBackendExcelApplyResult(
           matchedUserId: normalizeText(row.matched_user_id),
           matchedUserEmail: normalizeText(row.matched_user_email),
           placeholderCreated: Boolean(row.placeholder_created),
+          scheduleId: normalizeText(row.schedule_id) || null,
+          scheduleCreated: Boolean(row.schedule_created),
+          reportKey: normalizeText(row.report_key) || null,
+          reportCreated: Boolean(row.report_created),
+          reportReused: Boolean(row.report_reused),
           message: normalizeText(row.message),
         }))
       : [],

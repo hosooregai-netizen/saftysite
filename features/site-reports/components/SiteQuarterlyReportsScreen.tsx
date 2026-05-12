@@ -185,7 +185,7 @@ export function SiteQuarterlyReportsScreen({
         setDispatchError(null);
         setDispatchNotice(null);
 
-        const report = await fetchSafetyReportByKey(token, row.reportId);
+        const report = await fetchSafetyReportByKey(token, row.reportId, { force: true });
         const nextCompleted = !row.dispatchCompleted;
         const nextDispatch = buildToggledReportDispatch(report.dispatch, {
           currentUserId: currentUser.id,

@@ -7,39 +7,39 @@ export interface MailReportTemplate {
   subject: string;
 }
 
+const GUIDANCE_REPORT_BODY = [
+  '안녕하세요, 한국종합안전(주) {agentName} 입니다.',
+  '<br /><br />',
+  '기술지도 결과보고서를 보내 드리오니 확인 부탁드립니다.',
+  '<br /><br />',
+  '① 현장명 : {siteName}',
+  '<br />',
+  '② 회차 : 지도회차 {guidanceRound} / 계약회차 {contractRound}',
+  '<br />',
+  '③ 지도일자 : {visitDateDot}',
+  '<br /><br />',
+  '감사합니다.',
+  '<br /><br />',
+  '한국종합안전(주)',
+  '<br />',
+  'T. 02-454-4541',
+  '<br />',
+  'F. 02-2299-0905',
+  '<br />',
+  'E. hts27@safetysite.co.kr',
+  '<br />',
+  '서울특별시 광진구 구의강변로 45, 6층 603호(구의동, 성진프라자)',
+].join('');
+
+const GUIDANCE_REPORT_SUBJECT =
+  '한국종합안전({agentName}){siteName} - 기술지도 결과보고서({roundNo}회차)';
+
 export const MAIL_REPORT_TEMPLATES: MailReportTemplate[] = [
   {
     id: 'default',
-    name: '자동 생성',
-    subject: '[보고서] {siteName} {date} {round} 보고서 발송',
-    body: [
-      '<p>안녕하세요.</p>',
-      '<p>{siteName} 현장 보고서를 전달드립니다.</p>',
-      '<p>{reportList}</p>',
-      '<p>확인 부탁드립니다.</p>',
-    ].join(''),
-  },
-  {
-    id: 'quarterly',
-    name: '분기 보고',
-    subject: '[분기 보고서] {headquarterName} / {siteName} {date}',
-    body: [
-      '<p>안녕하세요.</p>',
-      '<p>{headquarterName} {siteName} 현장 분기 보고서를 첨부드립니다.</p>',
-      '<p>{reportList}</p>',
-      '<p>검토 후 회신 부탁드립니다.</p>',
-    ].join(''),
-  },
-  {
-    id: 'guidance',
-    name: '기술지도 보고',
-    subject: '[기술지도 보고서] {siteName} {round}',
-    body: [
-      '<p>안녕하세요.</p>',
-      '<p>{siteName} 현장 기술지도 보고서를 발송드립니다.</p>',
-      '<p>{reportList}</p>',
-      '<p>첨부 파일 확인 부탁드립니다.</p>',
-    ].join(''),
+    name: '기술지도 결과보고서',
+    subject: GUIDANCE_REPORT_SUBJECT,
+    body: GUIDANCE_REPORT_BODY,
   },
 ];
 
@@ -65,19 +65,38 @@ function pickSharedValue(reports: SelectedReportContext[], key: keyof SelectedRe
   return `${values[0]} 외 ${values.length - 1}건`;
 }
 
-function buildRoundLabel(reports: SelectedReportContext[]) {
+function normalizeAgentName(value: string) {
+  const normalized = normalizeText(value);
+  return normalized && !/^한국종합안전(?:\(주\))?$/u.test(normalized)
+    ? normalized
+    : '요원명';
+}
+
+function formatRoundNo(value: unknown, { pad = false } = {}) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? pad
+      ? String(Math.trunc(value)).padStart(2, '0')
+      : String(Math.trunc(value))
+    : '';
+}
+
+function buildRoundValue(
+  reports: SelectedReportContext[],
+  key: 'totalRound' | 'visitRound',
+  { pad = false } = {},
+) {
   const rounds = reports
-    .map((report) => {
-      const value = report.visitRound;
-      return typeof value === 'number' && Number.isFinite(value) && value > 0
-        ? `${value}회차`
-        : '';
-    })
+    .map((report) => formatRoundNo(report[key], { pad }))
     .filter(Boolean);
   const uniqueRounds = Array.from(new Set(rounds));
   if (uniqueRounds.length === 0) return '';
   if (uniqueRounds.length === 1) return uniqueRounds[0] || '';
-  return `${uniqueRounds[0]} 외 ${uniqueRounds.length - 1}회차`;
+  return `${uniqueRounds[0]} 외 ${uniqueRounds.length - 1}건`;
+}
+
+function buildRoundLabel(reports: SelectedReportContext[]) {
+  const round = buildRoundValue(reports, 'visitRound');
+  return round ? `${round}회차` : '';
 }
 
 function buildReportList(reports: SelectedReportContext[]) {
@@ -95,21 +114,34 @@ function buildReportList(reports: SelectedReportContext[]) {
   return `<ul>${rows.join('')}</ul>`;
 }
 
+function formatVisitDateDot(value: string) {
+  const normalized = normalizeText(value);
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return normalized;
+  return `${match[1]}.  ${match[2]}.  ${match[3]}.`;
+}
+
 export function renderMailReportTemplate(
   template: MailReportTemplate,
   reports: SelectedReportContext[],
 ) {
   const first = reports[0] || null;
+  const visitDate = pickSharedValue(reports, 'visitDate');
   const variables: Record<string, string> = {
-    date: pickSharedValue(reports, 'visitDate') || new Date().toISOString().slice(0, 10),
+    agentName: normalizeAgentName(pickSharedValue(reports, 'assigneeName')),
+    contractRound: buildRoundValue(reports, 'totalRound'),
+    date: visitDate || new Date().toISOString().slice(0, 10),
+    guidanceRound: buildRoundValue(reports, 'visitRound'),
     headquarterName: pickSharedValue(reports, 'headquarterName'),
     reportCount: reports.length ? String(reports.length) : '0',
     reportKey: normalizeText(first?.reportKey),
     reportList: buildReportList(reports),
     reportTitle: pickSharedValue(reports, 'reportTitle'),
     round: buildRoundLabel(reports),
-    siteName: pickSharedValue(reports, 'siteName'),
-    visitDate: pickSharedValue(reports, 'visitDate'),
+    roundNo: buildRoundValue(reports, 'visitRound', { pad: true }) || '00',
+    siteName: pickSharedValue(reports, 'siteName') || '현장명',
+    visitDate,
+    visitDateDot: formatVisitDateDot(visitDate),
   };
   const replace = (value: string) =>
     value.replace(/\{([a-zA-Z0-9_]+)\}/g, (_match, key: string) => variables[key] ?? '');

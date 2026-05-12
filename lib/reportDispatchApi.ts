@@ -1,6 +1,10 @@
 'use client';
 
-import { readSafetyAuthToken, SafetyApiError } from '@/lib/safetyApi';
+import {
+  invalidateSafetyReportReadCaches,
+  readSafetyAuthToken,
+  SafetyApiError,
+} from '@/lib/safetyApi';
 import type { ReportDispatchMeta } from '@/types/admin';
 import type { SafetyReport } from '@/types/backend';
 
@@ -39,5 +43,10 @@ export async function updateReportDispatch(
     throw new SafetyApiError(await parseErrorMessage(response), response.status);
   }
 
-  return (await response.json()) as SafetyReport;
+  const updated = (await response.json()) as SafetyReport;
+  invalidateSafetyReportReadCaches(token, {
+    reportKey: updated.report_key || reportKey,
+    siteId: updated.site_id,
+  });
+  return updated;
 }

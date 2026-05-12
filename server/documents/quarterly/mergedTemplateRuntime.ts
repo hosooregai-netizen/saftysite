@@ -1,6 +1,10 @@
 import type JSZip from 'jszip';
 
 import {
+  selectInspectionTemplateVariant,
+  type InspectionTemplateVariant,
+} from '@/lib/documents/inspection/templateVariant';
+import {
   applyTemplateTextQuirks,
   bindImagesIntoZip,
   expandRepeatBlocks,
@@ -10,7 +14,10 @@ import {
   type TemplateImagePlaceholder,
   validateGeneratedHwpxOrThrow,
 } from '@/server/documents/inspection/hwpx';
-import type { QuarterlyMergedTemplateImagePlaceholder } from '@/server/documents/quarterly/mergedTemplatePrototype';
+import type {
+  QuarterlyMergedTemplateAppendixPrototype,
+  QuarterlyMergedTemplateImagePlaceholder,
+} from '@/server/documents/quarterly/mergedTemplatePrototype';
 import type { InspectionSession } from '@/types/inspectionSession';
 
 const APPENDIX_REPEAT_PATH = 'appendices';
@@ -20,12 +27,17 @@ const APPENDIX_PROTOTYPE_PREFIX = `${APPENDIX_REPEAT_PATH}[0].`;
 
 interface RenderMergedQuarterlyAppendicesArgs {
   appendixPrototypeXml: string;
+  appendixPrototypes: Partial<Record<InspectionTemplateVariant, QuarterlyMergedTemplateAppendixPrototype>>;
   assetBaseUrl?: string;
   contentHpf: string;
-  imagePlaceholders: QuarterlyMergedTemplateImagePlaceholder[];
   sectionXml: string;
   selectedSessions: InspectionSession[];
   zip: JSZip;
+}
+
+interface PreparedAppendixPrototype {
+  baseBlockXml: string;
+  baseImagePlaceholders: TemplateImagePlaceholder[];
 }
 
 function stripPrefixedTemplateTokens(xml: string, prefix: string) {
@@ -129,21 +141,47 @@ export async function renderAppendicesIntoMergedQuarterlySection(
     );
   }
 
-  const baseBlockXml = stripPrefixedTemplateTokens(
-    args.appendixPrototypeXml
-      .replace(APPENDIX_REPEAT_START_MARKER, '')
-      .replace(APPENDIX_REPEAT_END_MARKER, ''),
-    APPENDIX_PROTOTYPE_PREFIX,
-  );
-  assertBalancedAppendixBlockXml(baseBlockXml, -1);
-  const baseImagePlaceholders = buildBaseAppendixImagePlaceholders(args.imagePlaceholders);
+  const preparedByVariant = new Map<InspectionTemplateVariant, PreparedAppendixPrototype>();
+  const getPreparedPrototype = (variant: InspectionTemplateVariant) => {
+    const cached = preparedByVariant.get(variant);
+    if (cached) {
+      return cached;
+    }
+
+    const prototype = args.appendixPrototypes[variant];
+    if (!prototype) {
+      throw new Error(
+        `Quarterly merged template runtime failed: missing appendix prototype "${variant}".`,
+      );
+    }
+
+    const baseBlockXml = stripPrefixedTemplateTokens(
+      prototype.appendixPrototypeXml
+        .replace(APPENDIX_REPEAT_START_MARKER, '')
+        .replace(APPENDIX_REPEAT_END_MARKER, ''),
+      APPENDIX_PROTOTYPE_PREFIX,
+    );
+    assertBalancedAppendixBlockXml(baseBlockXml, -1);
+    const prepared = {
+      baseBlockXml,
+      baseImagePlaceholders: buildBaseAppendixImagePlaceholders(prototype.imagePlaceholders),
+    };
+    preparedByVariant.set(variant, prepared);
+    return prepared;
+  };
   let nextContentHpf = args.contentHpf;
   const renderedBlocks: string[] = [];
 
   for (let sessionIndex = 0; sessionIndex < args.selectedSessions.length; sessionIndex += 1) {
     const session = args.selectedSessions[sessionIndex];
+    const templateVariant = selectInspectionTemplateVariant(session);
+    const prototype = getPreparedPrototype(templateVariant);
     const binding = mapSessionToTemplateBinding(session);
-    const namespaced = renameBinaryItemRefs(baseBlockXml, baseImagePlaceholders, sessionIndex);
+    const namespaced = renameBinaryItemRefs(
+      prototype.baseBlockXml,
+      prototype.baseImagePlaceholders,
+      sessionIndex,
+    );
     assertBalancedAppendixBlockXml(namespaced.xml, sessionIndex);
     const expanded = expandRepeatBlocks(
       namespaced.xml,
@@ -155,6 +193,7 @@ export async function renderAppendicesIntoMergedQuarterlySection(
       replaceTextPlaceholders(
         applyTemplateTextQuirks(expanded.xml),
         binding.text,
+        { templateVariant },
       ),
     );
     assertBalancedAppendixBlockXml(renderedBlockXml, sessionIndex);

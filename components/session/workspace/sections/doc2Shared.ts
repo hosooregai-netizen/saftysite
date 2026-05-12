@@ -1,4 +1,8 @@
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
+import {
+  applyInspectionSessionGuidanceDateChange,
+  buildInspectionAutoReportTitle,
+} from '@/features/inspection-session/lib/applyInspectionSessionGuidanceDateChange';
 import type { WorkPlanCheckStatus } from '@/types/inspectionSession';
 
 export const WORK_PLAN_STATUS_FULL_LABEL: Record<WorkPlanCheckStatus, string> = {
@@ -15,12 +19,6 @@ function parsePositiveRound(value: string): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function buildAutoReportTitle(reportDate: string, reportNumber: number) {
-  return reportDate
-    ? `${reportDate} 보고서 ${reportNumber}`
-    : `보고서 ${reportNumber}`;
-}
-
 export function updateOverviewField(
   props: OverviewSectionProps,
   key: keyof OverviewSectionProps['session']['document2Overview'],
@@ -28,6 +26,10 @@ export function updateOverviewField(
   source: 'manual' | 'derived' = 'manual',
 ) {
   props.applyDocumentUpdate('doc2', source, (current) => {
+    if (key === 'guidanceDate') {
+      return applyInspectionSessionGuidanceDateChange(current, value);
+    }
+
     if (key === 'visitCount') {
       const nextRound = parsePositiveRound(value);
       if (!nextRound) {
@@ -38,18 +40,20 @@ export function updateOverviewField(
         current.document2Overview.guidanceDate.trim() || current.meta.reportDate.trim();
       const currentTitle = current.meta.reportTitle.trim();
       const autoTitleCandidates = new Set([
-        buildAutoReportTitle(preferredDate, current.reportNumber),
-        buildAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
-        `보고서 ${current.reportNumber}`,
+        buildInspectionAutoReportTitle(preferredDate, current.reportNumber),
+        buildInspectionAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
+        buildInspectionAutoReportTitle('', current.reportNumber),
       ]);
 
       return {
         ...current,
+        scheduleId: nextRound === current.reportNumber ? current.scheduleId : null,
+        scheduleRoundNo: nextRound === current.reportNumber ? current.scheduleRoundNo : null,
         reportNumber: nextRound,
         meta: {
           ...current.meta,
           reportTitle: autoTitleCandidates.has(currentTitle)
-            ? buildAutoReportTitle(preferredDate, nextRound)
+            ? buildInspectionAutoReportTitle(preferredDate, nextRound)
             : current.meta.reportTitle,
         },
         document2Overview: {

@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import { fetchMailThreadDetail, fetchMailThreads, sendMail, sendReportMail } from '@/lib/mail/apiClient';
 import { readSafetyAuthToken } from '@/lib/safetyApi';
 import type { MailAccount, MailThreadDetail } from '@/types/mail';
@@ -223,6 +224,9 @@ export function useMailboxSendAction({
           to: recipients,
         });
         sentMessageId = sent.id;
+      }
+      if (currentUser?.id && (selectedReportKey || reportItems.length > 0 || selectedSiteId)) {
+        invalidateAdminReportMutationClientCaches(currentUser.id);
       }
 
       setMailSendProgress({

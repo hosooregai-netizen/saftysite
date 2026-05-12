@@ -239,6 +239,8 @@ export function buildLegacyAdminReportRows(input: {
       status: workflowStatus,
       updatedAt: buildUpdatedAt(row.visitDate),
       visitDate: normalizeText(row.visitDate),
+      visitRound: row.roundNo,
+      totalRound: matchedSite?.total_rounds ?? null,
       workflowStatus,
     });
   });

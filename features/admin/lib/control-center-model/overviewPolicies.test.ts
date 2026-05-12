@@ -10,6 +10,7 @@ import {
   buildDispatchManagementRows,
   compareDispatchManagementUnsentRows,
   isCurrentSiteManagementWindow,
+  isDispatchManagementUnsentRow,
   isPriorityQuarterlyManagementRowScope,
   isPriorityQuarterlySiteScope,
   isSiteInCurrentQuarterWindow,
@@ -139,7 +140,7 @@ test('current-quarter site scope prefers project period and falls back to contra
   );
 });
 
-test('dispatch management rows keep non-priority active current-quarter rows only', () => {
+test('dispatch management rows include period-active current-quarter rows only', () => {
   const siteById = new Map([
     [
       'site-active-quarter',
@@ -165,17 +166,30 @@ test('dispatch management rows keep non-priority active current-quarter rows onl
         status: 'planned',
       }),
     ],
+    [
+      'site-future-quarter',
+      buildSite({
+        project_start_date: '2026-05-01',
+        project_end_date: '2026-06-30',
+        lifecycle_status: 'planned',
+        status: 'planned',
+      }),
+    ],
   ]);
 
   const rows = [
     buildDispatchRow({ siteId: 'site-active-quarter' }),
     buildDispatchRow({ siteId: 'site-other-quarter' }),
     buildDispatchRow({ siteId: 'site-planned-quarter' }),
+    buildDispatchRow({ siteId: 'site-future-quarter' }),
   ];
 
   const filtered = buildDispatchManagementRows(rows, siteById, today);
 
-  assert.deepEqual(filtered.map((row) => row.siteId), ['site-active-quarter']);
+  assert.deepEqual(filtered.map((row) => row.siteId), [
+    'site-active-quarter',
+    'site-planned-quarter',
+  ]);
 });
 
 test('completed contract sites are excluded from current management scopes', () => {
@@ -198,7 +212,7 @@ test('completed contract sites are excluded from current management scopes', () 
   );
 });
 
-test('dispatch priority comparator puts mail-ready rows first and then older unsent rows', () => {
+test('dispatch priority comparator puts older unsent rows first and then mail-ready rows', () => {
   const sorted = [
     buildUnsentRow({
       mailReady: false,
@@ -231,7 +245,7 @@ test('dispatch priority comparator puts mail-ready rows first and then older uns
 
   assert.deepEqual(
     sorted.map((row) => row.reportKey),
-    ['ready-old', 'ready-new', 'not-ready'],
+    ['not-ready', 'ready-old', 'ready-new'],
   );
 });
 
@@ -261,7 +275,7 @@ test('priority quarterly site scope requires 20억 이상 and current-quarter ov
   assert.equal(
     isPriorityQuarterlySiteScope({
       site: buildSite({
-        project_amount: 1_900_000_000,
+        project_amount: '1,900,000,000' as unknown as number,
         project_start_date: '2026-04-01',
         project_end_date: '2026-06-30',
       }),
@@ -294,6 +308,50 @@ test('priority quarterly row scope follows the current quarter key from upstream
     isPriorityQuarterlyManagementRowScope(
       buildPriorityRow({ currentQuarterKey: '2026-Q1' }),
       today,
+    ),
+    false,
+  );
+  assert.equal(
+    isPriorityQuarterlySiteScope({
+      site: buildSite({
+        contract_status: 'completed',
+        project_amount: '10,553,400,000' as unknown as number,
+        project_start_date: '2025-04-01',
+        project_end_date: '2026-08-31',
+        status: 'active',
+      }),
+      today,
+    }),
+    true,
+  );
+  assert.equal(
+    isPriorityQuarterlySiteScope({
+      site: buildSite({
+        project_amount: 3_000_000_000,
+        project_start_date: '2026-04-01',
+        project_end_date: '2026-06-30',
+        status: 'closed',
+      }),
+      today,
+    }),
+    false,
+  );
+});
+
+test('dispatch management unsent rows keep D+15 and drop invalid, sent, and D+16 rows', () => {
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: -1 })), false);
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: 15 })), true);
+  assert.equal(isDispatchManagementUnsentRow(buildUnsentRow({ unsentDays: 16 })), false);
+  assert.equal(
+    isDispatchManagementUnsentRow(buildUnsentRow({ dispatchStatus: 'sent', unsentDays: 5 })),
+    false,
+  );
+  assert.equal(
+    isDispatchManagementUnsentRow(
+      buildUnsentRow({
+        dispatchStatus: 'manual_checked' as SafetyAdminUnsentReportRow['dispatchStatus'],
+        unsentDays: 5,
+      }),
     ),
     false,
   );

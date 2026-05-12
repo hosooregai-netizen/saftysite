@@ -1,4 +1,5 @@
-import { fetchAdminReports } from '@/lib/admin/apiClient';
+import { fetchAdminReports, fetchAdminSite } from '@/lib/admin/apiClient';
+import { getPrimarySiteManagerEmail } from '@/lib/siteContacts';
 import type { ControllerReportRow } from '@/types/admin';
 import type { SafetySite } from '@/types/backend';
 import type { MailboxReportOption } from './mailboxPanelTypes';
@@ -13,6 +14,7 @@ const ADMIN_INITIAL_REPORT_LIST_LIMIT = 500;
 const ADMIN_MODAL_REPORT_LIST_LIMIT = 20;
 
 type AdminReportsFetcher = typeof fetchAdminReports;
+type AdminSiteFetcher = typeof fetchAdminSite;
 
 function mapAdminRowsToMailboxReportOptions(
   rows: ControllerReportRow[],
@@ -27,8 +29,56 @@ function mapAdminRowsToMailboxReportOptions(
   );
 }
 
+async function buildRecipientAwareSiteMap(input: {
+  adminSiteById: Map<string, SafetySite>;
+  fetchSite?: AdminSiteFetcher;
+  hydrateMissingRecipients?: boolean;
+  rows: ControllerReportRow[];
+}) {
+  const nextSiteById = new Map(input.adminSiteById);
+
+  if (input.hydrateMissingRecipients === false) {
+    return nextSiteById;
+  }
+
+  const fetchSite = input.fetchSite ?? fetchAdminSite;
+  const missingRecipientSiteIds = Array.from(
+    new Set(
+      input.rows
+        .map((row) => row.siteId)
+        .filter((siteId) => {
+          if (!siteId) return false;
+          return !getPrimarySiteManagerEmail(nextSiteById.get(siteId));
+        }),
+    ),
+  );
+
+  if (missingRecipientSiteIds.length === 0) {
+    return nextSiteById;
+  }
+
+  await Promise.all(
+    missingRecipientSiteIds.map(async (siteId) => {
+      try {
+        const site = await fetchSite(siteId);
+        if (site?.id) {
+          nextSiteById.set(site.id, site);
+        }
+      } catch (error) {
+        console.warn('Failed to load mailbox report recipient site detail', {
+          error: error instanceof Error ? error.message : String(error),
+          siteId,
+        });
+      }
+    }),
+  );
+
+  return nextSiteById;
+}
+
 export async function fetchCanonicalAdminMailboxSelectedReport(input: {
   adminSiteById: Map<string, SafetySite>;
+  fetchSite?: AdminSiteFetcher;
   fetchReports?: AdminReportsFetcher;
   reportKey: string;
   siteId: string;
@@ -45,11 +95,16 @@ export async function fetchCanonicalAdminMailboxSelectedReport(input: {
     sortBy: 'updatedAt',
     sortDir: 'desc',
   });
+  const recipientAwareSiteById = await buildRecipientAwareSiteMap({
+    adminSiteById: input.adminSiteById,
+    fetchSite: input.fetchSite,
+    rows: response.rows,
+  });
   const options = mapAdminRowsToMailboxReportOptions(
     response.rows,
-    input.adminSiteById,
+    recipientAwareSiteById,
     input.siteId,
-    selectedSite,
+    input.siteId ? recipientAwareSiteById.get(input.siteId) ?? selectedSite : selectedSite,
   );
 
   return options[0] ?? null;
@@ -57,6 +112,7 @@ export async function fetchCanonicalAdminMailboxSelectedReport(input: {
 
 export async function fetchCanonicalAdminMailboxReportOptions(input: {
   adminSiteById: Map<string, SafetySite>;
+  fetchSite?: AdminSiteFetcher;
   fetchReports?: AdminReportsFetcher;
   page: number;
   reportPickerOpen: boolean;
@@ -96,12 +152,22 @@ export async function fetchCanonicalAdminMailboxReportOptions(input: {
     response = fallbackResponse;
   }
 
+  const recipientAwareSiteById = await buildRecipientAwareSiteMap({
+    adminSiteById: input.adminSiteById,
+    fetchSite: input.fetchSite,
+    hydrateMissingRecipients: input.reportPickerOpen,
+    rows,
+  });
+  const recipientAwareSelectedSite = input.reportSiteFilter
+    ? recipientAwareSiteById.get(input.reportSiteFilter) ?? selectedSite
+    : selectedSite;
+
   return {
     options: mapAdminRowsToMailboxReportOptions(
       rows,
-      input.adminSiteById,
+      recipientAwareSiteById,
       input.reportSiteFilter,
-      selectedSite,
+      recipientAwareSelectedSite,
     ),
     total: input.reportPickerOpen ? response.total : rows.length,
   };

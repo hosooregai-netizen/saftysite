@@ -3,6 +3,7 @@
 const ADMIN_SESSION_CACHE_PREFIX = 'safety-admin-session-cache:';
 const ADMIN_SESSION_CACHE_TTL_MS = 1000 * 60 * 5;
 const adminSessionCacheInFlight = new Map<string, Promise<unknown>>();
+const adminSessionCacheGenerations = new Map<string, number>();
 
 interface AdminSessionCacheRecord<T> {
   savedAt: number;
@@ -25,6 +26,21 @@ function buildScopePrefix(scope: string) {
 
 function isBrowserReady() {
   return typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+}
+
+function bumpAdminSessionCacheGeneration(requestKey: string) {
+  adminSessionCacheGenerations.set(
+    requestKey,
+    (adminSessionCacheGenerations.get(requestKey) ?? 0) + 1,
+  );
+}
+
+export function getAdminSessionCacheGeneration(
+  scope: string | null | undefined,
+  key: string,
+) {
+  if (!scope) return 0;
+  return adminSessionCacheGenerations.get(buildStorageKey(scope, key)) ?? 0;
 }
 
 export function readAdminSessionCache<T>(scope: string | null | undefined, key: string) {
@@ -72,7 +88,12 @@ export function writeAdminSessionCache<T>(
 }
 
 export function clearAdminSessionCache(scope: string | null | undefined, key: string) {
-  if (!scope || !isBrowserReady()) return;
+  if (!scope) return;
+
+  const requestKey = buildStorageKey(scope, key);
+  adminSessionCacheInFlight.delete(requestKey);
+  bumpAdminSessionCacheGeneration(requestKey);
+  if (!isBrowserReady()) return;
 
   try {
     window.sessionStorage.removeItem(buildStorageKey(scope, key));
@@ -85,15 +106,24 @@ export function clearAdminSessionCacheByPrefix(
   scope: string | null | undefined,
   keyPrefix: string,
 ) {
-  if (!scope || !isBrowserReady()) return;
+  if (!scope) return;
 
   const scopedPrefix = `${buildScopePrefix(scope)}${keyPrefix}`;
+  for (const requestKey of adminSessionCacheInFlight.keys()) {
+    if (requestKey.startsWith(scopedPrefix)) {
+      adminSessionCacheInFlight.delete(requestKey);
+      bumpAdminSessionCacheGeneration(requestKey);
+    }
+  }
+
+  if (!isBrowserReady()) return;
 
   try {
     for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
       const key = window.sessionStorage.key(index);
       if (!key || !key.startsWith(scopedPrefix)) continue;
       window.sessionStorage.removeItem(key);
+      bumpAdminSessionCacheGeneration(key);
     }
   } catch {
     // Ignore cache delete failures in session storage.
@@ -104,19 +134,26 @@ export function fetchAdminSessionCacheOnce<T>(
   scope: string | null | undefined,
   key: string,
   fetcher: () => Promise<T>,
+  options?: { force?: boolean },
 ) {
   if (!scope) {
     return fetcher();
   }
 
   const requestKey = buildStorageKey(scope, key);
-  const existing = adminSessionCacheInFlight.get(requestKey);
+  if (options?.force) {
+    bumpAdminSessionCacheGeneration(requestKey);
+  }
+  const existing = options?.force ? null : adminSessionCacheInFlight.get(requestKey);
   if (existing) {
     return existing as Promise<T>;
   }
 
-  const nextRequest = Promise.resolve(fetcher()).finally(() => {
-    adminSessionCacheInFlight.delete(requestKey);
+  let nextRequest!: Promise<T>;
+  nextRequest = Promise.resolve(fetcher()).finally(() => {
+    if (adminSessionCacheInFlight.get(requestKey) === nextRequest) {
+      adminSessionCacheInFlight.delete(requestKey);
+    }
   });
   adminSessionCacheInFlight.set(requestKey, nextRequest);
   return nextRequest;

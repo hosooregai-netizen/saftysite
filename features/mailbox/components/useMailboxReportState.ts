@@ -210,6 +210,7 @@ export function useMailboxReportState({
               siteId: workerSite.id,
             });
             return reports.map((item) => ({
+              assigneeName: workerSite.assigneeName || '',
               attachmentReady: isMailAttachmentReady({
                 originalPdfAvailable: Boolean(item.originalPdfAvailable),
                 reportKey: item.report_key,
@@ -232,6 +233,7 @@ export function useMailboxReportState({
               reportTitle: item.report_title,
               siteId: item.site_id,
               siteName: workerSite.siteName,
+              totalRound: item.total_round ?? workerSite.totalRounds ?? null,
               updatedAt: item.updated_at,
               visitDate: item.visit_date,
               visitRound: item.visit_round ?? null,
@@ -268,8 +270,12 @@ export function useMailboxReportState({
         current.attachmentReady === matchedReport.attachmentReady &&
         current.attachmentUnavailableReason === matchedReport.attachmentUnavailableReason &&
         current.reportTitle === matchedReport.reportTitle &&
-        current.siteName === matchedReport.siteName &&
-        current.headquarterName === matchedReport.headquarterName &&
+          current.siteName === matchedReport.siteName &&
+          current.headquarterName === matchedReport.headquarterName &&
+          current.recipientEmail === matchedReport.recipientEmail &&
+          current.assigneeName === matchedReport.assigneeName &&
+          current.totalRound === matchedReport.totalRound &&
+        current.visitRound === matchedReport.visitRound &&
         current.originalPdfAvailable === matchedReport.originalPdfAvailable &&
         current.originalPdfDownloadPath === matchedReport.originalPdfDownloadPath
       ) {

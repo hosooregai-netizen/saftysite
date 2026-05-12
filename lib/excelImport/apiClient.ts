@@ -27,6 +27,7 @@ function mapExcelImportPreview(payload: unknown): ExcelImportPreview {
       sourceSection: toText(scope.sourceSection ?? scope.source_section) === 'sites' ? 'sites' : 'headquarters',
       headquarterId: toText(scope.headquarterId ?? scope.headquarter_id) || null,
       siteId: toText(scope.siteId ?? scope.site_id) || null,
+      importKind: toText(scope.importKind ?? scope.import_kind) === 'k2b_guidance' ? 'k2b_guidance' : 'generic',
       label: toText(scope.label) || '전체',
     },
     sheets: Array.isArray(preview.sheets)
@@ -147,6 +148,10 @@ function mapExcelApplyResult(payload: unknown): ExcelApplyResult {
       createdPlaceholderUserCount: Number(summary.createdPlaceholderUserCount ?? summary.created_placeholder_user_count ?? 0),
       ambiguousWorkerMatchCount: Number(summary.ambiguousWorkerMatchCount ?? summary.ambiguous_worker_match_count ?? 0),
       createdAssignmentCount: Number(summary.createdAssignmentCount ?? summary.created_assignment_count ?? 0),
+      createdScheduleCount: Number(summary.createdScheduleCount ?? summary.created_schedule_count ?? 0),
+      reusedScheduleCount: Number(summary.reusedScheduleCount ?? summary.reused_schedule_count ?? 0),
+      createdReportCount: Number(summary.createdReportCount ?? summary.created_report_count ?? 0),
+      reusedReportCount: Number(summary.reusedReportCount ?? summary.reused_report_count ?? 0),
     },
     rows: Array.isArray(response.rows)
       ? response.rows.map((rowItem) => {
@@ -162,6 +167,11 @@ function mapExcelApplyResult(payload: unknown): ExcelApplyResult {
             matchedUserId: toText(row.matchedUserId ?? row.matched_user_id) || undefined,
             matchedUserEmail: toText(row.matchedUserEmail ?? row.matched_user_email) || undefined,
             placeholderCreated: Boolean(row.placeholderCreated ?? row.placeholder_created ?? false),
+            scheduleId: toText(row.scheduleId ?? row.schedule_id) || null,
+            scheduleCreated: Boolean(row.scheduleCreated ?? row.schedule_created ?? false),
+            reportKey: toText(row.reportKey ?? row.report_key) || null,
+            reportCreated: Boolean(row.reportCreated ?? row.report_created ?? false),
+            reportReused: Boolean(row.reportReused ?? row.report_reused ?? false),
             requiredCompletionFields: Array.isArray(row.requiredCompletionFields ?? row.required_completion_fields)
               ? ((row.requiredCompletionFields ?? row.required_completion_fields) as unknown[]).map((item) => toText(item)).filter(Boolean)
               : [],
@@ -208,6 +218,8 @@ function appendScope(body: FormData, scope?: ExcelImportScope) {
     body.set('siteId', scope.siteId);
     body.set('site_id', scope.siteId);
   }
+  body.set('importKind', scope.importKind ?? 'generic');
+  body.set('import_kind', scope.importKind ?? 'generic');
 }
 
 function buildDirectExcelImportUrl(path: string) {
@@ -280,12 +292,15 @@ export async function applyExcelWorkbook(input: {
             source_section: input.scope.sourceSection,
             headquarter_id: input.scope.headquarterId ?? null,
             site_id: input.scope.siteId ?? null,
+            import_kind: input.scope.importKind ?? 'generic',
           }
         : undefined,
       source_section: input.scope?.sourceSection,
+      import_kind: input.scope?.importKind ?? 'generic',
       headquarter_id: input.scope?.headquarterId ?? null,
       site_id: input.scope?.siteId ?? null,
       sourceSection: input.scope?.sourceSection,
+      importKind: input.scope?.importKind ?? 'generic',
     }),
   }, {
     fallbackPath: '/api/excel-imports/apply',

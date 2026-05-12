@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  parseExcelImportServer,
   readRequiredAdminToken,
   SafetyServerApiError,
 } from '@/server/admin/safetyApiServer';
@@ -19,16 +20,29 @@ export async function POST(request: Request): Promise<Response> {
     const siteIdEntry = formData.get('siteId');
     const sourceSection =
       formData.get('sourceSection') === 'sites' ? 'sites' : 'headquarters';
+    const importKind =
+      formData.get('importKind') === 'k2b_guidance' ||
+      formData.get('import_kind') === 'k2b_guidance'
+        ? 'k2b_guidance'
+        : 'generic';
     const headquarterId =
       typeof headquarterIdEntry === 'string' ? headquarterIdEntry : null;
     const siteId = typeof siteIdEntry === 'string' ? siteIdEntry : null;
     if (!(file instanceof File) || !file.name) {
       return NextResponse.json({ error: '업로드할 .xlsx 파일을 선택해 주세요.' }, { status: 400 });
     }
+    if (importKind === 'k2b_guidance') {
+      formData.set('source_section', sourceSection);
+      formData.set('import_kind', importKind);
+      if (headquarterId) formData.set('headquarter_id', headquarterId);
+      if (siteId) formData.set('site_id', siteId);
+      return NextResponse.json(await parseExcelImportServer(token, formData, request));
+    }
 
     return NextResponse.json(
       await parseLocalExcelWorkbook(token, file, request, {
         headquarterId,
+        importKind,
         siteId,
         sourceSection,
       }),

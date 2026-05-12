@@ -8,7 +8,7 @@ import {
   createInspectionSession,
   createInspectionSite,
 } from '@/constants/inspectionSession/sessionFactory';
-import { buildInspectionHwpxDocument } from './hwpx';
+import { buildInspectionHwpxDocument, mapSessionToTemplateBinding } from './hwpx';
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
@@ -56,6 +56,14 @@ function countStandaloneBlankPageBreakParagraphs(xml: string) {
 function findTableIndexContainingText(xml: string, text: string) {
   return (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).findIndex((tableXml) =>
     tableXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+  );
+}
+
+function findCellContainingText(xml: string, text: string): string | null {
+  return (
+    (xml.match(/<hp:tc\b[\s\S]*?<\/hp:tc>/g) ?? []).find((cellXml) =>
+      cellXml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').includes(text),
+    ) ?? null
   );
 }
 
@@ -120,6 +128,51 @@ async function readGeneratedSectionXml(accidentOccurred: 'no' | 'yes') {
   return sectionXml;
 }
 
+test('mapSessionToTemplateBinding leaves empty report values blank instead of rendering dashes', () => {
+  const session = createInspectionSession(
+    {
+      adminSiteSnapshot: {
+        businessRegistrationNumber: '',
+        clientRepresentativeName: '',
+        corporationRegistrationNumber: '',
+        headquartersAddress: '',
+        licenseNumber: '',
+        siteContactEmail: '',
+        siteManagerName: '',
+      },
+      document13Cases: [
+        { id: 'blank-case', imageUrl: '', summary: '', title: '' },
+        { id: 'not-applicable-case', imageUrl: '', summary: '', title: '\uD574\uB2F9\uC5C6\uC74C' },
+      ],
+      meta: {
+        approver: '',
+        reviewer: '',
+      },
+    },
+    'empty-output-site',
+    1,
+  );
+  session.document2Overview.accidentSummary = '';
+  session.document2Overview.accidentType = '';
+  session.document2Overview.contact = '';
+  session.document5Summary.summaryText = '';
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.text['cover.client_representative_name'], '');
+  assert.equal(binding.text['cover.reviewer'], '');
+  assert.equal(binding.text['cover.approver'], '');
+  assert.equal(binding.text['sec1.business_registration_number'], '');
+  assert.equal(binding.text['sec1.corporation_registration_number'], '');
+  assert.equal(binding.text['sec1.license_number'], '');
+  assert.equal(binding.text['sec2.contact'], '');
+  assert.equal(binding.text['sec2.accident_type'], '');
+  assert.equal(binding.text['sec2.accident_summary'], '');
+  assert.equal(binding.text['sec5.summary_text'], '');
+  assert.equal(binding.text['sec13.cases[0].title'], '');
+  assert.equal(binding.text['sec13.cases[1].title'], '');
+});
+
 test('buildInspectionHwpxDocument binds the cover client representative for both inspection template variants', async () => {
   for (const accidentOccurred of ['no', 'yes'] as const) {
     const sectionXml = await readGeneratedSectionXml(accidentOccurred);
@@ -168,6 +221,53 @@ test('buildInspectionHwpxDocument binds doc10 measurement values for both inspec
 
     for (const token of removedTokens) {
       assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(token)));
+    }
+  }
+});
+
+test('buildInspectionHwpxDocument applies text layout policy for single-line and multiline fields in both template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = buildMeasurementFixture(accidentOccurred);
+    const oneLineValue = `CORP SINGLE LINE VALUE ${accidentOccurred} 1234567890 ABCDEFGHIJ`;
+    const multilineFirst = `MULTILINE PROCESS FIELD ${accidentOccurred} ALPHA`;
+    const multilineSecond = `MULTILINE PROCESS FIELD ${accidentOccurred} BETA`;
+    const multilineNoWrapValue =
+      `MULTILINE NO AUTO WRAP ${accidentOccurred} ALPHA BETA GAMMA DELTA EPSILON ZETA ETA THETA IOTA KAPPA LAMBDA`;
+
+    session.adminSiteSnapshot.corporationRegistrationNumber = oneLineValue;
+    session.document8Plans = [
+      {
+        ...session.document8Plans[0],
+        countermeasure: 'MULTILINE COUNTERMEASURE SAMPLE',
+        hazard: multilineNoWrapValue,
+        processName: `${multilineFirst}\n${multilineSecond}`,
+      },
+    ];
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    const singleLineCell = findCellContainingText(sectionXml, oneLineValue);
+    const multilineCell = findCellContainingText(sectionXml, multilineFirst);
+    const multilineNoWrapCell = findCellContainingText(sectionXml, multilineNoWrapValue);
+    assert.ok(singleLineCell);
+    assert.ok(multilineCell);
+    assert.ok(multilineNoWrapCell);
+    assert.match(singleLineCell, /<hp:subList\b[^>]*\blineWrap="SQUEEZE"/);
+    assert.equal((singleLineCell.match(new RegExp(escapeRegExp(oneLineValue), 'g')) ?? []).length, 1);
+    assert.match(multilineNoWrapCell, /<hp:subList\b[^>]*\blineWrap="BREAK"/);
+    assert.equal(
+      (multilineNoWrapCell.match(new RegExp(escapeRegExp(multilineNoWrapValue), 'g')) ?? []).length,
+      1,
+    );
+    assert.match(multilineCell, /MULTILINE/);
+    assert.match(multilineCell, /FIELD/);
+    assert.match(multilineCell, /ALPHA/);
+    assert.match(multilineCell, /BETA/);
+    for (const paragraphXml of multilineCell.match(/<hp:p\b[\s\S]*?<\/hp:p>/g) ?? []) {
+      assert.match(paragraphXml, /\bparaPrIDRef="0"/);
     }
   }
 });

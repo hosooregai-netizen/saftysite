@@ -9,7 +9,9 @@ import type { SafetyBackendAdminOverviewResponse } from '@/types/backend';
 function buildMappedOverview(): SafetyAdminOverviewResponse {
   return {
     alerts: [],
+    alertsTotalCount: 0,
     completionRows: [],
+    completionRowsTotalCount: 0,
     coverageRows: [],
     deadlineSignalSummary: { entries: [], totalReportCount: 0 },
     dispatchQueueRows: [],
@@ -48,7 +50,9 @@ function buildMappedOverview(): SafetyAdminOverviewResponse {
 function buildBackendOverview(): SafetyBackendAdminOverviewResponse {
   return {
     alerts: [],
+    alerts_total_count: 0,
     completion_rows: [],
+    completion_rows_total_count: 0,
     coverage_rows: [],
     deadline_rows: [],
     deadline_signal_summary: {
@@ -202,7 +206,7 @@ test('drops long-overdue unsent rows from the mapped overview queue', () => {
       report_type_label: 'Technical guidance',
       site_id: 's1',
       site_name: 'Site 1',
-      unsent_days: 49,
+      unsent_days: 16,
       visit_date: '2026-03-01',
     },
   ];
@@ -212,6 +216,108 @@ test('drops long-overdue unsent rows from the mapped overview queue', () => {
   assert.equal(mappedOverview.unsentReportRows.length, 0);
   assert.equal(mappedOverview.deadlineSignalSummary.totalReportCount, 0);
   assert.match(mappedOverview.metricCards[0]?.value ?? '', /^0/);
+});
+
+test('maps capped upstream overview row totals separately from returned rows', () => {
+  const backendOverview = buildBackendOverview();
+  backendOverview.alerts = [
+    {
+      created_at: '2026-04-18',
+      description: 'Alert',
+      href: '/alerts/1',
+      id: 'a1',
+      report_key: '',
+      schedule_id: '',
+      severity: 'info',
+      site_id: 's1',
+      title: 'Alert',
+      type: 'schedule_conflict',
+    },
+  ];
+  backendOverview.alerts_total_count = 125;
+  backendOverview.completion_rows = [
+    {
+      headquarter_name: 'HQ',
+      href: '/headquarters?siteId=s1',
+      missing_items: ['담당자'],
+      site_id: 's1',
+      site_name: 'Site 1',
+    },
+  ];
+  backendOverview.completion_rows_total_count = 125;
+
+  const mappedOverview = mapBackendOverviewResponse(backendOverview);
+
+  assert.equal(mappedOverview.alerts.length, 1);
+  assert.equal(mappedOverview.alertsTotalCount, 125);
+  assert.equal(mappedOverview.completionRows.length, 1);
+  assert.equal(mappedOverview.completionRowsTotalCount, 125);
+});
+
+test('preserves backend quarterly material summary scope and diagnostics', () => {
+  const backendOverview = buildBackendOverview();
+  backendOverview.quarterly_material_summary = {
+    entries: [
+      { count: 27, href: '/headquarters?siteStatus=active', key: 'complete', label: 'Complete' },
+      { count: 0, href: '/headquarters?siteStatus=active', key: 'education_missing', label: 'Education missing' },
+      { count: 0, href: '/headquarters?siteStatus=active', key: 'measurement_missing', label: 'Measurement missing' },
+      { count: 1, href: '/headquarters?siteStatus=active', key: 'both_missing', label: 'Both missing' },
+    ],
+    missing_site_rows: [
+      {
+        education: {
+          filled_count: 1,
+          missing_count: 3,
+          required_count: 4,
+          raw_count: 1,
+          distinct_count: 1,
+          counted_count: 1,
+          source: 'report_payload',
+          reduced_reasons: [],
+        },
+        headquarter_name: 'HQ',
+        href: '/headquarters?siteId=s1',
+        measurement: {
+          filled_count: 1,
+          missing_count: 3,
+          required_count: 4,
+          raw_count: 4,
+          distinct_count: 1,
+          counted_count: 1,
+          source: 'report_payload',
+          reduced_reasons: ['deduped_same_measurement_key'],
+        },
+        missing_labels: ['Education 1/4', 'Measurement 1/4'],
+        quarter_key: '2026-Q2',
+        quarter_label: '2026 Q2',
+        site_id: 's1',
+        site_name: 'Site 1',
+      },
+    ],
+    quarter_key: '2026-Q2',
+    quarter_label: '2026 Q2',
+    total_site_count: 28,
+  };
+
+  const mappedOverview = mapBackendOverviewResponse(backendOverview);
+
+  assert.equal(mappedOverview.priorityQuarterlyManagementRows?.length, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.totalSiteCount, 28);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows.length, 1);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.rawCount, 4);
+  assert.equal(mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.distinctCount, 1);
+  assert.deepEqual(
+    mappedOverview.quarterlyMaterialSummary.missingSiteRows[0]?.measurement.reducedReasons,
+    ['deduped_same_measurement_key'],
+  );
+  assert.equal(
+    mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'complete')?.count,
+    27,
+  );
+  assert.equal(
+    mappedOverview.quarterlyMaterialSummary.entries.find((entry) => entry.key === 'both_missing')?.count,
+    1,
+  );
 });
 
 test('does not restore long-overdue unsent rows through upstream fallback', () => {
@@ -234,7 +340,7 @@ test('does not restore long-overdue unsent rows through upstream fallback', () =
       report_type_label: 'Technical guidance',
       site_id: 's1',
       site_name: 'Site 1',
-      unsent_days: 49,
+      unsent_days: 16,
       visit_date: '2026-03-01',
     },
   ];
@@ -246,7 +352,40 @@ test('does not restore long-overdue unsent rows through upstream fallback', () =
   assert.match(restored.metricCards[5]?.value ?? '', /^0/);
 });
 
-test('restores upstream unsent rows in dispatch priority order', () => {
+test('restores D+15 upstream unsent rows through upstream fallback', () => {
+  const mappedOverview = buildMappedOverview();
+  const backendOverview = buildBackendOverview();
+  backendOverview.unsent_report_rows = [
+    {
+      assignee_name: 'Owner',
+      deadline_date: '2026-03-26',
+      dispatch_status: 'overdue',
+      headquarter_name: 'HQ',
+      href: '/reports/r-d15',
+      mail_missing_reason: '',
+      mail_ready: true,
+      recipient_email: 'owner@example.com',
+      recipient_name: 'Owner',
+      reference_date: '2026-03-26',
+      report_key: 'r-d15',
+      report_title: 'D15 report',
+      report_type_label: 'Technical guidance',
+      site_id: 's1',
+      site_name: 'Site 1',
+      unsent_days: 15,
+      visit_date: '2026-03-26',
+    },
+  ];
+
+  const restored = applyOverviewUpstreamFallbacks(backendOverview, mappedOverview);
+
+  assert.equal(restored.unsentReportRows.length, 1);
+  assert.equal(restored.unsentReportRows[0]?.reportKey, 'r-d15');
+  assert.equal(restored.deadlineSignalSummary.totalReportCount, 1);
+  assert.match(restored.metricCards[5]?.value ?? '', /^1/);
+});
+
+test('restores upstream unsent rows in overdue-age priority order', () => {
   const mappedOverview = buildMappedOverview();
   const backendOverview = buildBackendOverview();
   backendOverview.unsent_report_rows = [
@@ -294,6 +433,6 @@ test('restores upstream unsent rows in dispatch priority order', () => {
 
   assert.deepEqual(
     restored.unsentReportRows.map((row) => row.reportKey),
-    ['r-ready', 'r-not-ready'],
+    ['r-not-ready', 'r-ready'],
   );
 });

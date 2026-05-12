@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
 import { imageSize } from 'image-size';
 import JSZip from 'jszip';
 
@@ -8,9 +5,11 @@ import {
   buildQuarterlyTitleForPeriod,
   normalizeQuarterlyReportPeriod,
 } from '@/lib/erpReports/shared';
-import { selectInspectionTemplateVariant } from '@/lib/documents/inspection/templateVariant';
-import { appendInspectionAppendixSections } from '@/server/documents/quarterly/inspectionAppendixMerge';
-import { buildQuarterlyMergedTemplatePrototype } from '@/server/documents/quarterly/mergedTemplatePrototype';
+import {
+  selectInspectionTemplateVariant,
+  type InspectionTemplateVariant,
+} from '@/lib/documents/inspection/templateVariant';
+import { buildQuarterlyMergedTemplatePrototypeBundle } from '@/server/documents/quarterly/mergedTemplatePrototype';
 import { renderAppendicesIntoMergedQuarterlySection } from '@/server/documents/quarterly/mergedTemplateRuntime';
 import { renderChartSvgTextPath } from '@/server/documents/shared/chartSvgText';
 import type { QuarterlyCounter, QuarterlySummaryReport } from '@/types/erpReports';
@@ -40,14 +39,6 @@ interface QuarterlyChartImageAssets {
   causative: ResolvedHwpxImageAsset;
 }
 
-const TEMPLATE_FILENAME = '\uBD84\uAE30 \uC885\uD569\uBCF4\uACE0\uC11C2.hwpx';
-const TEMPLATE_PATH = path.resolve(
-  process.cwd(),
-  'public',
-  'templates',
-  'quarterly',
-  TEMPLATE_FILENAME,
-);
 const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
 const EMPTY_CHART_LABEL = '\uC790\uB8CC \uC5C6\uC74C';
 const OPS_PENDING_TITLE = '\uAD00\uB9AC\uC790 \uBCF4\uC644 \uB300\uAE30';
@@ -56,12 +47,14 @@ const OPS_IMAGE_ITEM_ID = 'opsAssetImage';
 const OPS_TEMPLATE_IMAGE_ITEM_ID = 'tplopsimg01';
 const ACCIDENT_CHART_IMAGE_ITEM_ID = 'quarterlyAccidentChartImage';
 const CAUSATIVE_CHART_IMAGE_ITEM_ID = 'quarterlyCausativeChartImage';
-const NO_DATA_VALUE = '-';
+const NO_DATA_VALUE = '';
 const COVER_TITLE_TEXT_INDEX = 2;
 const COVER_SITE_NAME_TEXT_INDEX = 3;
 const COVER_REPORT_DATE_TEXT_INDEX = 4;
 const BODY_TITLE_TEXT_INDEX = 11;
 const COVER_SITE_NAME_LABEL = '\uD604\uC7A5\uBA85 : ';
+const FUTURE_PLAN_ROWS_PER_TABLE = 5;
+const FUTURE_PLAN_TABLE_PLACEHOLDER = '__QUARTERLY_FUTURE_PLAN_TABLES__';
 const QUARTERLY_CHART_WIDTH = 1560;
 const QUARTERLY_CHART_HEIGHT = 640;
 const QUARTERLY_CHART_CENTER_X = 280;
@@ -96,16 +89,22 @@ const IMAGE_EXTENSION_TO_MEDIA_TYPE: Record<string, string> = {
 };
 const HWPX_SAFE_IMAGE_EXTENSIONS = new Set(['bmp', 'gif', 'jpg', 'jpeg', 'png']);
 
-function selectQuarterlyMergedTemplateVariant(selectedSessions: InspectionSession[]) {
-  if (selectedSessions.length === 0) {
-    return null;
-  }
+function selectQuarterlyMergedTemplateVariants(
+  selectedSessions: InspectionSession[],
+): InspectionTemplateVariant[] {
+  return Array.from(
+    new Set(selectedSessions.map((session) => selectInspectionTemplateVariant(session))),
+  );
+}
 
+export function selectQuarterlyMergedTemplateHolderVariant(
+  selectedSessions: InspectionSession[],
+): InspectionTemplateVariant {
   return selectedSessions.some(
-    (session) => selectInspectionTemplateVariant(session) === 'v9-1',
+    (session) => selectInspectionTemplateVariant(session) === 'v10-1',
   )
-    ? 'v9-1'
-    : 'v9';
+    ? 'v10-1'
+    : 'v10';
 }
 
 function sanitizeDocumentFileName(value: string | null | undefined, fallback: string) {
@@ -452,56 +451,6 @@ function normalizeHwpxPlainText(value: string) {
   return value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
-function estimateHwpxMaxCharsPerLine(horzSize: number, textHeight: number) {
-  const safeHeight = Math.max(textHeight, 900);
-  return Math.max(8, Math.floor(horzSize / (safeHeight * 1.05)));
-}
-
-function charWidthUnits(char: string) {
-  return /[ -~]/.test(char) ? 0.6 : 1;
-}
-
-function wrapHwpxLine(text: string, maxCharsPerLine: number): string[] {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return [' '];
-
-  const lines: string[] = [];
-  let start = 0;
-
-  while (start < normalized.length) {
-    let width = 0;
-    let end = start;
-    let lastWhitespace = -1;
-
-    while (end < normalized.length) {
-      const nextWidth = width + charWidthUnits(normalized[end]);
-      if (nextWidth > maxCharsPerLine) break;
-      width = nextWidth;
-      if (/\s/.test(normalized[end])) lastWhitespace = end;
-      end += 1;
-    }
-
-    if (end === normalized.length) {
-      lines.push(normalized.slice(start));
-      break;
-    }
-
-    if (lastWhitespace >= start) {
-      lines.push(normalized.slice(start, lastWhitespace).trimEnd());
-      start = lastWhitespace + 1;
-      while (start < normalized.length && /\s/.test(normalized[start])) {
-        start += 1;
-      }
-      continue;
-    }
-
-    lines.push(normalized.slice(start, end));
-    start = end;
-  }
-
-  return lines.length > 0 ? lines : [' '];
-}
-
 function extractFirstLineSegMetric(paragraphXml: string, name: string): number | null {
   const match = paragraphXml.match(new RegExp(`<hp:lineseg\\b[^>]*\\b${name}="(\\d+)"`));
   if (!match) return null;
@@ -513,10 +462,8 @@ function buildRunXml(charPrIDRef: string, text: string) {
   return `<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${escaped}</hp:t></hp:run>`;
 }
 
-function wrapHwpxText(text: string, maxChars: number) {
-  const sourceLines = normalizeLineBreaks(text).split('\n');
-  const wrapped = sourceLines.flatMap((line) => wrapHwpxLine(line, maxChars));
-  return wrapped.length > 0 ? wrapped : [' '];
+function splitHwpxTextLines(text: string) {
+  return normalizeLineBreaks(text).split('\n');
 }
 
 function replaceParagraphRuns(paragraphXml: string, text: string) {
@@ -549,27 +496,21 @@ function buildReflowParagraphs(paragraphTemplate: string, text: string) {
     lineSegTemplate,
     baseVertPosText,
     vertSizeText,
-    textHeightText,
+    ,
     spacingText,
-    horzSizeText,
+    ,
     lineSegArrayClose,
   ] = lineSegMatch;
 
   const baseVertPos = Number.parseInt(baseVertPosText, 10);
   const vertSize = Number.parseInt(vertSizeText, 10);
-  const textHeight = Number.parseInt(textHeightText, 10);
   const spacing = Number.parseInt(spacingText, 10);
-  const horzSize = Number.parseInt(horzSizeText, 10);
   const charPrIDRef = paragraphTemplate.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '8';
   const lineStep = extractFirstLineSegMetric(paragraphTemplate, 'vertpos') !== null
     ? vertSize + spacing
     : vertSize + spacing;
 
-  const logicalLines = normalizeHwpxPlainText(text).split('\n');
-  const wrappedLines = logicalLines.flatMap((line) =>
-    wrapHwpxLine(line, estimateHwpxMaxCharsPerLine(horzSize, textHeight)),
-  );
-  const finalLines = wrappedLines.length > 0 ? wrappedLines : [' '];
+  const finalLines = normalizeHwpxPlainText(text).split('\n');
 
   return finalLines
     .map((line, lineIndex) => {
@@ -584,12 +525,26 @@ function stripLineSegArrays(xml: string) {
   return xml.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g, '');
 }
 
+function ensureSubListLineWrapBreak(xml: string) {
+  return xml.replace(/<hp:subList\b([^>]*)>/, (match, attributes: string) => {
+    if (/\blineWrap="[^"]*"/.test(attributes)) {
+      return match.replace(/\blineWrap="[^"]*"/, 'lineWrap="BREAK"');
+    }
+    return `<hp:subList${attributes} lineWrap="BREAK">`;
+  });
+}
+
 function replaceCellText(
   tableXml: string,
   rowAddr: number,
   colAddr: number,
   text: string,
-  options?: { multiline?: boolean; wrapAt?: number; reflow?: boolean; stripLineSeg?: boolean },
+  options?: {
+    lineWrapBreak?: boolean;
+    multiline?: boolean;
+    reflow?: boolean;
+    stripLineSeg?: boolean;
+  },
 ) {
   const targetMarker = `<hp:cellAddr colAddr="${colAddr}" rowAddr="${rowAddr}"/>`;
   const cellBlock = [...tableXml.matchAll(/<hp:tc\b[\s\S]*?<\/hp:tc>/g)]
@@ -603,15 +558,18 @@ function replaceCellText(
   const nextParagraphs = options?.reflow
     ? buildReflowParagraphs(paragraphTemplate, text)
     : options?.multiline
-    ? wrapHwpxText(text, options.wrapAt ?? 44)
+    ? splitHwpxTextLines(text)
         .map((line) => replaceParagraphRuns(paragraphTemplate, line))
         .join('')
     : replaceParagraphRuns(paragraphTemplate, text);
 
-  const nextCell = cellBlock.replace(
+  const nextCellWithText = cellBlock.replace(
     /<hp:p\b[\s\S]*?<\/hp:p>/,
     options?.stripLineSeg ? stripLineSegArrays(nextParagraphs) : nextParagraphs,
   );
+  const nextCell = options?.lineWrapBreak
+    ? ensureSubListLineWrapBreak(nextCellWithText)
+    : nextCellWithText;
 
   return tableXml.replace(cellBlock, nextCell);
 }
@@ -771,12 +729,12 @@ function replaceTableRows(tableXml: string, rows: string[]) {
   return `${prefix}${rows.join('')}${suffix}`;
 }
 
-function resizeTable(tableXml: string, rowCount: number, addedHeight: number) {
+function resizeTable(tableXml: string, rowCount: number, heightDelta: number) {
   let nextTable = tableXml.replace(/rowCnt="\d+"/, `rowCnt="${rowCount}"`);
-  if (addedHeight > 0) {
+  if (heightDelta !== 0) {
     nextTable = nextTable.replace(
       /(<hp:sz\b[^>]*height=")(\d+)(")/,
-      (_match, start, value, end) => `${start}${Number(value) + addedHeight}${end}`,
+      (_match, start, value, end) => `${start}${Math.max(1, Number(value) + heightDelta)}${end}`,
     );
   }
   return nextTable;
@@ -799,12 +757,96 @@ function ensureDataRowCapacity(tableXml: string, firstDataRowAddr: number, desir
   return resizeTable(resized, nextRows.length, prototypeHeight * cloneCount);
 }
 
+function setDataRowCapacity(tableXml: string, firstDataRowAddr: number, desiredRowCount: number) {
+  const rows = getTableRows(tableXml);
+  const headerRows = rows.slice(0, firstDataRowAddr);
+  const dataRows = rows.slice(firstDataRowAddr);
+  const prototypeRow = dataRows.at(-1) ?? rows.at(-1);
+  if (!prototypeRow) return tableXml;
+
+  const prototypeHeight = Number(prototypeRow.match(/<hp:cellSz\b[^>]*height="(\d+)"/)?.[1] ?? 0);
+  const nextDataRows = dataRows.slice(0, desiredRowCount);
+  while (nextDataRows.length < desiredRowCount) {
+    const nextRowAddr = firstDataRowAddr + nextDataRows.length;
+    nextDataRows.push(prototypeRow.replace(/rowAddr="\d+"/g, `rowAddr="${nextRowAddr}"`));
+  }
+
+  const nextRows = [...headerRows, ...nextDataRows].map((rowXml, rowIndex) =>
+    rowXml.replace(/rowAddr="\d+"/g, `rowAddr="${rowIndex}"`),
+  );
+  const heightDelta = prototypeHeight * (nextRows.length - rows.length);
+  return resizeTable(replaceTableRows(tableXml, nextRows), nextRows.length, heightDelta);
+}
+
 function matchTableBlocks(sectionXml: string) {
   return [...sectionXml.matchAll(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g)].map((match) => ({
     start: match.index ?? 0,
     end: (match.index ?? 0) + match[0].length,
     xml: match[0],
   }));
+}
+
+function balancedTagSpans(xml: string, tagName: string): Array<{ start: number; end: number }> {
+  const escapedTagName = tagName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokenPattern = new RegExp(`<${escapedTagName}\\b[^>]*\\/?>|<\\/${escapedTagName}>`, 'g');
+  const spans: Array<{ start: number; end: number }> = [];
+  const stack: number[] = [];
+
+  for (const match of xml.matchAll(tokenPattern)) {
+    const token = match[0];
+    const index = match.index ?? 0;
+    const isClosing = token.startsWith(`</${tagName}`);
+    const isSelfClosing = !isClosing && token.endsWith('/>');
+
+    if (isClosing) {
+      const start = stack.pop();
+      if (start != null) {
+        spans.push({ start, end: index + token.length });
+      }
+      continue;
+    }
+
+    if (isSelfClosing) {
+      spans.push({ start: index, end: index + token.length });
+      continue;
+    }
+
+    stack.push(index);
+  }
+
+  return spans.sort((left, right) => left.start - right.start);
+}
+
+function findContainingParagraphSpan(xml: string, marker: string) {
+  const markerIndex = xml.indexOf(marker);
+  if (markerIndex < 0) return null;
+
+  return balancedTagSpans(xml, 'hp:p')
+    .filter((span) => span.start <= markerIndex && markerIndex < span.end)
+    .sort((left, right) => (left.end - left.start) - (right.end - right.start))[0] ?? null;
+}
+
+function setParagraphPageBreak(paragraphXml: string, value: '0' | '1') {
+  return paragraphXml.replace(/<hp:p\b[^>]*>/, (paragraphTag) =>
+    /pageBreak=/.test(paragraphTag)
+      ? paragraphTag.replace(/pageBreak="[^"]*"/, `pageBreak="${value}"`)
+      : paragraphTag.replace(/>$/, ` pageBreak="${value}">`),
+  );
+}
+
+function buildFuturePlanTableParagraphs(sectionXml: string, futurePlanTables: string[]) {
+  const paragraphSpan = findContainingParagraphSpan(sectionXml, FUTURE_PLAN_TABLE_PLACEHOLDER);
+  if (!paragraphSpan) {
+    throw new Error('Quarterly HWPX template future plan table paragraph was not detected.');
+  }
+
+  const paragraphTemplate = sectionXml.slice(paragraphSpan.start, paragraphSpan.end);
+  const paragraphs = futurePlanTables.map((tableXml, index) => {
+    const paragraphXml = paragraphTemplate.replace(FUTURE_PLAN_TABLE_PLACEHOLDER, tableXml);
+    return index === 0 ? paragraphXml : setParagraphPageBreak(paragraphXml, '1');
+  });
+
+  return `${sectionXml.slice(0, paragraphSpan.start)}${paragraphs.join('')}${sectionXml.slice(paragraphSpan.end)}`;
 }
 
 function rebuildSectionXml(
@@ -1139,28 +1181,63 @@ function updateImplementationTable(tableXml: string, report: QuarterlySummaryRep
   return nextTable;
 }
 
-function updateFuturePlanTable(tableXml: string, report: QuarterlySummaryReport) {
-  const rows =
-    report.futurePlans.length > 0
-      ? report.futurePlans
-      : [{ processName: '', hazard: '', countermeasure: '', note: '', source: 'api' as const }];
+function createBlankFuturePlan(): QuarterlySummaryReport['futurePlans'][number] {
+  return {
+    id: 'blank-future-plan',
+    hazardCountermeasureItemId: '',
+    processName: '',
+    hazard: '',
+    countermeasure: '',
+    note: '',
+    source: 'api' as const,
+  };
+}
 
-  let nextTable = ensureDataRowCapacity(tableXml, 2, rows.length);
+function chunkFuturePlans(report: QuarterlySummaryReport) {
+  const rows = report.futurePlans.length > 0 ? report.futurePlans : [createBlankFuturePlan()];
+  const chunks: Array<QuarterlySummaryReport['futurePlans']> = [];
 
-  rows.forEach((item, index) => {
+  for (let index = 0; index < rows.length; index += FUTURE_PLAN_ROWS_PER_TABLE) {
+    chunks.push(rows.slice(index, index + FUTURE_PLAN_ROWS_PER_TABLE));
+  }
+
+  return chunks.length > 0 ? chunks : [[createBlankFuturePlan()]];
+}
+
+function padFuturePlanChunk(chunk: QuarterlySummaryReport['futurePlans']) {
+  const rows = [...chunk];
+  while (rows.length < FUTURE_PLAN_ROWS_PER_TABLE) {
+    rows.push(createBlankFuturePlan());
+  }
+  return rows;
+}
+
+function updateFuturePlanTableChunk(
+  tableXml: string,
+  rows: QuarterlySummaryReport['futurePlans'],
+) {
+  let nextTable = setDataRowCapacity(tableXml, 2, FUTURE_PLAN_ROWS_PER_TABLE);
+
+  padFuturePlanChunk(rows).forEach((item, index) => {
     const rowAddr = 2 + index;
     const leftText = formatOptionalText(item.hazard || item.processName);
     const rightText = formatOptionalText(item.countermeasure);
 
     nextTable = replaceCellText(nextTable, rowAddr, 0, formatText(leftText), {
-      reflow: true,
+      lineWrapBreak: true,
+      stripLineSeg: true,
     });
     nextTable = replaceCellText(nextTable, rowAddr, 1, formatText(rightText), {
-      reflow: true,
+      lineWrapBreak: true,
+      stripLineSeg: true,
     });
   });
 
   return nextTable;
+}
+
+function updateFuturePlanTables(tableXml: string, report: QuarterlySummaryReport) {
+  return chunkFuturePlans(report).map((chunk) => updateFuturePlanTableChunk(tableXml, chunk));
 }
 
 function updateOpsTable(
@@ -1185,7 +1262,6 @@ function updateOpsTable(
       )
     : replaceCellText(nextTable, 2, 0, buildOpsDetailLines(report), {
         multiline: true,
-        wrapAt: 42,
       });
   return nextTable;
 }
@@ -1246,28 +1322,37 @@ function updateSectionXml(
   tables[1] = updateSnapshotTable(tables[1], report, site);
   tables[2] = updateStatsTable(tables[2], chartImages);
   tables[3] = updateImplementationTable(tables[3], report);
-  tables[4] = updateFuturePlanTable(tables[4], report);
+  const futurePlanTables = updateFuturePlanTables(tables[4], report);
+  tables[4] = FUTURE_PLAN_TABLE_PLACEHOLDER;
   tables[5] = updateOpsTable(tables[5], report, opsImageAsset);
 
-  const rebuiltSectionXml = rebuildSectionXml(textUpdatedSection, tableBlocks, tables);
+  const rebuiltSectionXml = buildFuturePlanTableParagraphs(
+    rebuildSectionXml(textUpdatedSection, tableBlocks, tables),
+    futurePlanTables,
+  );
   const normalizedSectionXml = rebuiltSectionXml;
   return options?.skipPictureIdNormalization
     ? normalizedSectionXml
     : ensureUniqueRenderableObjectIds(normalizedSectionXml);
 }
 
-async function tryBuildQuarterlyMergedHwpxDocument(
+async function buildQuarterlyMergedHwpxDocument(
   report: QuarterlySummaryReport,
   site: InspectionSite,
   options?: QuarterlyHwpxBuildOptions,
-): Promise<GeneratedHwpxDocument | null> {
+): Promise<GeneratedHwpxDocument> {
   const selectedSessions = options?.selectedSessions ?? [];
-  const mergedTemplateVariant = selectQuarterlyMergedTemplateVariant(selectedSessions);
-  if (!mergedTemplateVariant || selectedSessions.length === 0) {
-    return null;
-  }
-
-  const prototype = await buildQuarterlyMergedTemplatePrototype(mergedTemplateVariant);
+  const selectedTemplateVariants = selectQuarterlyMergedTemplateVariants(selectedSessions);
+  const holderVariant =
+    selectedSessions.length > 0
+      ? selectQuarterlyMergedTemplateHolderVariant(selectedSessions)
+      : 'v10';
+  const mergedTemplateVariants =
+    selectedTemplateVariants.length > 0 ? selectedTemplateVariants : [holderVariant];
+  const prototype = await buildQuarterlyMergedTemplatePrototypeBundle(
+    mergedTemplateVariants,
+    holderVariant,
+  );
   const zip = await JSZip.loadAsync(prototype.buffer);
   const sectionXmlFile = zip.file('Contents/section0.xml');
   const contentHpfFile = zip.file('Contents/content.hpf');
@@ -1334,9 +1419,9 @@ async function tryBuildQuarterlyMergedHwpxDocument(
   );
   const renderedAppendices = await renderAppendicesIntoMergedQuarterlySection({
     appendixPrototypeXml: prototype.appendixPrototypeXml,
+    appendixPrototypes: prototype.prototypes,
     assetBaseUrl: options?.assetBaseUrl,
     contentHpf,
-    imagePlaceholders: prototype.imagePlaceholders,
     sectionXml: updatedSectionXml,
     selectedSessions,
     zip,
@@ -1365,110 +1450,5 @@ export async function buildQuarterlyHwpxDocument(
   site: InspectionSite,
   options?: QuarterlyHwpxBuildOptions,
 ): Promise<GeneratedHwpxDocument> {
-  const selectedSessions = options?.selectedSessions ?? [];
-  if (selectedSessions.length > 0) {
-    try {
-      const mergedDocument = await tryBuildQuarterlyMergedHwpxDocument(report, site, options);
-      if (mergedDocument) {
-        return mergedDocument;
-      }
-    } catch {
-      // Fall back to the legacy multi-section path if the merged template renderer
-      // cannot produce a valid document for the current data shape.
-    }
-  }
-
-  const templateBuffer = await fs.readFile(TEMPLATE_PATH);
-  const zip = await JSZip.loadAsync(templateBuffer);
-
-  const sectionXmlFile = zip.file('Contents/section0.xml');
-  const contentHpfFile = zip.file('Contents/content.hpf');
-  const accidentChartFile = zip.file('Chart/chart1.xml');
-  const causativeChartFile = zip.file('Chart/chart2.xml');
-
-  if (!sectionXmlFile || !contentHpfFile) {
-    throw new Error('Quarterly HWPX template is missing required assets.');
-  }
-
-  const sectionXml = await sectionXmlFile.async('string');
-  let contentHpf = await contentHpfFile.async('string');
-  const accidentChartXml = accidentChartFile
-    ? await accidentChartFile.async('string')
-    : null;
-  const causativeChartXml = causativeChartFile
-    ? await causativeChartFile.async('string')
-    : null;
-  const [opsImageAsset, accidentChartImage, causativeChartImage] = await Promise.all([
-    resolveOpsImageAsset(report, options),
-    renderQuarterlyChartImageAsset(report.accidentStats),
-    renderQuarterlyChartImageAsset(report.causativeStats),
-  ]);
-  const chartImages: QuarterlyChartImageAssets = {
-    accident: accidentChartImage,
-    causative: causativeChartImage,
-  };
-
-  if (opsImageAsset) {
-    const href = `BinData/${OPS_IMAGE_ITEM_ID}.${opsImageAsset.extension}`;
-    zip.file(href, opsImageAsset.buffer, { compression: 'STORE' });
-    contentHpf = upsertManifestItem(
-      contentHpf,
-      OPS_IMAGE_ITEM_ID,
-      href,
-      normalizeHwpxMediaType(opsImageAsset.mediaType, href),
-    );
-  }
-
-  for (const [itemId, asset] of [
-    [ACCIDENT_CHART_IMAGE_ITEM_ID, chartImages.accident],
-    [CAUSATIVE_CHART_IMAGE_ITEM_ID, chartImages.causative],
-  ] as const) {
-    const href = `BinData/${itemId}.${asset.extension}`;
-    zip.file(href, asset.buffer, { compression: 'STORE' });
-    contentHpf = upsertManifestItem(
-      contentHpf,
-      itemId,
-      href,
-      normalizeHwpxMediaType(asset.mediaType, href),
-    );
-  }
-
-  let nextHeaderXml = '';
-  if (selectedSessions.length > 0) {
-    const headerXmlFile = zip.file('Contents/header.xml');
-    if (!headerXmlFile) {
-      throw new Error('Quarterly HWPX template is missing Contents/header.xml.');
-    }
-    nextHeaderXml = await headerXmlFile.async('string');
-    const mergedAppendices = await appendInspectionAppendixSections({
-      assetBaseUrl: options?.assetBaseUrl,
-      contentHpf,
-      headerXml: nextHeaderXml,
-      selectedSessions,
-      siteSessions: options?.siteSessions?.length ? options.siteSessions : selectedSessions,
-      zip,
-    });
-    contentHpf = mergedAppendices.contentHpf;
-    nextHeaderXml = mergedAppendices.headerXml;
-  }
-
-  zip.file(
-    'Contents/section0.xml',
-    updateSectionXml(sectionXml, report, site, opsImageAsset, chartImages),
-  );
-  zip.file('Contents/content.hpf', contentHpf);
-  if (nextHeaderXml) {
-    zip.file('Contents/header.xml', nextHeaderXml);
-  }
-  if (accidentChartFile && accidentChartXml) {
-    zip.file('Chart/chart1.xml', updateChartXml(accidentChartXml, report.accidentStats));
-  }
-  if (causativeChartFile && causativeChartXml) {
-    zip.file('Chart/chart2.xml', updateChartXml(causativeChartXml, report.causativeStats));
-  }
-
-  return {
-    buffer: await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }),
-    filename: fileNameForQuarterlyReport(report, site),
-  };
+  return buildQuarterlyMergedHwpxDocument(report, site, options);
 }

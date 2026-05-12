@@ -18,6 +18,7 @@ interface HeadquartersTableProps {
   onDeleteRequest: (item: SafetyHeadquarter) => void;
   onEditRequest: (item: SafetyHeadquarter) => void;
   onExportRequest: () => void;
+  onImportRequest: () => void;
   onOpenSitesRequest: (item: SafetyHeadquarter) => void;
   onPageChange: (page: number) => void;
   onQueryChange: (value: string) => void;
@@ -50,6 +51,7 @@ export function HeadquartersTable({
   onDeleteRequest,
   onEditRequest,
   onExportRequest,
+  onImportRequest,
   onOpenSitesRequest,
   onPageChange,
   onQueryChange,
@@ -105,6 +107,14 @@ export function HeadquartersTable({
             disabled={busy}
           >
             건설사 추가
+          </button>
+          <button
+            type="button"
+            className="app-button app-button-secondary"
+            onClick={onImportRequest}
+            disabled={busy}
+          >
+            엑셀로 추가
           </button>
         </div>
       </div>
@@ -179,12 +189,15 @@ export function HeadquartersTable({
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.contact_name || '-'}</div>
+                          <div className={styles.tableSecondary}>
+                            {[item.contact_phone, item.contact_email].filter(Boolean).join(' / ') || '-'}
+                          </div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>
                             {item.business_registration_no || '-'}
                           </div>
-                          <div className={styles.tableSecondary}>면허번호 {item.license_no || '-'}</div>
+                          <div className={styles.tableSecondary}>법인등록번호 {item.corporate_registration_no || '-'}</div>
                         </td>
                         <td>
                           <div className={styles.tablePrimary}>{item.address || '-'}</div>

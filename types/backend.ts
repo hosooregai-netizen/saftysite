@@ -153,6 +153,7 @@ export interface SafetyHeadquarterDetail extends SafetyHeadquarterSummary {
   license_no: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  contact_email?: string | null;
   address: string | null;
   memo: string | null;
   is_active: boolean;
@@ -496,6 +497,8 @@ export interface SafetyBackendAdminReportRow {
   lifecycle_status?: string | null;
   updated_at: string;
   visit_date: string;
+  visit_round?: number | null;
+  total_round?: number | null;
 }
 
 export interface SafetyBackendAdminReportsResponse {
@@ -861,6 +864,7 @@ export interface SafetyBackendExcelImportPreview {
     source_section: 'headquarters' | 'sites';
     headquarter_id?: string | null;
     site_id?: string | null;
+    import_kind?: 'generic' | 'k2b_guidance';
     label: string;
   };
   sheets: SafetyBackendExcelImportSheetPreview[];
@@ -878,6 +882,11 @@ export interface SafetyBackendExcelImportApplyRowResult {
   matched_user_id?: string;
   matched_user_email?: string;
   placeholder_created?: boolean;
+  schedule_id?: string | null;
+  schedule_created?: boolean;
+  report_key?: string | null;
+  report_created?: boolean;
+  report_reused?: boolean;
   message: string;
 }
 
@@ -892,6 +901,10 @@ export interface SafetyBackendExcelApplyResult {
     created_placeholder_user_count?: number;
     ambiguous_worker_match_count?: number;
     created_assignment_count?: number;
+    created_schedule_count?: number;
+    reused_schedule_count?: number;
+    created_report_count?: number;
+    reused_report_count?: number;
   };
   rows: SafetyBackendExcelImportApplyRowResult[];
 }
@@ -1042,6 +1055,7 @@ export interface SafetyBackendSmsSendResponse {
 
 export interface SafetyBackendAdminOverviewResponse {
   alerts: SafetyBackendAdminAlert[];
+  alerts_total_count?: number;
   completion_rows: Array<{
     href: string;
     headquarter_name: string;
@@ -1049,6 +1063,7 @@ export interface SafetyBackendAdminOverviewResponse {
     site_id: string;
     site_name: string;
   }>;
+  completion_rows_total_count?: number;
   coverage_rows: Array<{
     item_count: number;
     label: string;
@@ -1158,6 +1173,11 @@ export interface SafetyBackendAdminOverviewResponse {
         filled_count: number;
         missing_count: number;
         required_count: number;
+        raw_count?: number;
+        distinct_count?: number;
+        counted_count?: number;
+        source?: string;
+        reduced_reasons?: string[];
       };
       headquarter_name: string;
       href: string;
@@ -1165,6 +1185,11 @@ export interface SafetyBackendAdminOverviewResponse {
         filled_count: number;
         missing_count: number;
         required_count: number;
+        raw_count?: number;
+        distinct_count?: number;
+        counted_count?: number;
+        source?: string;
+        reduced_reasons?: string[];
       };
       missing_labels: string[];
       quarter_key: string;

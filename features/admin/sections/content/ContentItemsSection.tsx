@@ -154,7 +154,7 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
   const urlSort = useMemo<TableSortState>(
     () => ({
       direction: readEnumParam(searchParams, 'contentDir', ['asc', 'desc'] as const, 'asc'),
-      key: readStringParam(searchParams, 'contentSort', 'title'),
+      key: readStringParam(searchParams, 'contentSort', CONTENT_LIST_QUERY_DEFAULTS.contentSort),
     }),
     [searchParams],
   );

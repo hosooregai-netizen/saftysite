@@ -11,12 +11,27 @@ export interface AssignedSafetySiteResolverDeps {
   upsertAssignedSitesIntoStore: (sites: SafetySite[]) => void;
 }
 
+function normalizeText(value: string | null | undefined) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function hasRegisteredContractWindow(site: SafetySite) {
+  return Boolean(
+    normalizeText(site.contract_start_date) &&
+      normalizeText(site.contract_end_date),
+  );
+}
+
 export async function resolveAssignedSafetySite(
   siteId: string,
   deps: AssignedSafetySiteResolverDeps,
 ): Promise<SafetySite | null> {
   const cached = deps.getAssignedSafetySite(siteId);
-  if (cached && deps.hasAssignedSafetySiteDetail(siteId)) {
+  if (
+    cached &&
+    deps.hasAssignedSafetySiteDetail(siteId) &&
+    hasRegisteredContractWindow(cached)
+  ) {
     deps.upsertAssignedSitesIntoStore([cached]);
     return cached;
   }

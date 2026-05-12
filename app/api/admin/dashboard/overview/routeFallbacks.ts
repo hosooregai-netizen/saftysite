@@ -13,6 +13,15 @@ function normalizeText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeNumericValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value !== 'string') return null;
+  const normalized = value.replace(/,/g, '').replace(/[^\d.-]/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function mapBackendOverviewUnsentRowsPreservingUpstream(
   rows: SafetyBackendAdminOverviewResponse['unsent_report_rows'],
 ): SafetyAdminOverviewResponse['unsentReportRows'] {
@@ -63,10 +72,7 @@ function mapBackendOverviewPriorityRowsPreservingUpstream(
       typeof row.latest_guidance_round === 'number' && Number.isFinite(row.latest_guidance_round)
         ? row.latest_guidance_round
         : null,
-    projectAmount:
-      typeof row.project_amount === 'number' && Number.isFinite(row.project_amount)
-        ? row.project_amount
-        : null,
+    projectAmount: normalizeNumericValue(row.project_amount),
     quarterlyDispatchStatus: (normalizeText(row.quarterly_dispatch_status) ||
       'report_missing') as SafetyAdminPriorityQuarterlyManagementRow['quarterlyDispatchStatus'],
     quarterlyReflectionStatus: (normalizeText(row.quarterly_reflection_status) ||

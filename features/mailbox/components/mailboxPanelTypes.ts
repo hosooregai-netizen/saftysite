@@ -18,6 +18,7 @@ export interface MailboxPanelProps {
 }
 
 export interface MailboxReportOption {
+  assigneeName: string;
   attachmentReady: boolean;
   attachmentUnavailableReason: string;
   documentKind: SafetyReportListItem['document_kind'] | null;
@@ -32,6 +33,7 @@ export interface MailboxReportOption {
   reportTitle: string;
   siteId: string;
   siteName: string;
+  totalRound: number | null;
   updatedAt: string | null;
   visitDate: string | null;
   visitRound: number | null;
