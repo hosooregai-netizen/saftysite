@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   mergeAdminSiteSnapshots,
@@ -15,7 +15,6 @@ import {
   useUrlQueryUpdater,
 } from '@/hooks/useUrlQueryState';
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
-import { fetchAdminReports } from '@/lib/admin/apiClient';
 import { isAdminUserRole } from '@/lib/admin';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
@@ -31,9 +30,6 @@ import {
   buildScheduleReportSyncPlan,
   resolveContractWindow,
 } from '@/features/schedule-report-sync/scheduleReportSync';
-import type { ControllerReportRow } from '@/types/admin';
-import type { SafetyReportStatus } from '@/types/backend';
-import type { InspectionSite } from '@/types/inspectionSession';
 import {
   buildDefaultReportTitle,
   getFilteredReportItems,
@@ -43,7 +39,16 @@ import {
   type SiteReportDispatchFilter,
   type SiteReportSortMode,
 } from '@/features/site-reports/report-list/types';
+import {
+  beginAdminLegacySiteReportRequest,
+  fetchAllAdminLegacySiteReportItems,
+  isCurrentAdminLegacySiteReportRequest,
+  readAdminLegacySiteReportCache,
+  writeAdminLegacySiteReportCache,
+  type AdminLegacySiteReportRequestToken,
+} from '@/features/site-reports/report-list/adminLegacySiteReportCache';
 import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/useSiteReportIndexLoader';
+import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
 
 interface UseSiteReportListStateOptions {
   buildReportHref?: (reportKey: string) => string;
@@ -63,120 +68,35 @@ export type { CreateSiteReportInput, SiteReportSortMode };
 
 type AdminLegacySiteReportsState = {
   error: string | null;
-  items: import('@/types/inspectionSession').InspectionReportListItem[];
+  hasCache: boolean;
+  items: InspectionReportListItem[];
+  siteId: string | null;
   status: 'idle' | 'loading' | 'loaded' | 'error';
 };
+
+function createIdleAdminLegacySiteReportsState(): AdminLegacySiteReportsState {
+  return {
+    error: null,
+    hasCache: false,
+    items: [],
+    siteId: null,
+    status: 'idle',
+  };
+}
+
+function isWritableReportListItem(item: InspectionReportListItem) {
+  return (
+    !item.readOnly &&
+    item.reportOpenMode !== 'original_pdf' &&
+    !item.reportKey.startsWith('legacy:')
+  );
+}
 
 const SITE_REPORT_LIST_QUERY_DEFAULTS = {
   dispatch: 'all',
   reportQuery: '',
   reportSort: 'round',
 };
-
-function extractVisitRound(value: string | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  const match = value.match(/(\d+)\s*차/);
-  if (!match) {
-    return null;
-  }
-
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function isLegacyTechnicalGuidanceRow(row: ControllerReportRow) {
-  return row.reportType === 'technical_guidance' && row.reportKey.startsWith('legacy:');
-}
-
-function isDispatchCompleted(row: ControllerReportRow) {
-  return (
-    row.dispatch?.dispatchStatus === 'sent' ||
-    row.dispatch?.dispatchStatus === 'manual_checked'
-  );
-}
-
-function normalizeLegacyReportStatus(status: string): SafetyReportStatus {
-  switch (status) {
-    case 'submitted':
-    case 'published':
-    case 'archived':
-      return status;
-    case 'draft':
-    default:
-      return 'draft';
-  }
-}
-
-function mapAdminLegacyRowToReportItem(
-  row: ControllerReportRow,
-): import('@/types/inspectionSession').InspectionReportListItem {
-  const parsedRouteRound =
-    typeof row.routeParam === 'string' && /^\d+$/.test(row.routeParam)
-      ? Number(row.routeParam)
-      : null;
-
-  return {
-    id: row.reportKey,
-    reportKey: row.reportKey,
-    reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
-    reportOpenHref: `/admin/report-open?reportKey=${encodeURIComponent(row.reportKey)}`,
-    reportOpenMode: 'original_pdf',
-    readOnly: true,
-    originalPdfAvailable: Boolean(row.originalPdfAvailable),
-    siteId: row.siteId,
-    headquarterId: row.headquarterId || null,
-    assignedUserId: row.assigneeUserId || null,
-    visitDate: row.visitDate || null,
-    visitRound:
-      parsedRouteRound ??
-      extractVisitRound(row.reportTitle) ??
-      extractVisitRound(row.periodLabel),
-    totalRound: null,
-    progressRate: row.progressRate,
-    status: normalizeLegacyReportStatus(row.status),
-    dispatchCompleted: isDispatchCompleted(row),
-    payloadVersion: 1,
-    latestRevisionNo: 0,
-    submittedAt: row.status === 'submitted' || row.status === 'published' ? row.updatedAt : null,
-    publishedAt: row.status === 'published' ? row.updatedAt : null,
-    lastAutosavedAt: row.updatedAt,
-    createdAt: row.updatedAt,
-    updatedAt: row.updatedAt,
-    meta: {
-      drafter: row.assigneeName,
-      originalPdfAvailable: Boolean(row.originalPdfAvailable),
-      reportType: row.reportType,
-      siteName: row.siteName,
-    },
-  };
-}
-
-async function fetchAllAdminLegacySiteReportItems(siteId: string) {
-  const items: import('@/types/inspectionSession').InspectionReportListItem[] = [];
-  let offset = 0;
-
-  while (true) {
-    const response = await fetchAdminReports({
-      limit: 200,
-      offset,
-      reportType: 'technical_guidance',
-      siteId,
-    });
-    items.push(
-      ...response.rows
-        .filter((row) => isLegacyTechnicalGuidanceRow(row))
-        .map((row) => mapAdminLegacyRowToReportItem(row)),
-    );
-
-    offset += response.rows.length;
-    if (offset >= response.total || response.rows.length < response.limit) {
-      return items;
-    }
-  }
-}
 
 export function useSiteReportListState(
   siteKey: string | null,
@@ -266,43 +186,83 @@ export function useSiteReportListState(
       isAuthenticated,
       isReady,
     });
-  const [adminLegacyState, setAdminLegacyState] = useState<AdminLegacySiteReportsState>({
-    error: null,
-    items: [],
-    status: 'idle',
+  const [adminLegacyState, setAdminLegacyState] = useState<AdminLegacySiteReportsState>(() => {
+    const ownerId = currentUser?.id?.trim() || '';
+    const siteId = currentSite?.id ?? '';
+    if (!isAdminView || !ownerId || !siteId) {
+      return createIdleAdminLegacySiteReportsState();
+    }
+
+    const cached = readAdminLegacySiteReportCache(ownerId, siteId);
+    return cached.hasCache
+      ? {
+          error: null,
+          hasCache: true,
+          items: cached.items,
+          siteId,
+          status: 'loading',
+        }
+      : createIdleAdminLegacySiteReportsState();
   });
+  const adminLegacyRequestRef = useRef<AdminLegacySiteReportRequestToken | null>(null);
   const reloadAdminLegacyItems = useCallback(
     async (options?: { force?: boolean }) => {
-      if (!isAdminView || !currentSite || !isAuthenticated || !isReady) {
-        setAdminLegacyState({ error: null, items: [], status: 'idle' });
+      const ownerId = currentUser?.id?.trim() || '';
+      const siteId = currentSite?.id ?? '';
+      void options;
+
+      if (!isAdminView || !siteId || !ownerId || !isAuthenticated || !isReady) {
+        setAdminLegacyState(createIdleAdminLegacySiteReportsState());
         return;
       }
 
-      setAdminLegacyState((current) => ({
-        error: null,
-        items: options?.force ? [] : current.items,
-        status:
-          current.status === 'loaded' && !options?.force && current.items.length > 0
-            ? 'loaded'
-            : 'loading',
-      }));
+      const requestToken = beginAdminLegacySiteReportRequest(adminLegacyRequestRef, siteId);
+      const cached = readAdminLegacySiteReportCache(ownerId, siteId);
+
+      setAdminLegacyState((current) => {
+        const currentSiteCache =
+          current.siteId === siteId && current.hasCache ? current.items : [];
+        const fallbackItems = cached.hasCache ? cached.items : currentSiteCache;
+        const hasCache = cached.hasCache || (current.siteId === siteId && current.hasCache);
+
+        return {
+          error: null,
+          hasCache,
+          items: fallbackItems,
+          siteId,
+          status: 'loading',
+        };
+      });
 
       try {
-        const items = await fetchAllAdminLegacySiteReportItems(currentSite.id);
+        const items = await fetchAllAdminLegacySiteReportItems(siteId);
+        if (!isCurrentAdminLegacySiteReportRequest(adminLegacyRequestRef, requestToken)) {
+          return;
+        }
+
+        writeAdminLegacySiteReportCache(ownerId, siteId, items);
         setAdminLegacyState({
           error: null,
+          hasCache: true,
           items,
+          siteId,
           status: 'loaded',
         });
       } catch (error) {
+        if (!isCurrentAdminLegacySiteReportRequest(adminLegacyRequestRef, requestToken)) {
+          return;
+        }
+
         setAdminLegacyState((current) => ({
           error: error instanceof Error ? error.message : '레거시 보고서 목록을 불러오지 못했습니다.',
-          items: current.items,
-          status: current.items.length > 0 ? 'loaded' : 'error',
+          hasCache: current.siteId === siteId && current.hasCache,
+          items: current.siteId === siteId ? current.items : [],
+          siteId,
+          status: 'error',
         }));
       }
     },
-    [currentSite, isAdminView, isAuthenticated, isReady],
+    [currentSite?.id, currentUser?.id, isAdminView, isAuthenticated, isReady],
   );
 
   useEffect(() => {
@@ -317,7 +277,7 @@ export function useSiteReportListState(
   }, [urlDispatchFilter]);
 
   const deferredReportQuery = useDeferredValue(reportQuery);
-  const effectiveReportItems = useMemo(() => {
+  const combinedReportItems = useMemo(() => {
     if (!isAdminView || !currentSite) {
       return reportItems;
     }
@@ -328,32 +288,53 @@ export function useSiteReportListState(
 
     return mergeReportIndexItems(
       mergeReportIndexItems(reportItems, localSessionItems),
-      adminLegacyState.items,
+      adminLegacyState.siteId === currentSite.id ? adminLegacyState.items : [],
     );
-  }, [adminLegacyState.items, currentSite, isAdminView, reportItems, sessions]);
+  }, [adminLegacyState.items, adminLegacyState.siteId, currentSite, isAdminView, reportItems, sessions]);
   const effectiveReportIndexStatus = useMemo(() => {
     if (!isAdminView) {
       return reportIndexStatus;
     }
-    if (
-      effectiveReportItems.length === 0 &&
-      (reportIndexStatus === 'loading' ||
-        reportIndexStatus === 'idle' ||
-        adminLegacyState.status === 'loading' ||
-        adminLegacyState.status === 'idle')
-    ) {
-      return 'loading' as const;
+    if (!currentSite) {
+      return reportIndexStatus === 'error' ? 'error' as const : 'loading' as const;
     }
-    if (effectiveReportItems.length > 0) {
-      return 'loaded' as const;
-    }
-    if (reportIndexStatus === 'error' || adminLegacyState.status === 'error') {
+
+    const legacyStateMatchesSite = adminLegacyState.siteId === currentSite.id;
+    const legacyListReady =
+      legacyStateMatchesSite &&
+      (adminLegacyState.hasCache || adminLegacyState.status === 'loaded');
+    const legacyFailedWithoutCache =
+      legacyStateMatchesSite &&
+      adminLegacyState.status === 'error' &&
+      !adminLegacyState.hasCache;
+
+    if (reportIndexStatus === 'error' || legacyFailedWithoutCache) {
       return 'error' as const;
     }
-    return reportIndexStatus;
-  }, [adminLegacyState.status, effectiveReportItems.length, isAdminView, reportIndexStatus]);
+
+    if (reportIndexStatus === 'loaded' && legacyListReady) {
+      return 'loaded' as const;
+    }
+
+    return 'loading' as const;
+  }, [
+    adminLegacyState.hasCache,
+    adminLegacyState.siteId,
+    adminLegacyState.status,
+    currentSite,
+    isAdminView,
+    reportIndexStatus,
+  ]);
+  const effectiveReportItems = useMemo(
+    () =>
+      isAdminView && effectiveReportIndexStatus !== 'loaded'
+        ? []
+        : combinedReportItems,
+    [combinedReportItems, effectiveReportIndexStatus, isAdminView],
+  );
   const effectiveReportIndexError = isAdminView
-    ? reportIndexError || adminLegacyState.error
+    ? reportIndexError ||
+      (currentSite && adminLegacyState.siteId === currentSite.id ? adminLegacyState.error : null)
     : reportIndexError;
   const nextReportNumber = useMemo(() => {
     if (!currentSite) return 1;
@@ -493,7 +474,7 @@ export function useSiteReportListState(
         visitDate: normalizedReportDate,
       },
       contractWindow,
-      reports: nextReportItems,
+      reports: nextReportItems.filter(isWritableReportListItem),
       schedules: scheduleRows,
     });
 

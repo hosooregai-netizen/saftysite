@@ -13,6 +13,7 @@ import type {
   SiteReportSortMode,
 } from '@/features/site-reports/report-list/types';
 import { useSiteReportCreateDialog } from '@/features/site-reports/report-list/useSiteReportCreateDialog';
+import { mergeReportIndexItem } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
@@ -174,7 +175,13 @@ export function SiteReportListPanel({
         });
 
         const updatedReport = await updateReportDispatch(item.reportKey, nextDispatch);
-        const updatedItem = mapSafetyReportListItem(updatedReport);
+        const updatedRemoteItem = mapSafetyReportListItem(updatedReport);
+        const updatedItem = mergeReportIndexItem(updatedRemoteItem, {
+          ...item,
+          dispatchCompleted: updatedRemoteItem.dispatchCompleted,
+          dispatchStatus: updatedRemoteItem.dispatchStatus,
+          reportIndexSource: item.reportIndexSource ?? updatedRemoteItem.reportIndexSource,
+        });
         upsertReportIndexItems(currentSite.id, [updatedItem]);
         setDispatchOverrides((current) => ({
           ...current,

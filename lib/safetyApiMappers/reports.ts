@@ -31,6 +31,51 @@ import {
 } from './utils';
 
 const ADMIN_ROLES = new Set(['super_admin', 'admin', 'controller']);
+const COMPLETED_DISPATCH_STATUSES = new Set(['sent', 'manual_checked']);
+
+type DispatchCarrier = {
+  dispatch?: unknown;
+  dispatch_completed?: boolean | null;
+  meta?: Record<string, unknown> | null;
+};
+
+function hasOwnKey(record: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+function getExplicitDispatchStatus(dispatch: unknown): string | null {
+  const record = asMapperRecord(dispatch);
+  const hasCamelStatus = hasOwnKey(record, 'dispatchStatus');
+  const hasSnakeStatus = hasOwnKey(record, 'dispatch_status');
+  if (!hasCamelStatus && !hasSnakeStatus) {
+    return null;
+  }
+
+  return normalizeMapperText(
+    hasCamelStatus ? record.dispatchStatus : record.dispatch_status,
+  ).toLowerCase();
+}
+
+export function resolveReportDispatchListState(report: DispatchCarrier): {
+  dispatchCompleted: boolean;
+  dispatchStatus: string | null;
+} {
+  const meta = asMapperRecord(report.meta);
+  const dispatch = report.dispatch ?? meta.dispatch;
+  const explicitStatus = getExplicitDispatchStatus(dispatch);
+
+  if (explicitStatus !== null) {
+    return {
+      dispatchCompleted: COMPLETED_DISPATCH_STATUSES.has(explicitStatus),
+      dispatchStatus: explicitStatus,
+    };
+  }
+
+  return {
+    dispatchCompleted: report.dispatch_completed === true,
+    dispatchStatus: null,
+  };
+}
 
 function mergeAdminSiteSnapshot(
   primary: Partial<AdminSiteSnapshot> | null | undefined,
@@ -106,6 +151,8 @@ function buildTechnicalGuidancePayloadForSave(
 export function mapSafetyReportListItem(
   report: SafetyReportListItem,
 ): InspectionReportListItem {
+  const dispatchState = resolveReportDispatchListState(report);
+
   return {
     id: report.report_key,
     reportKey: report.report_key,
@@ -123,7 +170,9 @@ export function mapSafetyReportListItem(
     totalRound: report.total_round,
     progressRate: report.progress_rate,
     status: report.status,
-    dispatchCompleted: Boolean(report.dispatch_completed),
+    dispatchCompleted: dispatchState.dispatchCompleted,
+    dispatchStatus: dispatchState.dispatchStatus,
+    reportIndexSource: 'remote',
     payloadVersion: report.payload_version,
     latestRevisionNo: report.latest_revision_no,
     submittedAt: report.submitted_at,
@@ -159,6 +208,8 @@ export function mapInspectionSessionToReportListItem(
     progressRate: progress.percentage,
     status: 'draft',
     dispatchCompleted: false,
+    dispatchStatus: null,
+    reportIndexSource: 'local',
     payloadVersion: 1,
     latestRevisionNo: 0,
     submittedAt: null,

@@ -160,10 +160,19 @@ async function fetchCurrentAdminReportRows(token: string, request: Request) {
       .filter((row) => isVisibleReport(row));
     rows.push(...mappedRows);
 
-    offset += response.rows.length;
-    if (offset >= response.total || response.rows.length < response.limit) {
+    const pageLimit = response.limit || 200;
+    const nextOffset = offset + response.rows.length;
+    const total = response.total ?? nextOffset;
+
+    if (
+      response.rows.length === 0 ||
+      nextOffset >= total ||
+      response.rows.length < pageLimit
+    ) {
       return rows;
     }
+
+    offset = nextOffset;
   }
 }
 

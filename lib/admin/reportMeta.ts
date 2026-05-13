@@ -80,7 +80,7 @@ export function normalizeControllerReview(
 
 function normalizeDispatchHistoryItem(value: unknown): ReportDispatchHistoryEntry | null {
   const record = asMapperRecord(value);
-  const sentAt = normalizeMapperText(record.sentAt);
+  const sentAt = normalizeMapperText(record.sentAt || record.sent_at);
   const id = normalizeMapperText(record.id) || sentAt;
   if (!id && !sentAt) {
     return null;
@@ -90,7 +90,7 @@ function normalizeDispatchHistoryItem(value: unknown): ReportDispatchHistoryEntr
     id,
     memo: normalizeMapperText(record.memo),
     sentAt,
-    sentByUserId: normalizeMapperText(record.sentByUserId),
+    sentByUserId: normalizeMapperText(record.sentByUserId || record.sent_by_user_id),
   };
 }
 
@@ -100,8 +100,9 @@ export function normalizeDispatchMeta(value: unknown): ReportDispatchMeta | null
     return null;
   }
 
-  const sentHistory = Array.isArray(record.sentHistory)
-    ? record.sentHistory
+  const sentHistoryRaw = record.sentHistory || record.sent_history;
+  const sentHistory = Array.isArray(sentHistoryRaw)
+    ? sentHistoryRaw
         .map((item) => normalizeDispatchHistoryItem(item))
         .filter((item): item is ReportDispatchHistoryEntry => Boolean(item))
     : [];

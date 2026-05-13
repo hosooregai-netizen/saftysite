@@ -394,6 +394,11 @@ export async function runSiteReportListSmoke(config: ClientSmokePlaywrightConfig
     await page.getByText(HEADQUARTER_NUMBER, { exact: true }).waitFor({ state: 'visible' });
     await page.getByText(HEADQUARTER_NAME, { exact: true }).waitFor({ state: 'visible' });
     await page.getByText(HEADQUARTER_ADDRESS, { exact: true }).waitFor({ state: 'visible' });
+    assert.equal(
+      requestCounts.get('GET /api/admin/reports') || 0,
+      0,
+      'Field-agent site report lists must not call the admin reports API.',
+    );
 
     harness.assertContractApisObserved();
     harness.assertNoClientErrors();

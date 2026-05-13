@@ -2,7 +2,36 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createInspectionSession, createInspectionSite } from '@/constants/inspectionSession';
-import { buildSafetyReportUpsertInput } from './reports';
+import type { SafetyReportListItem } from '@/types/backend';
+import { buildSafetyReportUpsertInput, mapSafetyReportListItem } from './reports';
+
+function buildReportListItem(
+  overrides: Partial<SafetyReportListItem> & Record<string, unknown> = {},
+): SafetyReportListItem {
+  return {
+    id: 'report-1',
+    report_key: 'report-1',
+    report_title: 'Report 1',
+    site_id: 'site-1',
+    headquarter_id: null,
+    assigned_user_id: null,
+    visit_date: '2026-04-01',
+    visit_round: 1,
+    total_round: 10,
+    progress_rate: 20,
+    status: 'draft',
+    payload_version: 1,
+    latest_revision_no: 0,
+    submitted_at: null,
+    published_at: null,
+    last_autosaved_at: null,
+    dispatch_completed: false,
+    meta: {},
+    created_at: '2026-04-01T00:00:00.000Z',
+    updated_at: '2026-04-01T00:00:00.000Z',
+    ...overrides,
+  } as SafetyReportListItem;
+}
 
 test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   const site = createInspectionSite({
@@ -106,4 +135,52 @@ test('buildSafetyReportUpsertInput drops schedule links when the schedule round 
 
   assert.equal(payload.visit_round, 1);
   assert.equal(payload.schedule_id, null);
+});
+
+test('mapSafetyReportListItem treats snake_case manual dispatch as completed', () => {
+  const item = mapSafetyReportListItem(
+    buildReportListItem({
+      dispatch_completed: undefined,
+      dispatch: { dispatch_status: 'manual_checked' } as unknown as SafetyReportListItem['dispatch'],
+    }),
+  );
+
+  assert.equal(item.dispatchCompleted, true);
+  assert.equal(item.dispatchStatus, 'manual_checked');
+});
+
+test('mapSafetyReportListItem treats camelCase sent dispatch as completed', () => {
+  const item = mapSafetyReportListItem(
+    buildReportListItem({
+      dispatch_completed: undefined,
+      dispatch: { dispatchStatus: 'sent' } as unknown as SafetyReportListItem['dispatch'],
+    }),
+  );
+
+  assert.equal(item.dispatchCompleted, true);
+  assert.equal(item.dispatchStatus, 'sent');
+});
+
+test('mapSafetyReportListItem treats explicit none dispatch as pending', () => {
+  const item = mapSafetyReportListItem(
+    buildReportListItem({
+      dispatch_completed: true,
+      dispatch: { dispatch_status: 'none' } as unknown as SafetyReportListItem['dispatch'],
+    }),
+  );
+
+  assert.equal(item.dispatchCompleted, false);
+  assert.equal(item.dispatchStatus, 'none');
+});
+
+test('mapSafetyReportListItem falls back to dispatch_completed when no status exists', () => {
+  const item = mapSafetyReportListItem(
+    buildReportListItem({
+      dispatch_completed: true,
+      dispatch: {} as unknown as SafetyReportListItem['dispatch'],
+    }),
+  );
+
+  assert.equal(item.dispatchCompleted, true);
+  assert.equal(item.dispatchStatus, null);
 });

@@ -58,6 +58,7 @@ export interface BuildScheduleReportSyncPlanInput {
 }
 
 interface SyncEntry {
+  canUpdateReport: boolean;
   date: string;
   dispatchCompleted: boolean;
   originalDate: string;
@@ -74,6 +75,19 @@ function normalizeRoundNo(value: number | null | undefined) {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
     : 0;
+}
+
+function isWritableReport(
+  report: InspectionReportListItem | null | undefined,
+  reportKey = normalizeText(report?.reportKey),
+) {
+  return Boolean(
+    report &&
+      reportKey &&
+      !report.readOnly &&
+      report.reportOpenMode !== 'original_pdf' &&
+      !reportKey.startsWith('legacy:'),
+  );
 }
 
 function isWithinWindow(value: string, window: ScheduleReportContractWindow) {
@@ -237,6 +251,7 @@ function buildScheduleEntries(input: BuildScheduleReportSyncPlanInput): SyncEntr
     }
 
     entries.push({
+      canUpdateReport: isWritableReport(report, reportKey),
       date,
       dispatchCompleted: Boolean(report?.dispatchCompleted),
       originalDate:
@@ -271,6 +286,7 @@ function buildScheduleEntries(input: BuildScheduleReportSyncPlanInput): SyncEntr
     }
 
     entries.push({
+      canUpdateReport: isWritableReport(report, reportKey),
       date,
       dispatchCompleted: Boolean(report.dispatchCompleted),
       originalDate: normalizeText(report.visitDate),
@@ -357,7 +373,13 @@ function buildChangedScheduleOnlyPlan(
     ? [desiredSchedule]
     : [];
   const shouldUpdateReport =
-    Boolean(reportKey && report && !report.dispatchCompleted && plannedDate) &&
+    Boolean(
+      reportKey &&
+        report &&
+        isWritableReport(report, reportKey) &&
+        !report.dispatchCompleted &&
+        plannedDate,
+    ) &&
     (normalizeText(report?.visitDate) !== plannedDate ||
       normalizeRoundNo(report?.visitRound) !== schedule.roundNo ||
       normalizeText(report?.scheduleId) !== schedule.id);
@@ -457,7 +479,7 @@ export function buildScheduleReportSyncPlan(
       scheduleId: targetSchedule.id,
     });
 
-    if (entry.reportKey && !entry.dispatchCompleted) {
+    if (entry.reportKey && entry.canUpdateReport && !entry.dispatchCompleted) {
       reportUpdates.push({
         reportKey: entry.reportKey,
         reportTitle: input.buildReportTitle(entry.date, targetSchedule.roundNo),

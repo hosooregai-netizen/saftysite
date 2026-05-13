@@ -100,6 +100,89 @@ export function sortReportIndexItems(items: InspectionReportListItem[]) {
   });
 }
 
+function isLocalReportIndexItem(item: InspectionReportListItem) {
+  return item.reportIndexSource === 'local';
+}
+
+function isLegacyReportIndexItem(item: InspectionReportListItem) {
+  return (
+    item.reportIndexSource === 'legacy' ||
+    (item.readOnly === true && item.reportOpenMode === 'original_pdf')
+  );
+}
+
+function hasExplicitDispatchStatus(item: InspectionReportListItem) {
+  return item.dispatchStatus !== null && item.dispatchStatus !== undefined;
+}
+
+function resolveDispatchCarrier(
+  currentItem: InspectionReportListItem,
+  nextItem: InspectionReportListItem,
+) {
+  if (hasExplicitDispatchStatus(nextItem) && !isLocalReportIndexItem(nextItem)) {
+    return nextItem;
+  }
+
+  if (hasExplicitDispatchStatus(currentItem)) {
+    return currentItem;
+  }
+
+  if (hasExplicitDispatchStatus(nextItem)) {
+    return nextItem;
+  }
+
+  if (nextItem.reportIndexSource === 'remote' && nextItem.dispatchCompleted) {
+    return nextItem;
+  }
+
+  if (currentItem.reportIndexSource === 'remote' && currentItem.dispatchCompleted) {
+    return currentItem;
+  }
+
+  if (
+    currentItem.dispatchCompleted &&
+    isLocalReportIndexItem(nextItem) &&
+    !hasExplicitDispatchStatus(nextItem)
+  ) {
+    return currentItem;
+  }
+
+  if (
+    nextItem.dispatchCompleted &&
+    isLocalReportIndexItem(currentItem) &&
+    !hasExplicitDispatchStatus(currentItem)
+  ) {
+    return nextItem;
+  }
+
+  return nextItem;
+}
+
+export function mergeReportIndexItem(
+  currentItem: InspectionReportListItem,
+  nextItem: InspectionReportListItem,
+) {
+  if (
+    isLegacyReportIndexItem(nextItem) &&
+    !isLegacyReportIndexItem(currentItem) &&
+    !currentItem.reportKey.startsWith('legacy:')
+  ) {
+    return currentItem;
+  }
+
+  const baseItem =
+    isLocalReportIndexItem(nextItem) && !isLegacyReportIndexItem(currentItem)
+      ? { ...currentItem, ...nextItem }
+      : nextItem;
+  const dispatchCarrier = resolveDispatchCarrier(currentItem, nextItem);
+
+  return {
+    ...baseItem,
+    dispatchCompleted: dispatchCarrier.dispatchCompleted,
+    dispatchStatus: dispatchCarrier.dispatchStatus ?? null,
+  };
+}
+
 export function mergeReportIndexItems(
   currentItems: InspectionReportListItem[],
   nextItems: InspectionReportListItem[],
@@ -111,7 +194,8 @@ export function mergeReportIndexItems(
   });
 
   nextItems.forEach((item) => {
-    merged.set(item.reportKey, item);
+    const currentItem = merged.get(item.reportKey);
+    merged.set(item.reportKey, currentItem ? mergeReportIndexItem(currentItem, item) : item);
   });
 
   return sortReportIndexItems(Array.from(merged.values()));

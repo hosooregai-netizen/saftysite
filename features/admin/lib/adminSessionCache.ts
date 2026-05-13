@@ -149,8 +149,7 @@ export function fetchAdminSessionCacheOnce<T>(
     return existing as Promise<T>;
   }
 
-  let nextRequest!: Promise<T>;
-  nextRequest = Promise.resolve(fetcher()).finally(() => {
+  const nextRequest = Promise.resolve(fetcher()).finally(() => {
     if (adminSessionCacheInFlight.get(requestKey) === nextRequest) {
       adminSessionCacheInFlight.delete(requestKey);
     }

@@ -65,6 +65,41 @@ async function installDelayedSiteDetailRoute(page: Page, siteId: string, delayMs
   });
 }
 
+async function installHeldAdminLegacyReportsRoute(page: Page, siteId: string) {
+  let releaseResponse: () => void = () => {};
+  let resolveIntercepted: () => void = () => {};
+  let intercepted = false;
+  const requestIntercepted = new Promise<void>((resolve) => {
+    resolveIntercepted = resolve;
+  });
+
+  await page.route('**/api/admin/reports**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    if (
+      intercepted ||
+      request.method() !== 'GET' ||
+      url.searchParams.get('site_id') !== siteId ||
+      url.searchParams.get('report_type') !== 'technical_guidance'
+    ) {
+      await route.fallback();
+      return;
+    }
+
+    intercepted = true;
+    resolveIntercepted();
+    await new Promise<void>((release) => {
+      releaseResponse = release;
+    });
+    await route.fallback();
+  });
+
+  return {
+    release: () => releaseResponse(),
+    requestIntercepted,
+  };
+}
+
 export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
   const harness = await createAdminSmokeHarness('admin-sites', config);
 
@@ -82,6 +117,10 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
     const siteAId = 'site-mocked-admin-site-a';
     const siteBName = 'mocked admin site b';
     const siteBId = 'site-mocked-admin-site-b';
+    const initialReportWritesBefore = requestCounts.get('POST /reports/upsert') || 0;
+    const initialReportDispatchWritesBefore = requestCounts.get('PATCH /reports/:id/dispatch') || 0;
+    const initialAdminDispatchWritesBefore =
+      requestCounts.get('PATCH /api/admin/reports/:id/dispatch') || 0;
 
     await page.goto(`${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1`, {
       waitUntil: 'load',
@@ -98,13 +137,57 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
       `${harness.baseURL}/admin?section=headquarters&headquarterId=hq-1&siteId=site-1`,
       { waitUntil: 'load' },
     );
+    const firstLegacyReportHold = await installHeldAdminLegacyReportsRoute(page, 'site-1');
     await page.locator('a[href="/sites/site-1"]').first().click();
     await page.waitForURL(/\/sites\/site-1$/);
+    await firstLegacyReportHold.requestIntercepted;
+    await page.waitForTimeout(250);
+    if (await page.locator('a[href="/sessions/report-tech-1"]').isVisible().catch(() => false)) {
+      throw new Error('Admin site reports exposed a partial normal-only list before legacy reports loaded.');
+    }
+    if ((await page.locator('article').count()) > 0) {
+      throw new Error('Admin site reports rendered rows before the combined list was ready.');
+    }
+    const adminReportReadsAfterFirstRequest = requestCounts.get('GET /api/admin/reports') || 0;
+    firstLegacyReportHold.release();
+    await harness.waitForRequestCount(
+      'GET /api/admin/reports',
+      adminReportReadsAfterFirstRequest + 1,
+    );
     const legacyReportLink = page.getByRole('link', {
       exact: true,
       name: '레거시 5차 기술지도 보고서',
     });
     await legacyReportLink.waitFor({ state: 'visible' });
+
+    const cachedLegacyReportHold = await installHeldAdminLegacyReportsRoute(page, 'site-1');
+    await page.goto(`${harness.baseURL}/sites/site-1`, {
+      waitUntil: 'load',
+    });
+    await page.waitForURL(/\/sites\/site-1$/);
+    await cachedLegacyReportHold.requestIntercepted;
+    await legacyReportLink.waitFor({ state: 'visible' });
+    if (!(await page.locator('a[href="/sessions/report-tech-1"]').isVisible().catch(() => false))) {
+      throw new Error('Cached admin site reports did not keep normal report rows visible during revalidation.');
+    }
+    const adminReportReadsAfterCachedRequest = requestCounts.get('GET /api/admin/reports') || 0;
+    cachedLegacyReportHold.release();
+    await harness.waitForRequestCount(
+      'GET /api/admin/reports',
+      adminReportReadsAfterCachedRequest + 1,
+    );
+    await legacyReportLink.waitFor({ state: 'visible' });
+
+    if ((requestCounts.get('POST /reports/upsert') || 0) !== initialReportWritesBefore) {
+      throw new Error('Rendering legacy admin site report rows must not upsert reports.');
+    }
+    if ((requestCounts.get('PATCH /reports/:id/dispatch') || 0) !== initialReportDispatchWritesBefore) {
+      throw new Error('Rendering legacy admin site report rows must not patch report dispatch.');
+    }
+    if ((requestCounts.get('PATCH /api/admin/reports/:id/dispatch') || 0) !== initialAdminDispatchWritesBefore) {
+      throw new Error('Rendering legacy admin site report rows must not patch admin report dispatch.');
+    }
+
     await legacyReportLink.click();
     await page.waitForURL(
       new RegExp(

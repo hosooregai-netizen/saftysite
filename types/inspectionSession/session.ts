@@ -89,6 +89,7 @@ export interface InspectionSectionMeta {
 }
 
 export type ReportIndexStatus = 'idle' | 'loading' | 'loaded' | 'error';
+export type ReportIndexSource = 'remote' | 'local' | 'legacy';
 
 export interface InspectionReportListItem {
   id: string;
@@ -108,6 +109,8 @@ export interface InspectionReportListItem {
   progressRate: number | null;
   status: SafetyReportStatus;
   dispatchCompleted: boolean;
+  dispatchStatus?: string | null;
+  reportIndexSource?: ReportIndexSource;
   payloadVersion: number;
   latestRevisionNo: number;
   submittedAt: string | null;
