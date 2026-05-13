@@ -188,6 +188,48 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
       throw new Error('Rendering legacy admin site report rows must not patch admin report dispatch.');
     }
 
+    const legacyReportRow = page.locator('article').filter({ has: legacyReportLink }).first();
+    const legacyDispatchStatusCell = legacyReportRow.locator('[class*="dispatchStatusCell"]');
+    const legacyPublicDispatchWritesBefore = requestCounts.get('PATCH /reports/:id/dispatch') || 0;
+    const legacyAdminDispatchWritesBefore =
+      requestCounts.get('PATCH /api/admin/reports/:id/dispatch') || 0;
+    await legacyReportRow.locator('button[aria-haspopup="menu"]').click();
+    await page.getByRole('menuitem', { name: '발송으로 변경' }).click();
+    await harness.waitForRequestCount(
+      'PATCH /api/admin/reports/:id/dispatch',
+      legacyAdminDispatchWritesBefore + 1,
+    );
+    if ((requestCounts.get('PATCH /reports/:id/dispatch') || 0) !== legacyPublicDispatchWritesBefore) {
+      throw new Error('Legacy site report dispatch toggle must use the admin dispatch API only.');
+    }
+    await harness.waitForCondition(
+      async () => (await legacyDispatchStatusCell.textContent())?.includes('발송완료') === true,
+      'Legacy site report row did not update to dispatched after manual toggle.',
+    );
+
+    const refreshedLegacyReportHold = await installHeldAdminLegacyReportsRoute(page, 'site-1');
+    await page.goto(`${harness.baseURL}/sites/site-1`, {
+      waitUntil: 'load',
+    });
+    await page.waitForURL(/\/sites\/site-1$/);
+    await refreshedLegacyReportHold.requestIntercepted;
+    const refreshedLegacyReportRow = page.locator('article').filter({
+      hasText: '레거시 5차 기술지도 보고서',
+    }).first();
+    await refreshedLegacyReportRow.waitFor({ state: 'visible' });
+    await harness.waitForCondition(
+      async () =>
+        (await refreshedLegacyReportRow.locator('[class*="dispatchStatusCell"]').textContent())
+          ?.includes('발송완료') === true,
+      'Legacy site report dispatch cache did not survive a page re-entry before revalidation.',
+    );
+    const adminReportReadsAfterLegacyDispatchReentry = requestCounts.get('GET /api/admin/reports') || 0;
+    refreshedLegacyReportHold.release();
+    await harness.waitForRequestCount(
+      'GET /api/admin/reports',
+      adminReportReadsAfterLegacyDispatchReentry + 1,
+    );
+
     await legacyReportLink.click();
     await page.waitForURL(
       new RegExp(

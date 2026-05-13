@@ -6,6 +6,7 @@ import {
   beginAdminLegacySiteReportRequest,
   isCurrentAdminLegacySiteReportRequest,
   readAdminLegacySiteReportCache,
+  upsertAdminLegacySiteReportCacheItem,
   writeAdminLegacySiteReportCache,
 } from './adminLegacySiteReportCache';
 
@@ -124,6 +125,70 @@ test('stale legacy report cache remains available as fallback data', () => {
 
     assert.equal(cached.hasCache, true);
     assert.equal(cached.isFresh, false);
+    assert.deepEqual(cached.items, [item]);
+  } finally {
+    sessionStorage.clear();
+    uninstallWindow();
+  }
+});
+
+test('upsertAdminLegacySiteReportCacheItem replaces matching legacy rows with dispatch metadata', () => {
+  const sessionStorage = installWindow();
+
+  try {
+    const pendingItem = buildItem('legacy:technical_guidance:1001');
+    const siblingItem = buildItem('legacy:technical_guidance:1002');
+    writeAdminLegacySiteReportCache('admin-1', 'site-1', [pendingItem, siblingItem]);
+
+    const dispatch = {
+      dispatchStatus: 'manual_checked',
+      dispatchMethod: 'manual',
+      dispatchCheckedBy: 'admin-1',
+      dispatchCheckedAt: '2026-04-01T01:00:00.000Z',
+      sentHistory: [
+        {
+          id: 'manual-dispatch-1',
+          memo: '현장 기술지도보고서 목록에서 발송으로 변경',
+          sentAt: '2026-04-01T01:00:00.000Z',
+          sentByUserId: 'admin-1',
+        },
+      ],
+    };
+    const updatedItem: InspectionReportListItem = {
+      ...pendingItem,
+      dispatchCompleted: true,
+      dispatchStatus: 'manual_checked',
+      meta: {
+        ...pendingItem.meta,
+        dispatch,
+      },
+    };
+
+    upsertAdminLegacySiteReportCacheItem('admin-1', 'site-1', updatedItem);
+    const cached = readAdminLegacySiteReportCache('admin-1', 'site-1');
+
+    assert.equal(cached.items.length, 2);
+    assert.equal(cached.items[0]?.reportKey, 'legacy:technical_guidance:1001');
+    assert.equal(cached.items[0]?.dispatchCompleted, true);
+    assert.equal(cached.items[0]?.dispatchStatus, 'manual_checked');
+    assert.deepEqual(cached.items[0]?.meta.dispatch, dispatch);
+    assert.equal(cached.items[1]?.reportKey, 'legacy:technical_guidance:1002');
+    assert.equal(cached.items[1]?.dispatchCompleted, false);
+  } finally {
+    sessionStorage.clear();
+    uninstallWindow();
+  }
+});
+
+test('upsertAdminLegacySiteReportCacheItem creates a legacy cache when none exists', () => {
+  const sessionStorage = installWindow();
+
+  try {
+    const item = buildItem('legacy:technical_guidance:1001');
+    upsertAdminLegacySiteReportCacheItem('admin-1', 'site-1', item);
+    const cached = readAdminLegacySiteReportCache('admin-1', 'site-1');
+
+    assert.equal(cached.hasCache, true);
     assert.deepEqual(cached.items, [item]);
   } finally {
     sessionStorage.clear();

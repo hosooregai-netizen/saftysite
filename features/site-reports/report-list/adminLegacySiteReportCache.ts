@@ -92,6 +92,22 @@ export function writeAdminLegacySiteReportCache(
   );
 }
 
+export function upsertAdminLegacySiteReportCacheItem(
+  ownerId: string | null | undefined,
+  siteId: string | null | undefined,
+  item: InspectionReportListItem,
+) {
+  if (!ownerId || !siteId) return;
+
+  const cached = readAdminLegacySiteReportCache(ownerId, siteId);
+  const replaced = cached.items.some((current) => current.reportKey === item.reportKey);
+  const nextItems = replaced
+    ? cached.items.map((current) => (current.reportKey === item.reportKey ? item : current))
+    : [...cached.items, item];
+
+  writeAdminLegacySiteReportCache(ownerId, siteId, nextItems);
+}
+
 function extractVisitRound(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -174,6 +190,7 @@ export function mapAdminLegacyRowToReportItem(
     createdAt: row.updatedAt,
     updatedAt: row.updatedAt,
     meta: {
+      dispatch: row.dispatch,
       drafter: row.assigneeName,
       originalPdfAvailable: Boolean(row.originalPdfAvailable),
       reportType: row.reportType,

@@ -41,24 +41,29 @@ export function ReportListRow({
 }: ReportListRowProps) {
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
   const sessionHref = item.reportOpenHref || `/sessions/${item.reportKey}`;
-  const menuItems = item.readOnly
-    ? [{ label: '열기', href: sessionHref }]
-    : [
-        { label: '열기', href: sessionHref },
-        {
-          label: item.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
-          onSelect: () => onToggleDispatch(item),
-        },
-        ...(canArchiveReports
-          ? [
-              {
-                label: '삭제',
-                tone: 'danger' as const,
-                onSelect: () => onDeleteRequest(item.reportKey),
-              },
-            ]
-          : []),
-      ];
+  const isLegacyTechnicalGuidance =
+    item.reportIndexSource === 'legacy' && item.reportKey.startsWith('legacy:technical_guidance:');
+  const canToggleDispatch = !item.readOnly || isLegacyTechnicalGuidance;
+  const menuItems = [
+    { label: '열기', href: sessionHref },
+    ...(canToggleDispatch
+      ? [
+          {
+            label: item.dispatchCompleted ? '미발송으로 변경' : '발송으로 변경',
+            onSelect: () => onToggleDispatch(item),
+          },
+        ]
+      : []),
+    ...(!item.readOnly && canArchiveReports
+      ? [
+          {
+            label: '삭제',
+            tone: 'danger' as const,
+            onSelect: () => onDeleteRequest(item.reportKey),
+          },
+        ]
+      : []),
+  ];
 
   return (
     <article

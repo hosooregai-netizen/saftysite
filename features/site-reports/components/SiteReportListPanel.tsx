@@ -7,14 +7,17 @@ import { getSiteReportSummary } from '@/features/site-reports/report-list/report
 import { SiteReportCreateDialog } from '@/features/site-reports/report-list/SiteReportCreateDialog';
 import { SiteReportDeleteDialog } from '@/features/site-reports/report-list/SiteReportDeleteDialog';
 import { SiteReportListToolbar } from '@/features/site-reports/report-list/SiteReportListToolbar';
+import { upsertAdminLegacySiteReportCacheItem } from '@/features/site-reports/report-list/adminLegacySiteReportCache';
 import type {
   CreateSiteReportInput,
   SiteReportDispatchFilter,
   SiteReportSortMode,
 } from '@/features/site-reports/report-list/types';
 import { useSiteReportCreateDialog } from '@/features/site-reports/report-list/useSiteReportCreateDialog';
+import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import { mergeReportIndexItem } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { updateAdminReportDispatch } from '@/lib/admin/apiClient';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { mapSafetyReportListItem } from '@/lib/safetyApiMappers';
@@ -29,6 +32,12 @@ import type {
   ReportIndexStatus,
 } from '@/types/inspectionSession';
 import styles from './SiteReportsScreen.module.css';
+
+type DispatchOverride = {
+  dispatch: unknown;
+  dispatchCompleted: boolean;
+  dispatchStatus: string | null;
+};
 
 interface SiteReportListPanelProps {
   assignedUserDisplay?: string;
@@ -60,6 +69,41 @@ function getErrorMessage(error: unknown) {
   }
 
   return '발송 여부 변경에 실패했습니다.';
+}
+
+function isLegacyTechnicalGuidanceItem(item: InspectionReportListItem) {
+  return item.reportIndexSource === 'legacy' && item.reportKey.startsWith('legacy:technical_guidance:');
+}
+
+function getRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function getItemDispatch(item: InspectionReportListItem) {
+  return getRecord(item.meta).dispatch ?? {
+    dispatchStatus: item.dispatchStatus || (item.dispatchCompleted ? 'manual_checked' : ''),
+  };
+}
+
+function getReportDispatch(report: { dispatch?: unknown; meta?: Record<string, unknown> }) {
+  return report.dispatch ?? getRecord(report.meta).dispatch ?? null;
+}
+
+function applyDispatchOverride(
+  item: InspectionReportListItem,
+  override: DispatchOverride | undefined,
+): InspectionReportListItem {
+  if (!override) return item;
+
+  return {
+    ...item,
+    dispatchCompleted: override.dispatchCompleted,
+    dispatchStatus: override.dispatchStatus,
+    meta: {
+      ...item.meta,
+      dispatch: override.dispatch,
+    },
+  };
 }
 
 export function SiteReportListPanel({
@@ -95,7 +139,7 @@ export function SiteReportListPanel({
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
-  const [dispatchOverrides, setDispatchOverrides] = useState<Record<string, boolean>>({});
+  const [dispatchOverrides, setDispatchOverrides] = useState<Record<string, DispatchOverride>>({});
   const deletingSession = dialogSessionId
     ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
     : null;
@@ -107,24 +151,14 @@ export function SiteReportListPanel({
   const displayReportItems = useMemo(
     () =>
       reportItems.map((item) =>
-        dispatchOverrides[item.reportKey] == null
-          ? item
-          : {
-              ...item,
-              dispatchCompleted: dispatchOverrides[item.reportKey],
-            },
+        applyDispatchOverride(item, dispatchOverrides[item.reportKey]),
       ),
     [dispatchOverrides, reportItems],
   );
   const displayFilteredReportItems = useMemo(
     () =>
       filteredReportItems.map((item) =>
-        dispatchOverrides[item.reportKey] == null
-          ? item
-          : {
-              ...item,
-              dispatchCompleted: dispatchOverrides[item.reportKey],
-            },
+        applyDispatchOverride(item, dispatchOverrides[item.reportKey]),
       ),
     [dispatchOverrides, filteredReportItems],
   );
@@ -164,31 +198,54 @@ export function SiteReportListPanel({
         setDispatchError(null);
         setDispatchNotice(null);
 
-        const report = await fetchSafetyReportByKey(token, item.reportKey, { force: true });
+        const isLegacyReport = isLegacyTechnicalGuidanceItem(item);
+        const report = isLegacyReport
+          ? null
+          : await fetchSafetyReportByKey(token, item.reportKey, { force: true });
         const nextCompleted = !item.dispatchCompleted;
-        const nextDispatch = buildToggledReportDispatch(report.dispatch, {
-          currentUserId: currentUser.id,
-          historyMemo: nextCompleted
-            ? '현장 기술지도보고서 목록에서 발송으로 변경'
-            : '현장 기술지도보고서 목록에서 미발송으로 변경',
-          nextCompleted,
-        });
+        const nextDispatch = buildToggledReportDispatch(
+          isLegacyReport ? getItemDispatch(item) : report?.dispatch,
+          {
+            currentUserId: currentUser.id,
+            historyMemo: nextCompleted
+              ? '현장 기술지도보고서 목록에서 발송으로 변경'
+              : '현장 기술지도보고서 목록에서 미발송으로 변경',
+            nextCompleted,
+          },
+        );
 
-        const updatedReport = await updateReportDispatch(item.reportKey, nextDispatch);
+        const updatedReport = isLegacyReport
+          ? await updateAdminReportDispatch(item.reportKey, nextDispatch)
+          : await updateReportDispatch(item.reportKey, nextDispatch);
         const updatedRemoteItem = mapSafetyReportListItem(updatedReport);
+        const updatedDispatch = getReportDispatch(updatedReport);
         const updatedItem = mergeReportIndexItem(updatedRemoteItem, {
           ...item,
           dispatchCompleted: updatedRemoteItem.dispatchCompleted,
           dispatchStatus: updatedRemoteItem.dispatchStatus,
+          meta: {
+            ...item.meta,
+            dispatch: updatedDispatch,
+          },
           reportIndexSource: item.reportIndexSource ?? updatedRemoteItem.reportIndexSource,
         });
         upsertReportIndexItems(currentSite.id, [updatedItem]);
         setDispatchOverrides((current) => ({
           ...current,
-          [item.reportKey]: updatedItem.dispatchCompleted,
+          [item.reportKey]: {
+            dispatch: updatedDispatch,
+            dispatchCompleted: updatedItem.dispatchCompleted,
+            dispatchStatus: updatedItem.dispatchStatus ?? null,
+          },
         }));
-        await ensureSessionLoaded(item.reportKey, { force: true });
-        void ensureSiteReportIndexLoaded(currentSite.id, { force: true });
+        if (isLegacyReport) {
+          upsertAdminLegacySiteReportCacheItem(currentUser.id, currentSite.id, updatedItem);
+          invalidateAdminReportMutationClientCaches(currentUser.id);
+          reloadReportIndex();
+        } else {
+          await ensureSessionLoaded(item.reportKey, { force: true });
+          void ensureSiteReportIndexLoaded(currentSite.id, { force: true });
+        }
         setDispatchNotice(
           nextCompleted
             ? '보고서 발송 여부를 발송으로 변경했습니다.'
@@ -203,6 +260,7 @@ export function SiteReportListPanel({
       currentUser,
       ensureSessionLoaded,
       ensureSiteReportIndexLoaded,
+      reloadReportIndex,
       upsertReportIndexItems,
     ],
   );
