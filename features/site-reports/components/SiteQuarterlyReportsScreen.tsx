@@ -11,6 +11,7 @@ import {
   readStringParam,
   useUrlQueryUpdater,
 } from '@/hooks/useUrlQueryState';
+import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
@@ -21,6 +22,7 @@ import {
 } from '@/lib/safetyApi';
 import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import { upsertOperationalQuarterlyReportIndexFromReport } from '@/lib/operationalReportIndexCache';
 import { useResolvedSiteRoute } from '../hooks/useResolvedSiteRoute';
 import { QuarterlyReportCreateDialog } from '../quarterly-list/QuarterlyReportCreateDialog';
 import { QuarterlyReportDeleteDialog } from '../quarterly-list/QuarterlyReportDeleteDialog';
@@ -195,8 +197,18 @@ export function SiteQuarterlyReportsScreen({
           nextCompleted,
         });
 
-        await updateReportDispatch(row.reportId, nextDispatch);
-        await reload({ force: true });
+        const updatedReport = await updateReportDispatch(row.reportId, nextDispatch);
+        if (currentSite) {
+          upsertOperationalQuarterlyReportIndexFromReport(
+            currentUser.id,
+            currentSite.id,
+            updatedReport,
+          );
+        }
+        if (isAdminUserRole(currentUser.role)) {
+          invalidateAdminReportMutationClientCaches(currentUser.id);
+        }
+        void reload({ force: true });
         setDispatchNotice(
           nextCompleted
             ? '분기 보고서 발송 여부를 발송으로 변경했습니다.'
@@ -206,7 +218,7 @@ export function SiteQuarterlyReportsScreen({
         setDispatchError(getErrorMessage(error));
       }
     },
-    [currentUser, reload],
+    [currentSite, currentUser, reload],
   );
 
   if (!isReady) {

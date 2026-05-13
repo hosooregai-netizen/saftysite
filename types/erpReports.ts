@@ -19,6 +19,9 @@ export interface OperationalQuarterlyIndexItem {
   title: string;
   reportKind: 'quarterly_summary';
   dispatchCompleted: boolean;
+  dispatchStatus?: ReportDispatchMeta['dispatchStatus'] | null;
+  dispatch?: ReportDispatchMeta | null;
+  meta?: Record<string, unknown>;
   periodStartDate: string;
   periodEndDate: string;
   quarterKey: string;

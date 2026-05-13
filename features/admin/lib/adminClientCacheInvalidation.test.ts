@@ -96,6 +96,9 @@ test('directory mutation invalidation clears bootstrap directory caches and sche
 
   writeAdminSessionCache(scope, 'bootstrap:sites-data', ['new-sites']);
   writeAdminSessionCache(scope, 'bootstrap:mailbox-directory', { sites: [], headquarters: [] });
+  writeAdminSessionCache(scope, 'overview', { unsent: 1 });
+  writeAdminSessionCache(scope, 'reports:list:alpha', ['report-row']);
+  writeAdminSessionCache(scope, 'sites:list:v2:alpha', ['site-row']);
   writeAdminSessionCache(scope, 'schedule-lookups', { filters: [] });
   writeAdminSessionCache(scope, 'schedule-calendar:2026-04', ['calendar-row']);
   writeAdminSessionCache(scope, 'schedule-queue:2026-04', ['queue-row']);
@@ -106,6 +109,9 @@ test('directory mutation invalidation clears bootstrap directory caches and sche
 
   assert.equal(readAdminSessionCache(scope, 'bootstrap:sites-data').value, null);
   assert.equal(readAdminSessionCache(scope, 'bootstrap:mailbox-directory').value, null);
+  assert.equal(readAdminSessionCache(scope, 'overview').value, null);
+  assert.equal(readAdminSessionCache(scope, 'reports:list:alpha').value, null);
+  assert.equal(readAdminSessionCache(scope, 'sites:list:v2:alpha').value, null);
   assert.equal(readAdminSessionCache(scope, 'schedule-lookups').value, null);
   assert.equal(readAdminSessionCache(scope, 'schedule-calendar:2026-04').value, null);
   assert.equal(readAdminSessionCache(scope, 'schedule-queue:2026-04').value, null);

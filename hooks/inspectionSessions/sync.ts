@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { SafetyMasterData } from '@/types/backend';
 import type { InspectionSessionsStore } from './store';
 import { useInspectionSessionAuthSync } from './useInspectionSessionAuthSync';
@@ -35,6 +35,34 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     }),
     [],
   );
+  const markReportIndexMutation = useCallback((siteId: string, reportKeys: string[]) => {
+    if (!siteId) {
+      return;
+    }
+
+    reportIndexRequestGenerationRef.current.set(
+      siteId,
+      (reportIndexRequestGenerationRef.current.get(siteId) ?? 0) + 1,
+    );
+    siteReportsLoadRequestGenerationRef.current.set(
+      siteId,
+      (siteReportsLoadRequestGenerationRef.current.get(siteId) ?? 0) + 1,
+    );
+    reportIndexRequestsRef.current.delete(siteId);
+    siteReportsLoadRequestsRef.current.delete(siteId);
+
+    reportKeys.forEach((reportKey) => {
+      if (!reportKey) {
+        return;
+      }
+
+      sessionLoadRequestGenerationRef.current.set(
+        reportKey,
+        (sessionLoadRequestGenerationRef.current.get(reportKey) ?? 0) + 1,
+      );
+      sessionLoadRequestsRef.current.delete(reportKey);
+    });
+  }, []);
 
   const hydration = useInspectionSessionStateHydration(store, runtime);
   const masterDataActions = useMemo(
@@ -86,6 +114,7 @@ export function useInspectionSessionsSync(store: InspectionSessionsStore) {
     ensureSiteReportsLoaded,
     login,
     logout,
+    markReportIndexMutation,
     refreshMasterData,
     reload,
   };

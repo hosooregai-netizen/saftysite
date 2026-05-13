@@ -26,3 +26,10 @@
 ## Notes
 
 - The site report smoke now covers the delayed stale `/reports?site_id=site-1` race after a successful dispatch PATCH and verifies persisted `inspection-report-index-v2` stays completed.
+
+## Follow-up: Operational Report Dispatch Cache Sync
+
+- Added a quarterly operational-index cache upsert path keyed by owner, site, and report key so PATCH success updates the visible quarterly row before force revalidation finishes.
+- Guarded operational-index hydrate/fetch generations so pre-mutation stale responses cannot replace a successful dispatch PATCH result.
+- Kept admin report cache invalidation scoped to admin users for normal and legacy technical-guidance dispatch toggles.
+- Extended cache invalidation coverage for site/directory mutations to include overview, reports list, and sites list session caches.

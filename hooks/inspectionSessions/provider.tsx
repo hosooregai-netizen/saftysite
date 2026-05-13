@@ -38,6 +38,7 @@ export function InspectionSessionsProvider({
     ensureSiteReportsLoaded,
     login,
     logout,
+    markReportIndexMutation,
     reload,
     refreshMasterData,
   } = useInspectionSessionsSync(store);
@@ -78,12 +79,13 @@ export function InspectionSessionsProvider({
   );
 
   const getReportIndexBySiteId = useCallback(
-    (siteId: string) => store.reportIndexBySiteIdRef.current[siteId] || null,
-    [store.reportIndexBySiteId, store.reportIndexBySiteIdRef],
+    (siteId: string) => store.reportIndexBySiteId[siteId] || null,
+    [store.reportIndexBySiteId],
   );
 
   const upsertReportIndexItems = useCallback(
     (siteId: string, items: InspectionReportListItem[]) => {
+      markReportIndexMutation(siteId, items.map((item) => item.reportKey));
       store.setReportIndexBySiteId((current) => {
         const nextItems = mergeReportIndexItems(current[siteId]?.items ?? [], items);
         return {
@@ -99,7 +101,7 @@ export function InspectionSessionsProvider({
         };
       });
     },
-    [store],
+    [markReportIndexMutation, store],
   );
 
   const upsertAssignedSitesIntoStore = useCallback(

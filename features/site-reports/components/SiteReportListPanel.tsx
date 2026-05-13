@@ -18,6 +18,7 @@ import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/
 import { mergeReportIndexItem } from '@/hooks/inspectionSessions/helpers';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { updateAdminReportDispatch } from '@/lib/admin/apiClient';
+import { isAdminUserRole } from '@/lib/admin';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { mapSafetyReportListItem } from '@/lib/safetyApiMappers';
@@ -31,6 +32,7 @@ import type {
   InspectionSite,
   ReportIndexStatus,
 } from '@/types/inspectionSession';
+import type { SafetyUser } from '@/types/backend';
 import styles from './SiteReportsScreen.module.css';
 
 type DispatchOverride = {
@@ -87,6 +89,12 @@ function getItemDispatch(item: InspectionReportListItem) {
 
 function getReportDispatch(report: { dispatch?: unknown; meta?: Record<string, unknown> }) {
   return report.dispatch ?? getRecord(report.meta).dispatch ?? null;
+}
+
+function invalidateAdminReportCachesForUser(user: SafetyUser) {
+  if (isAdminUserRole(user.role)) {
+    invalidateAdminReportMutationClientCaches(user.id);
+  }
 }
 
 function applyDispatchOverride(
@@ -240,9 +248,10 @@ export function SiteReportListPanel({
         }));
         if (isLegacyReport) {
           upsertAdminLegacySiteReportCacheItem(currentUser.id, currentSite.id, updatedItem);
-          invalidateAdminReportMutationClientCaches(currentUser.id);
+          invalidateAdminReportCachesForUser(currentUser);
           reloadReportIndex();
         } else {
+          invalidateAdminReportCachesForUser(currentUser);
           await ensureSessionLoaded(item.reportKey, { force: true });
           void ensureSiteReportIndexLoaded(currentSite.id, { force: true });
         }
