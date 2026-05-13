@@ -15,7 +15,9 @@ export default async function FileActivityPage({ params }: FileActivityPageProps
     <WebhardShell
       title="파일 활동 이력"
       subtitle="업로드, 이동, 공유, 복구, 잠금, 다운로드 이력을 시간순으로 확인합니다."
-      leftRail={<WebhardLeftRail projectId={pageData.detail.file.projectId} />}
+      activeSection="project"
+      projectId={pageData.detail.file.projectId}
+      leftRail={<WebhardLeftRail activeView="project" projectId={pageData.detail.file.projectId} />}
       folderTree={null}
       detailPanel={null}
     >

@@ -18,7 +18,9 @@ export default async function FilePage({ params }: FilePageProps) {
     <WebhardShell
       title={pageData.detail.file.fileName}
       subtitle="미리보기, 태그, 연결정보, 버전, 공유, 활동이력을 한 화면에서 검토합니다."
-      leftRail={<WebhardLeftRail projectId={pageData.detail.file.projectId} />}
+      activeSection="project"
+      projectId={pageData.detail.file.projectId}
+      leftRail={<WebhardLeftRail activeView="project" projectId={pageData.detail.file.projectId} />}
       folderTree={null}
       detailPanel={
         <div className="content-grid">

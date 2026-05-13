@@ -15,7 +15,9 @@ export default async function FileVersionsPage({ params }: FileVersionsPageProps
     <WebhardShell
       title="파일 버전"
       subtitle="원본, 작업본, 검토본, 최종본, 제출본 버전을 구분해 관리합니다."
-      leftRail={<WebhardLeftRail projectId={pageData.detail.file.projectId} />}
+      activeSection="project"
+      projectId={pageData.detail.file.projectId}
+      leftRail={<WebhardLeftRail activeView="project" projectId={pageData.detail.file.projectId} />}
       folderTree={null}
       detailPanel={null}
     >
