@@ -165,8 +165,6 @@ export function createInspectionSession(
     drafter: options.meta?.drafter ?? adminSiteSnapshot.assigneeName,
     reviewer: options.meta?.reviewer ?? '',
     approver: options.meta?.approver ?? '',
-    sourceLegacyReportKey: options.meta?.sourceLegacyReportKey,
-    sourceLegacyReportId: options.meta?.sourceLegacyReportId,
   };
 
   return finalizeInspectionSession({

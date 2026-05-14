@@ -28,7 +28,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
     canArchiveReports,
     canCreateReport,
     createAvailabilityMessage,
-    createLegacyReport,
     createReport,
     currentSite,
     currentUserName,
@@ -124,7 +123,6 @@ export function SiteReportsScreen({ siteKey }: SiteReportsScreenProps) {
                   canArchiveReports={canArchiveReports}
                   canCreateReport={canCreateReport}
                   createAvailabilityMessage={createAvailabilityMessage}
-                  createLegacyReport={createLegacyReport}
                   createReport={createReport}
                   currentSite={currentSite}
                   deleteSession={deleteSession}

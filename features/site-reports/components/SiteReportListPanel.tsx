@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReportList } from '@/features/site-reports/components/ReportList';
 import { SiteReportsSummaryBar } from '@/features/site-reports/components/SiteReportsSummaryBar';
 import { getSiteReportSummary } from '@/features/site-reports/report-list/reportListHelpers';
@@ -46,7 +46,6 @@ interface SiteReportListPanelProps {
   canArchiveReports: boolean;
   canCreateReport: boolean;
   createAvailabilityMessage: string | null;
-  createLegacyReport: (item: InspectionReportListItem) => Promise<void>;
   createReport: (input: CreateSiteReportInput) => Promise<void>;
   currentSite: InspectionSite;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -120,7 +119,6 @@ export function SiteReportListPanel({
   canArchiveReports,
   canCreateReport,
   createAvailabilityMessage,
-  createLegacyReport,
   createReport,
   currentSite,
   deleteSession,
@@ -149,9 +147,7 @@ export function SiteReportListPanel({
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
-  const [legacyCreateError, setLegacyCreateError] = useState<string | null>(null);
   const [dispatchOverrides, setDispatchOverrides] = useState<Record<string, DispatchOverride>>({});
-  const legacyCreateInFlightRef = useRef<Set<string>>(new Set());
   const deletingSession = dialogSessionId
     ? reportItems.find((item) => item.reportKey === dialogSessionId) ?? null
     : null;
@@ -192,33 +188,7 @@ export function SiteReportListPanel({
 
   useEffect(() => {
     setDispatchOverrides({});
-    setLegacyCreateError(null);
-    legacyCreateInFlightRef.current.clear();
   }, [currentSite.id]);
-
-  const handleCreateLegacyReport = useCallback(
-    async (item: InspectionReportListItem) => {
-      if (legacyCreateInFlightRef.current.has(item.reportKey)) {
-        return;
-      }
-
-      legacyCreateInFlightRef.current.add(item.reportKey);
-      setLegacyCreateError(null);
-      setDispatchNotice(null);
-      try {
-        await createLegacyReport(item);
-      } catch (error) {
-        setLegacyCreateError(
-          error instanceof Error
-            ? error.message
-            : 'Legacy report document creation failed.',
-        );
-      } finally {
-        legacyCreateInFlightRef.current.delete(item.reportKey);
-      }
-    },
-    [createLegacyReport],
-  );
 
   const handleToggleDispatch = useCallback(
     async (item: InspectionReportListItem) => {
@@ -307,7 +277,6 @@ export function SiteReportListPanel({
   const panelBody = (
     <>
       {dispatchError ? <div className={styles.bannerError}>{dispatchError}</div> : null}
-      {legacyCreateError ? <div className={styles.bannerError}>{legacyCreateError}</div> : null}
       {dispatchNotice ? <div className={styles.bannerInfo}>{dispatchNotice}</div> : null}
 
       {showTableTools ? (
@@ -345,9 +314,6 @@ export function SiteReportListPanel({
         canCreateReport={canCreateReport}
         createAvailabilityMessage={createAvailabilityMessage}
         currentSite={currentSite}
-        onCreateLegacyReport={(item) => {
-          void handleCreateLegacyReport(item);
-        }}
         onCreateReport={openCreateDialog}
         onDeleteRequest={setDialogSessionId}
         onToggleDispatch={handleToggleDispatch}

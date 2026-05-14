@@ -77,27 +77,6 @@ test('normalizeInspectionSession clears placeholder values in adminSiteSnapshot'
   assert.equal(session.adminSiteSnapshot.headquartersAddress, '');
 });
 
-test('normalizeInspectionSession preserves legacy source report metadata', () => {
-  const session = normalizeInspectionSession({
-    meta: {
-      siteName: 'Site Alpha',
-      reportDate: '2026-04-19',
-      reportTitle: 'Report 9',
-      drafter: 'Inspector',
-      sourceLegacyReportKey: 'legacy:technical_guidance:1001',
-      sourceLegacyReportId: '1001',
-    },
-    adminSiteSnapshot: {
-      siteName: 'Site Alpha',
-    },
-    reportNumber: 9,
-  });
-
-  assert.equal(session.meta.sourceLegacyReportKey, 'legacy:technical_guidance:1001');
-  assert.equal(session.meta.sourceLegacyReportId, '1001');
-});
-
-
 test('normalizeInspectionSite preserves totalRounds from camelCase and snake_case inputs', () => {
   const camelCaseSite = normalizeInspectionSite({
     id: 'site-1',

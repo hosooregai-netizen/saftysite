@@ -39,8 +39,6 @@ export interface InspectionReportMeta {
   drafter: string;
   reviewer: string;
   approver: string;
-  sourceLegacyReportKey?: string;
-  sourceLegacyReportId?: string;
 }
 
 export interface AdminSiteSnapshot {
