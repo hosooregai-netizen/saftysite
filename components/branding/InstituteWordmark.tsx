@@ -1,6 +1,7 @@
 'use client';
 
 import styles from './InstituteWordmark.module.css';
+import { SERVICE_NAME } from '@/lib/branding';
 
 interface InstituteWordmarkProps {
   className?: string;
@@ -19,7 +20,7 @@ export function InstituteWordmark({
   compact = false,
   tone = 'dark',
   productLine = null,
-  showSecondary = true,
+  showSecondary = false,
 }: InstituteWordmarkProps) {
   return (
     <span
@@ -30,8 +31,8 @@ export function InstituteWordmark({
         className,
       )}
     >
-      <span className={styles.primary}>대한안전산업연구원</span>
-      {showSecondary ? <span className={styles.secondary}>大韓安全産業硏究院</span> : null}
+      <span className={styles.primary}>{SERVICE_NAME}</span>
+      {showSecondary ? <span className={styles.secondary}>KOREA SAFETY</span> : null}
       {productLine ? <span className={styles.product}>{productLine}</span> : null}
     </span>
   );

@@ -16,7 +16,7 @@
 .primary {
   font-size: 1.02rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
