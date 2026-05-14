@@ -748,6 +748,18 @@ async function installErpRoutes({
         offset: Number(url.searchParams.get('offset') || '0'),
         rows: Array.from({ length: 12 }, (_, index) => {
           const roundNo = index + 1;
+          const legacyLinkedReportKey =
+            siteId === 'site-1' && roundNo === 5
+              ? 'legacy:technical_guidance:1001'
+              : siteId === 'site-1' && roundNo === 6
+                ? 'legacy:technical_guidance:1002'
+                : '';
+          const legacyPlannedDate =
+            siteId === 'site-1' && roundNo === 5
+              ? '2026-03-31'
+              : siteId === 'site-1' && roundNo === 6
+                ? '2026-04-07'
+                : '';
           return {
             actualVisitDate: '',
             assigneeName: 'Smoke Worker',
@@ -760,8 +772,8 @@ async function installErpRoutes({
             isConflicted: false,
             isOutOfWindow: false,
             isOverdue: false,
-            linkedReportKey: '',
-            plannedDate: '',
+            linkedReportKey: legacyLinkedReportKey,
+            plannedDate: legacyPlannedDate,
             roundNo,
             selectionConfirmedAt: '',
             selectionConfirmedByName: '',

@@ -128,6 +128,8 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
       drafter: normalizeText(asRecord(source.meta).drafter) || session.meta.drafter,
       reviewer: normalizeText(asRecord(source.meta).reviewer) || '',
       approver: normalizeText(asRecord(source.meta).approver) || '',
+      sourceLegacyReportKey: normalizeText(asRecord(source.meta).sourceLegacyReportKey) || undefined,
+      sourceLegacyReportId: normalizeText(asRecord(source.meta).sourceLegacyReportId) || undefined,
     },
     controllerReview: normalizeControllerReview(source.controllerReview),
     adminSiteSnapshot,

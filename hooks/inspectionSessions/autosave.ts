@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
-import { getSessionSiteKey } from '@/constants/inspectionSession';
+import { getSessionSiteKey, normalizeInspectionSite } from '@/constants/inspectionSession';
 import {
   applyInspectionSessionInlineImageReplacements,
   createInspectionSessionInlineImageReplacements,
@@ -25,6 +25,23 @@ import {
 } from '@/lib/safetyApiMappers';
 import { getErrorMessage, isAuthFailure } from './helpers';
 import type { InspectionSessionsStore } from './store';
+import type { InspectionSession, InspectionSite } from '@/types/inspectionSession';
+
+function buildFallbackSiteFromSession(session: InspectionSession): InspectionSite {
+  const snapshot = session.adminSiteSnapshot;
+  const siteName = session.meta.siteName || snapshot.siteName || snapshot.customerName || '';
+
+  return normalizeInspectionSite({
+    id: getSessionSiteKey(session),
+    title: siteName,
+    customerName: snapshot.customerName,
+    siteName,
+    assigneeName: snapshot.assigneeName || session.meta.drafter,
+    adminSiteSnapshot: snapshot,
+    createdAt: session.createdAt,
+    updatedAt: session.updatedAt,
+  });
+}
 
 export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
   const {
@@ -122,8 +139,9 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
           dirtySessionIdsRef.current.delete(sessionId);
           continue;
         }
-        const site = sitesRef.current.find((item) => item.id === getSessionSiteKey(session));
-        if (!site) continue;
+        const site =
+          sitesRef.current.find((item) => item.id === getSessionSiteKey(session)) ??
+          buildFallbackSiteFromSession(session);
 
         const versionAtSync = sessionVersionsRef.current[sessionId] ?? 0;
         const sessionForSave = await promoteInlineImages(session, site.id);
@@ -192,12 +210,20 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
     store.masterDataRef,
   ]);
 
-  const saveNow = useCallback(async (options?: { throwOnError?: boolean }) => {
-    await Promise.all([
+  const saveNow = useCallback(async (options?: { ignorePersistErrors?: boolean; throwOnError?: boolean }) => {
+    const persistPromise = Promise.all([
       persistReportIndexBySiteId(reportIndexBySiteIdRef.current),
       persistSessions(sessionsRef.current),
       persistSites(sitesRef.current),
     ]);
+    if (options?.ignorePersistErrors) {
+      await persistPromise.catch((error) => {
+        console.warn('Failed to persist inspection session cache before save.', error);
+        // Local cache persistence failures must not block explicit report creation.
+      });
+    } else {
+      await persistPromise;
+    }
     await flushDirtySessions(options);
   }, [
     flushDirtySessions,

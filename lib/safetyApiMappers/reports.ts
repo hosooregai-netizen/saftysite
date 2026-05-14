@@ -226,6 +226,8 @@ export function mapInspectionSessionToReportListItem(
       currentSection: session.currentSection,
       reportNumber: session.reportNumber,
       reportKind: TECHNICAL_GUIDANCE_REPORT_KIND,
+      sourceLegacyReportKey: session.meta.sourceLegacyReportKey,
+      sourceLegacyReportId: session.meta.sourceLegacyReportId,
     },
   };
 }
@@ -280,6 +282,14 @@ export function mapSafetyReportToInspectionSession(
       approver:
         normalizeMapperText(payloadMeta.approver) ||
         normalizeMapperText(reportMeta.approver),
+      sourceLegacyReportKey:
+        normalizeMapperText(payloadMeta.sourceLegacyReportKey) ||
+        normalizeMapperText(reportMeta.sourceLegacyReportKey) ||
+        undefined,
+      sourceLegacyReportId:
+        normalizeMapperText(payloadMeta.sourceLegacyReportId) ||
+        normalizeMapperText(reportMeta.sourceLegacyReportId) ||
+        undefined,
     },
     controllerReview: normalizeControllerReview(
       payload.controllerReview ?? payloadMeta.controllerReview ?? reportMeta.controllerReview,
@@ -331,6 +341,8 @@ export function buildSafetyReportUpsertInput(
       reportNumber: session.reportNumber,
       scheduleRoundNo: session.scheduleRoundNo ?? null,
       controllerReview: session.controllerReview,
+      sourceLegacyReportKey: session.meta.sourceLegacyReportKey,
+      sourceLegacyReportId: session.meta.sourceLegacyReportId,
     },
     status: 'draft',
     create_revision: false,

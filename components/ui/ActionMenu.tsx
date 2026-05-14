@@ -38,6 +38,7 @@ export default function ActionMenu({
   items,
   label = '작업 메뉴 열기',
 }: ActionMenuProps) {
+  const actionableItems = items.filter((item) => item.href || item.onSelect);
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -85,7 +86,7 @@ export default function ActionMenu({
   useLayoutEffect(() => {
     if (!isOpen) return;
     updatePosition();
-  }, [isOpen, items.length]);
+  }, [isOpen, actionableItems.length]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -158,7 +159,7 @@ export default function ActionMenu({
                 minWidth: `${position.minWidth}px`,
               }}
             >
-              {items.map((item) =>
+              {actionableItems.map((item) =>
                 item.href ? (
                   <Link
                     key={`${item.label}-${item.href}`}

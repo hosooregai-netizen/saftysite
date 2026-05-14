@@ -8,6 +8,7 @@ import {
 } from '@/constants/inspectionSession';
 import { SafetyApiError } from '@/lib/safetyApi';
 import { buildSafetyMasterData } from '@/lib/safetyApiMappers';
+import { suppressGeneratedLegacyTechnicalGuidancePlaceholders } from '@/lib/siteReports/legacyTechnicalGuidance';
 import type {
   InspectionReportListItem,
   InspectionSite,
@@ -198,7 +199,9 @@ export function mergeReportIndexItems(
     merged.set(item.reportKey, currentItem ? mergeReportIndexItem(currentItem, item) : item);
   });
 
-  return sortReportIndexItems(Array.from(merged.values()));
+  return sortReportIndexItems(
+    suppressGeneratedLegacyTechnicalGuidancePlaceholders(Array.from(merged.values())),
+  );
 }
 
 export function createEmptyReportIndexState(): SiteReportIndexState {

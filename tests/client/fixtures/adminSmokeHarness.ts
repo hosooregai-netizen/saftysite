@@ -876,6 +876,33 @@ function ensureAdminFixtureSchedules(harness: ErpSmokeHarness) {
           windowEnd: '2026-04-30',
           windowStart: '2026-04-01',
         },
+        {
+          actualVisitDate: '',
+          assigneeName: 'Legacy Worker',
+          assigneeUserId: '',
+          exceptionMemo: '',
+          exceptionReasonCode: '',
+          headquarterId: 'hq-1',
+          headquarterName: 'Legacy HQ',
+          id: 'site-1-round-6',
+          isConflicted: false,
+          isOutOfWindow: false,
+          isOverdue: false,
+          linkedReportKey: 'legacy:technical_guidance:1002',
+          plannedDate: '2026-04-07',
+          roundNo: 6,
+          selectionConfirmedAt: NOW,
+          selectionConfirmedByName: 'admin',
+          selectionConfirmedByUserId: 'admin-1',
+          selectionReasonLabel: 'Legacy InSEF import',
+          selectionReasonMemo: 'legacy_site_id=legacy-1 round=6',
+          siteId: 'site-1',
+          siteName: 'Legacy Site',
+          status: 'planned',
+          totalRounds: 9,
+          windowEnd: '2026-04-30',
+          windowStart: '2026-04-01',
+        },
       ],
     },
   );
@@ -939,6 +966,16 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       visit_date: '2026-03-31',
       visit_round: 5,
     },
+    {
+      id: 'legacy:technical_guidance:1002',
+      report_key: 'legacy:technical_guidance:1002',
+      report_title: 'Legacy PDF Missing 6',
+      site_id: 'site-1',
+      headquarter_id: 'hq-1',
+      assigned_user_id: 'field-1',
+      visit_date: '2026-04-07',
+      visit_round: 6,
+    },
   ];
 
   technicalGuidanceFixtures.forEach((fixture) => {
@@ -963,6 +1000,11 @@ function ensureAdminFixtureReports(harness: ErpSmokeHarness) {
       dispatch: buildEmptyDispatch(),
       meta: {
         forceAdminBootstrap: fixture.report_key.startsWith('legacy:technical_guidance:'),
+        ...(fixture.report_key === 'legacy:technical_guidance:1001'
+          ? {
+              originalPdfDownloadPath: `/api/admin/reports/${encodeURIComponent(fixture.report_key)}/original-pdf`,
+            }
+          : {}),
         reportKind: 'technical_guidance',
         reportNumber: fixture.visit_round,
         siteName: '기존 현장',

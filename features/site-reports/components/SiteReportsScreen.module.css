@@ -357,6 +357,14 @@
   color: var(--erp-mid);
 }
 
+.reportLinkButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
 .dataValue {
   display: block;
   font-size: var(--text-ui-sm);

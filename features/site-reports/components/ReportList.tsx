@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ReportListEmptyState, type ReportListEmptyMode } from '@/features/site-reports/report-list/ReportListEmptyState';
 import { ReportListRow } from '@/features/site-reports/report-list/ReportListRow';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
+import { isLegacyTechnicalGuidanceCreateTarget } from '@/lib/siteReports/legacyTechnicalGuidance';
 import type {
   InspectionReportListItem,
   InspectionSite,
@@ -19,6 +20,7 @@ interface ReportListProps {
   createAvailabilityMessage: string | null;
   currentSite: InspectionSite;
   onCreateReport: () => void;
+  onCreateLegacyReport: (item: InspectionReportListItem) => void;
   onDeleteRequest: (reportKey: string) => void;
   onToggleDispatch: (item: InspectionReportListItem) => void;
   reportIndexStatus: ReportIndexStatus;
@@ -48,6 +50,10 @@ function getEmptyStateMode(params: {
 }
 
 function resolveReportHref(item: InspectionReportListItem) {
+  if (isLegacyTechnicalGuidanceCreateTarget(item)) {
+    return null;
+  }
+
   return item.reportOpenHref || `/sessions/${item.reportKey}`;
 }
 
@@ -58,6 +64,7 @@ export function ReportList({
   createAvailabilityMessage,
   currentSite,
   onCreateReport,
+  onCreateLegacyReport,
   onDeleteRequest,
   onToggleDispatch,
   reportIndexStatus,
@@ -70,6 +77,9 @@ export function ReportList({
   const warmSession = useCallback(
     (item: InspectionReportListItem) => {
       const sessionHref = resolveReportHref(item);
+      if (!sessionHref) {
+        return;
+      }
       if (prefetchedReportKeysRef.current.has(item.reportKey)) {
         return;
       }
@@ -126,8 +136,15 @@ export function ReportList({
                 item={item}
                 onDeleteRequest={onDeleteRequest}
                 onOpenReport={(nextItem) => {
+                  if (isLegacyTechnicalGuidanceCreateTarget(nextItem)) {
+                    onCreateLegacyReport(nextItem);
+                    return;
+                  }
                   warmSession(nextItem);
-                  router.push(resolveReportHref(nextItem));
+                  const href = resolveReportHref(nextItem);
+                  if (href) {
+                    router.push(href);
+                  }
                 }}
                 onToggleDispatch={onToggleDispatch}
                 onWarmReport={warmSession}

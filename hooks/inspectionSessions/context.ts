@@ -72,7 +72,7 @@ export interface InspectionSessionsContextValue {
   ) => void;
   deleteSession: (sessionId: string) => Promise<void>;
   deleteSessions: (predicate: (session: InspectionSession) => boolean) => void;
-  saveNow: (options?: { throwOnError?: boolean }) => Promise<void>;
+  saveNow: (options?: { ignorePersistErrors?: boolean; throwOnError?: boolean }) => Promise<void>;
   getSessionById: (sessionId: string) => InspectionSession | null;
   getSessionsBySiteId: (siteId: string) => InspectionSession[];
   getSiteById: (siteId: string) => InspectionSite | null;

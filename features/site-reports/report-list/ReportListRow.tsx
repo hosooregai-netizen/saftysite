@@ -4,6 +4,10 @@ import Link from 'next/link';
 import ActionMenu from '@/components/ui/ActionMenu';
 import styles from '@/features/site-reports/components/SiteReportsScreen.module.css';
 import { formatDateTime } from '@/lib/formatDateTime';
+import {
+  isLegacyTechnicalGuidanceCreateTarget,
+  isLegacyTechnicalGuidanceReportItem,
+} from '@/lib/siteReports/legacyTechnicalGuidance';
 import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
 import { getReportDrafterDisplay } from './reportListHelpers';
 
@@ -40,11 +44,16 @@ export function ReportListRow({
   onWarmReport,
 }: ReportListRowProps) {
   const progressRate = Math.max(0, Math.min(100, item.progressRate ?? 0));
-  const sessionHref = item.reportOpenHref || `/sessions/${item.reportKey}`;
-  const isLegacyTechnicalGuidance =
-    item.reportIndexSource === 'legacy' && item.reportKey.startsWith('legacy:technical_guidance:');
+  const isLegacyTechnicalGuidance = isLegacyTechnicalGuidanceReportItem(item);
+  const isLegacyCreateTarget = isLegacyTechnicalGuidanceCreateTarget(item);
+  const sessionHref = isLegacyCreateTarget
+    ? undefined
+    : item.reportOpenHref || `/sessions/${item.reportKey}`;
   const canToggleDispatch = !item.readOnly || isLegacyTechnicalGuidance;
   const menuItems = [
+    ...(isLegacyCreateTarget
+      ? [{ label: '문서 생성', onSelect: () => onOpenReport(item) }]
+      : []),
     { label: '열기', href: sessionHref },
     ...(canToggleDispatch
       ? [
@@ -88,14 +97,26 @@ export function ReportListRow({
       </div>
 
       <div className={`${styles.primaryCell} ${styles.titleCell}`}>
-        <Link
-          href={sessionHref}
-          className={styles.reportLink}
-          onMouseEnter={() => onWarmReport(item)}
-          onFocus={() => onWarmReport(item)}
-        >
-          {item.reportTitle}
-        </Link>
+        {isLegacyCreateTarget ? (
+          <button
+            type="button"
+            className={`${styles.reportLink} ${styles.reportLinkButton}`}
+            onClick={() => onOpenReport(item)}
+            onMouseEnter={() => onWarmReport(item)}
+            onFocus={() => onWarmReport(item)}
+          >
+            {item.reportTitle}
+          </button>
+        ) : (
+          <Link
+            href={sessionHref || `/sessions/${item.reportKey}`}
+            className={styles.reportLink}
+            onMouseEnter={() => onWarmReport(item)}
+            onFocus={() => onWarmReport(item)}
+          >
+            {item.reportTitle}
+          </Link>
+        )}
       </div>
 
       <div className={`${styles.dataCell} ${styles.reportDateCell} ${styles.desktopOnly}`}>

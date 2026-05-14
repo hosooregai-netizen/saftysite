@@ -3,7 +3,11 @@ import test from 'node:test';
 
 import { createInspectionSession, createInspectionSite } from '@/constants/inspectionSession';
 import type { SafetyReportListItem } from '@/types/backend';
-import { buildSafetyReportUpsertInput, mapSafetyReportListItem } from './reports';
+import {
+  buildSafetyReportUpsertInput,
+  mapInspectionSessionToReportListItem,
+  mapSafetyReportListItem,
+} from './reports';
 
 function buildReportListItem(
   overrides: Partial<SafetyReportListItem> & Record<string, unknown> = {},
@@ -112,6 +116,33 @@ test('buildSafetyReportUpsertInput keeps schedule links when the schedule round 
 
   assert.equal(payload.visit_round, 1);
   assert.equal(payload.schedule_id, 'schedule-1');
+});
+
+test('report mappers preserve legacy source metadata', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession(
+    {
+      meta: {
+        siteName: 'Site Alpha',
+        reportDate: '2026-04-15',
+        reportTitle: 'Report 5',
+        drafter: 'Inspector',
+        sourceLegacyReportKey: 'legacy:technical_guidance:1001',
+        sourceLegacyReportId: '1001',
+      },
+    },
+    site.id,
+    5,
+  );
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+  const payloadBody = payload.payload as { meta?: Record<string, unknown> };
+  const listItem = mapInspectionSessionToReportListItem(session, site);
+
+  assert.equal(payload.meta?.sourceLegacyReportKey, 'legacy:technical_guidance:1001');
+  assert.equal(payload.meta?.sourceLegacyReportId, '1001');
+  assert.equal(payloadBody.meta?.sourceLegacyReportKey, 'legacy:technical_guidance:1001');
+  assert.equal(listItem.meta.sourceLegacyReportKey, 'legacy:technical_guidance:1001');
 });
 
 test('buildSafetyReportUpsertInput drops schedule links when the schedule round changed', () => {

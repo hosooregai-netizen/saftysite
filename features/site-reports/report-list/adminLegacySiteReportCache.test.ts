@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import type { ControllerReportRow } from '@/types/admin';
 import type { InspectionReportListItem } from '@/types/inspectionSession';
 import {
   beginAdminLegacySiteReportRequest,
   isCurrentAdminLegacySiteReportRequest,
+  mapAdminLegacyRowToReportItem,
   readAdminLegacySiteReportCache,
   upsertAdminLegacySiteReportCacheItem,
   writeAdminLegacySiteReportCache,
@@ -96,6 +98,67 @@ function buildItem(reportKey: string): InspectionReportListItem {
     meta: {},
   };
 }
+
+function buildLegacyRow(
+  overrides: Partial<ControllerReportRow> = {},
+): ControllerReportRow {
+  return {
+    assigneeName: 'Inspector',
+    assigneeUserId: 'user-1',
+    checkerUserId: '',
+    controllerReview: null,
+    deadlineDate: '2026-04-08',
+    dispatch: null,
+    dispatchSignal: '',
+    dispatchStatus: '',
+    headquarterId: 'hq-1',
+    headquarterName: 'HQ',
+    lifecycleStatus: 'active',
+    originalPdfAvailable: true,
+    originalPdfDownloadPath: '/api/admin/reports/legacy/original-pdf',
+    periodLabel: '',
+    progressRate: 100,
+    qualityStatus: 'unchecked',
+    reportKey: 'legacy:technical_guidance:1001',
+    reportMonth: '',
+    reportTitle: 'Legacy report',
+    reportType: 'technical_guidance',
+    routeParam: 'legacy:technical_guidance:1001',
+    siteId: 'site-1',
+    siteName: 'Site 1',
+    sortLabel: 'Site 1 Legacy report',
+    status: 'submitted',
+    updatedAt: '2026-04-01T00:00:00.000Z',
+    visitDate: '2026-04-01',
+    visitRound: 1,
+    totalRound: null,
+    workflowStatus: 'submitted',
+    ...overrides,
+  } as ControllerReportRow;
+}
+
+test('mapAdminLegacyRowToReportItem keeps original PDF href when available', () => {
+  const item = mapAdminLegacyRowToReportItem(buildLegacyRow());
+
+  assert.equal(item.reportOpenHref, '/admin/report-open?reportKey=legacy%3Atechnical_guidance%3A1001');
+  assert.equal(item.reportOpenMode, 'original_pdf');
+  assert.equal(item.originalPdfAvailable, true);
+});
+
+test('mapAdminLegacyRowToReportItem marks PDF-less legacy rows for document creation', () => {
+  const item = mapAdminLegacyRowToReportItem(
+    buildLegacyRow({
+      originalPdfAvailable: false,
+      originalPdfDownloadPath: '',
+      reportKey: 'legacy:technical_guidance:1002',
+      routeParam: 'legacy:technical_guidance:1002',
+    }),
+  );
+
+  assert.equal(item.reportOpenHref, null);
+  assert.equal(item.reportOpenMode, 'legacy_create');
+  assert.equal(item.originalPdfAvailable, false);
+});
 
 test('empty legacy report arrays are valid cache hits', () => {
   const sessionStorage = installWindow();

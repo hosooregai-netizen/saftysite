@@ -24,6 +24,12 @@ import {
 } from '@/lib/safetyApi';
 import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
 import {
+  findReportGeneratedFromLegacyTarget,
+  getLegacyTechnicalGuidanceReportId,
+  isLegacyTechnicalGuidanceCreateTarget,
+  isLegacyTechnicalGuidanceReportKey,
+} from '@/lib/siteReports/legacyTechnicalGuidance';
+import {
   applyScheduleReportUpdateToSession,
   buildContractWindowFromScheduleRows,
   buildContractWindowFromSafetySite,
@@ -48,7 +54,7 @@ import {
   type AdminLegacySiteReportRequestToken,
 } from '@/features/site-reports/report-list/adminLegacySiteReportCache';
 import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/useSiteReportIndexLoader';
-import type { InspectionReportListItem, InspectionSite } from '@/types/inspectionSession';
+import type { InspectionReportListItem, InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface UseSiteReportListStateOptions {
   buildReportHref?: (reportKey: string) => string;
@@ -92,6 +98,19 @@ function isWritableReportListItem(item: InspectionReportListItem) {
   );
 }
 
+function normalizeText(value: string | null | undefined) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function buildReportHref(
+  reportKey: string,
+  buildReportHrefOption: UseSiteReportListStateOptions['buildReportHref'],
+) {
+  return buildReportHrefOption
+    ? buildReportHrefOption(reportKey)
+    : `/sessions/${reportKey}`;
+}
+
 const SITE_REPORT_LIST_QUERY_DEFAULTS = {
   dispatch: 'all',
   reportQuery: '',
@@ -112,6 +131,7 @@ export function useSiteReportListState(
     currentUser,
     createSession,
     deleteSession,
+    deleteSessions,
     ensureAssignedSafetySite,
     ensureSessionLoaded,
     ensureSiteReportIndexLoaded,
@@ -205,6 +225,7 @@ export function useSiteReportListState(
       : createIdleAdminLegacySiteReportsState();
   });
   const adminLegacyRequestRef = useRef<AdminLegacySiteReportRequestToken | null>(null);
+  const legacyCreateInFlightRef = useRef<Set<string>>(new Set());
   const reloadAdminLegacyItems = useCallback(
     async (options?: { force?: boolean }) => {
       const ownerId = currentUser?.id?.trim() || '';
@@ -508,11 +529,171 @@ export function useSiteReportListState(
     router.push(nextHref);
   };
 
+  const createLegacyReport = async (item: InspectionReportListItem) => {
+    if (!currentSite || effectiveReportIndexStatus !== 'loaded') return;
+    if (!isLegacyTechnicalGuidanceCreateTarget(item)) return;
+    if (legacyCreateInFlightRef.current.has(item.reportKey)) return;
+
+    legacyCreateInFlightRef.current.add(item.reportKey);
+    let createdSession: InspectionSession | null = null;
+    let relinkedScheduleId: string | null = null;
+    let previousLinkedReportKey = '';
+    let previousPlannedDate = '';
+
+    try {
+      const targetVisitDate = normalizeText(item.visitDate);
+      const targetVisitRound =
+        typeof item.visitRound === 'number' &&
+        Number.isFinite(item.visitRound) &&
+        item.visitRound > 0
+          ? Math.trunc(item.visitRound)
+          : 0;
+
+      if (!targetVisitDate || !targetVisitRound) {
+        throw new SafetyApiError('Legacy report is missing visit date or round.', 400);
+      }
+
+      const existingReport = findReportGeneratedFromLegacyTarget(
+        effectiveReportItems,
+        item,
+      );
+      if (existingReport) {
+        router.push(buildReportHref(existingReport.reportKey, options.buildReportHref));
+        return;
+      }
+
+      const token = readSafetyAuthToken();
+      if (!token) {
+        throw new SafetyApiError('濡쒓렇?몄씠 留뚮즺?섏뿀?듬땲?? ?ㅼ떆 濡쒓렇?명빐 二쇱꽭??', 401);
+      }
+
+      const safetySite = await ensureAssignedSafetySite(currentSite.id);
+      const scheduleResponse = await fetchAllMySchedules({
+        includeAll: true,
+        siteId: currentSite.id,
+      });
+      const matchedByLinkedKey =
+        scheduleResponse.rows.find(
+          (row) => normalizeText(row.linkedReportKey) === item.reportKey,
+        ) ?? null;
+      const matchedByRound =
+        scheduleResponse.rows.find((row) => row.roundNo === targetVisitRound) ??
+        null;
+      const matchedSchedule = matchedByLinkedKey ?? matchedByRound;
+
+      if (!matchedSchedule) {
+        throw new SafetyApiError('Matching schedule for the legacy report was not found.', 400);
+      }
+      if (matchedSchedule.roundNo !== targetVisitRound) {
+        throw new SafetyApiError('Legacy report round does not match the linked schedule.', 400);
+      }
+
+      const linkedReportKey = normalizeText(matchedSchedule.linkedReportKey);
+      if (linkedReportKey && linkedReportKey !== item.reportKey) {
+        if (isLegacyTechnicalGuidanceReportKey(linkedReportKey)) {
+          throw new SafetyApiError('Schedule is linked to a different legacy report.', 400);
+        }
+
+        router.push(buildReportHref(linkedReportKey, options.buildReportHref));
+        return;
+      }
+
+      const contractWindow = resolveContractWindow(
+        buildContractWindowFromSafetySite(safetySite),
+        buildContractWindowFromScheduleRows(scheduleResponse.rows),
+      );
+      if (!contractWindow.windowStart || !contractWindow.windowEnd) {
+        throw new SafetyApiError('?꾩옣 怨꾩빟湲곌컙???ㅼ젙?섏뼱 ?덉? ?딆븘 諛⑸Ц?쇱쓣 ??ν븷 ???놁뒿?덈떎.', 400);
+      }
+      if (targetVisitDate < contractWindow.windowStart || targetVisitDate > contractWindow.windowEnd) {
+        throw new SafetyApiError(
+          `${targetVisitDate}? 怨꾩빟湲곌컙 ${contractWindow.windowStart} ~ ${contractWindow.windowEnd} 諛뽰엯?덈떎.`,
+          400,
+        );
+      }
+
+      const seed = await fetchTechnicalGuidanceSeed(token, currentSite.id, {
+        targetVisitDate,
+        targetVisitRound,
+      });
+      const normalizedReportTitle = buildDefaultReportTitle(
+        targetVisitDate,
+        targetVisitRound,
+      );
+      const sourceLegacyReportId =
+        getLegacyTechnicalGuidanceReportId(item.reportKey) ?? undefined;
+
+      createdSession = createSession(currentSite, {
+        reportNumber: targetVisitRound,
+        scheduleId: matchedSchedule.id,
+        scheduleRoundNo: matchedSchedule.roundNo,
+        meta: {
+          siteName: currentSite.siteName,
+          reportDate: targetVisitDate,
+          reportTitle: normalizedReportTitle,
+          drafter: currentUser?.name || currentSite.assigneeName,
+          sourceLegacyReportKey: item.reportKey,
+          sourceLegacyReportId,
+        },
+        document4FollowUps: seed.open_followups.map((seedItem) => ({
+          id: seedItem.id,
+          sourceSessionId: seedItem.source_session_id ?? undefined,
+          sourceFindingId: seedItem.source_finding_id ?? undefined,
+          location: seedItem.location,
+          guidanceDate: seedItem.guidance_date,
+          confirmationDate: seedItem.confirmation_date || targetVisitDate,
+          beforePhotoUrl: seedItem.before_photo_url,
+          afterPhotoUrl: seedItem.after_photo_url,
+          result: seedItem.result,
+        })),
+        technicalGuidanceRelations: createEmptyTechnicalGuidanceRelations({
+          computedAt: new Date().toISOString(),
+          projectionVersion: seed.projection_version,
+          stale: false,
+          recomputeStatus: 'fresh',
+          sourceReportKeys: seed.previous_authoritative_report?.report_key
+            ? [seed.previous_authoritative_report.report_key]
+            : [],
+          cumulativeAccidentEntries: seed.cumulative_accident_entries,
+          cumulativeAgentEntries: seed.cumulative_agent_entries,
+        }),
+      });
+
+      previousLinkedReportKey = linkedReportKey;
+      previousPlannedDate = normalizeText(matchedSchedule.plannedDate);
+      await updateMySchedule(matchedSchedule.id, {
+        linkedReportKey: createdSession.id,
+        plannedDate: targetVisitDate,
+      });
+      relinkedScheduleId = matchedSchedule.id;
+      await saveNow({ ignorePersistErrors: true, throwOnError: true });
+
+      router.push(buildReportHref(createdSession.id, options.buildReportHref));
+    } catch (error) {
+      if (createdSession) {
+        deleteSessions((session) => session.id === createdSession?.id);
+      }
+      if (relinkedScheduleId) {
+        await updateMySchedule(relinkedScheduleId, {
+          linkedReportKey: previousLinkedReportKey,
+          plannedDate: previousPlannedDate,
+        }).catch(() => {
+          // Best-effort rollback only; surface the original creation failure.
+        });
+      }
+
+      throw error;
+    } finally {
+      legacyCreateInFlightRef.current.delete(item.reportKey);
+    }
+  };
+
   const canCreateReport = effectiveReportIndexStatus === 'loaded';
   return {
     assignedUserDisplay,
     canArchiveReports,
     canCreateReport,
+    createLegacyReport,
     createReport,
     currentSite,
     currentUser,

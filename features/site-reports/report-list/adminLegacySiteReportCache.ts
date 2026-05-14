@@ -158,15 +158,18 @@ export function mapAdminLegacyRowToReportItem(
     typeof row.routeParam === 'string' && /^\d+$/.test(row.routeParam)
       ? Number(row.routeParam)
       : null;
+  const originalPdfAvailable = Boolean(row.originalPdfAvailable);
 
   return {
     id: row.reportKey,
     reportKey: row.reportKey,
     reportTitle: row.reportTitle || row.periodLabel || row.reportKey,
-    reportOpenHref: `/admin/report-open?reportKey=${encodeURIComponent(row.reportKey)}`,
-    reportOpenMode: 'original_pdf',
+    reportOpenHref: originalPdfAvailable
+      ? `/admin/report-open?reportKey=${encodeURIComponent(row.reportKey)}`
+      : null,
+    reportOpenMode: originalPdfAvailable ? 'original_pdf' : 'legacy_create',
     readOnly: true,
-    originalPdfAvailable: Boolean(row.originalPdfAvailable),
+    originalPdfAvailable,
     siteId: row.siteId,
     headquarterId: row.headquarterId || null,
     assignedUserId: row.assigneeUserId || null,
@@ -192,7 +195,7 @@ export function mapAdminLegacyRowToReportItem(
     meta: {
       dispatch: row.dispatch,
       drafter: row.assigneeName,
-      originalPdfAvailable: Boolean(row.originalPdfAvailable),
+      originalPdfAvailable,
       reportType: row.reportType,
       siteName: row.siteName,
     },

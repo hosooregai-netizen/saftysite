@@ -96,7 +96,7 @@ export interface InspectionReportListItem {
   reportKey: string;
   reportTitle: string;
   reportOpenHref?: string | null;
-  reportOpenMode?: 'session' | 'original_pdf';
+  reportOpenMode?: 'session' | 'original_pdf' | 'legacy_create';
   readOnly?: boolean;
   originalPdfAvailable?: boolean;
   siteId: string;
