@@ -1,6 +1,5 @@
 import type { Locator, Page } from 'playwright';
 import type { ClientSmokePlaywrightConfig } from '../../../playwright.config';
-import type { SafetyAdminScheduleListResponse } from '../../../types/admin';
 import { createAdminSmokeHarness } from '../fixtures/adminSmokeHarness';
 
 async function assertSiteTableColumnCount(page: Page) {
@@ -259,47 +258,31 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
         url.searchParams.get('target_visit_round') === '6'
       );
     });
-    const legacyAdminScheduleResponse = page.waitForResponse((response) => {
-      const url = new URL(response.url());
+    const legacySchedulePatchResponse = page.waitForResponse((response) => {
       return (
-        response.request().method() === 'GET' &&
-        url.pathname === '/api/admin/schedules' &&
-        url.searchParams.get('site_id') === 'site-1' &&
-        url.searchParams.get('month') === 'all'
-      );
-    });
-    const legacyReportUpsertRequest = page.waitForRequest((request) => {
-      const url = new URL(request.url());
-      return (
-        request.method() === 'POST' &&
-        url.pathname.endsWith('/reports/upsert')
+        response.request().method() === 'PATCH' &&
+        response.url().includes('/api/me/schedules/schedule-smoke-6')
       );
     });
     await pdfMissingLegacyTrigger.click();
     await legacySeedResponse;
-    const adminSchedulePayload =
-      (await (await legacyAdminScheduleResponse).json()) as SafetyAdminScheduleListResponse;
-    const matchedAdminSchedule = adminSchedulePayload.rows.find(
-      (row) => row.roundNo === 6,
-    );
-    if (!matchedAdminSchedule) {
-      throw new Error('PDF-less legacy creation did not load the matching admin schedule.');
+    const linkedSchedule = (await (await legacySchedulePatchResponse).json()) as {
+      linkedReportKey: string;
+      plannedDate: string;
+      roundNo: number;
+    };
+    if (
+      !linkedSchedule.linkedReportKey ||
+      linkedSchedule.linkedReportKey.startsWith('legacy:technical_guidance:')
+    ) {
+      throw new Error('PDF-less legacy creation did not relink the schedule to a new session key.');
     }
-    if (matchedAdminSchedule.plannedDate !== '2026-04-07') {
-      throw new Error('PDF-less legacy creation matched the wrong admin schedule date.');
+    if (linkedSchedule.plannedDate !== '2026-04-07' || linkedSchedule.roundNo !== 6) {
+      throw new Error('PDF-less legacy creation patched the wrong visit date or round.');
     }
-    const reportUpsertBody =
-      ((await legacyReportUpsertRequest).postDataJSON?.() ?? {}) as Record<string, unknown>;
-    const generatedReportKey = String(reportUpsertBody.report_key || '');
-    if (!generatedReportKey || generatedReportKey.startsWith('legacy:technical_guidance:')) {
-      throw new Error('PDF-less legacy creation did not create a new session report key.');
-    }
-    if (reportUpsertBody.schedule_id !== matchedAdminSchedule.id) {
-      throw new Error('PDF-less legacy creation did not save the matching admin schedule id.');
-    }
-    await page.waitForURL(new RegExp(`/sessions/${generatedReportKey}$`));
+    await page.waitForURL(new RegExp(`/sessions/${linkedSchedule.linkedReportKey}$`));
     const generatedLegacyReport = harness.state.reports.find(
-      (report) => String(report.report_key) === generatedReportKey,
+      (report) => String(report.report_key) === linkedSchedule.linkedReportKey,
     );
     if (!generatedLegacyReport) {
       throw new Error('PDF-less legacy creation did not save a generated report.');
@@ -316,7 +299,7 @@ export async function runAdminSitesSmoke(config: ClientSmokePlaywrightConfig) {
       waitUntil: 'load',
     });
     await page.waitForURL(/\/sites\/site-1$/);
-    await page.locator(`a[href="/sessions/${generatedReportKey}"]`).first().waitFor({
+    await page.locator(`a[href="/sessions/${linkedSchedule.linkedReportKey}"]`).first().waitFor({
       state: 'visible',
     });
     if (await page.getByText('Legacy PDF Missing 6', { exact: true }).isVisible().catch(() => false)) {

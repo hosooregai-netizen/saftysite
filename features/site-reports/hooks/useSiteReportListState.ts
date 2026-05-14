@@ -16,7 +16,6 @@ import {
 } from '@/hooks/useUrlQueryState';
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { isAdminUserRole } from '@/lib/admin';
-import { fetchAdminSchedules } from '@/lib/admin/apiClient';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import {
   fetchTechnicalGuidanceSeed,
@@ -55,7 +54,6 @@ import {
   type AdminLegacySiteReportRequestToken,
 } from '@/features/site-reports/report-list/adminLegacySiteReportCache';
 import { useSiteReportIndexLoader } from '@/features/site-reports/report-list/useSiteReportIndexLoader';
-import type { SafetyInspectionSchedule } from '@/types/admin';
 import type { InspectionReportListItem, InspectionSession, InspectionSite } from '@/types/inspectionSession';
 
 interface UseSiteReportListStateOptions {
@@ -118,78 +116,6 @@ const SITE_REPORT_LIST_QUERY_DEFAULTS = {
   reportQuery: '',
   reportSort: 'round',
 };
-
-const ADMIN_SITE_SCHEDULE_PAGE_LIMIT = 5000;
-
-async function fetchAllAdminSiteSchedules(siteId: string) {
-  const rows: SafetyInspectionSchedule[] = [];
-  let offset = 0;
-
-  while (true) {
-    const response = await fetchAdminSchedules({
-      limit: ADMIN_SITE_SCHEDULE_PAGE_LIMIT,
-      month: 'all',
-      offset,
-      siteId,
-    });
-    rows.push(...response.rows);
-
-    const pageLimit = response.limit || ADMIN_SITE_SCHEDULE_PAGE_LIMIT;
-    const nextOffset = offset + response.rows.length;
-    const total = response.total ?? nextOffset;
-    if (
-      response.rows.length === 0 ||
-      response.rows.length < pageLimit ||
-      nextOffset >= total
-    ) {
-      return rows;
-    }
-
-    offset = nextOffset;
-  }
-}
-
-function findLegacyReportSchedule(
-  rows: SafetyInspectionSchedule[],
-  item: InspectionReportListItem,
-  targetVisitDate: string,
-  targetVisitRound: number,
-) {
-  const linkedKeyMatches = rows.filter(
-    (row) => normalizeText(row.linkedReportKey) === item.reportKey,
-  );
-  const linkedKeyMatch =
-    linkedKeyMatches.find(
-      (row) =>
-        row.roundNo === targetVisitRound &&
-        normalizeText(row.plannedDate) === targetVisitDate,
-    ) ??
-    linkedKeyMatches.find((row) => row.roundNo === targetVisitRound) ??
-    linkedKeyMatches[0] ??
-    null;
-
-  if (linkedKeyMatch) {
-    return linkedKeyMatch;
-  }
-
-  const roundMatches = rows.filter((row) => row.roundNo === targetVisitRound);
-  const isCurrentOrOpen = (row: SafetyInspectionSchedule) => {
-    const linkedReportKey = normalizeText(row.linkedReportKey);
-    return !linkedReportKey || linkedReportKey === item.reportKey;
-  };
-
-  return (
-    roundMatches.find(
-      (row) =>
-        normalizeText(row.plannedDate) === targetVisitDate &&
-        isCurrentOrOpen(row),
-    ) ??
-    roundMatches.find(isCurrentOrOpen) ??
-    roundMatches.find((row) => normalizeText(row.plannedDate) === targetVisitDate) ??
-    roundMatches[0] ??
-    null
-  );
-}
 
 export function useSiteReportListState(
   siteKey: string | null,
@@ -642,18 +568,18 @@ export function useSiteReportListState(
       }
 
       const safetySite = await ensureAssignedSafetySite(currentSite.id);
-      const scheduleRows = isAdminView
-        ? await fetchAllAdminSiteSchedules(currentSite.id)
-        : (await fetchAllMySchedules({
-            includeAll: true,
-            siteId: currentSite.id,
-          })).rows;
-      const matchedSchedule = findLegacyReportSchedule(
-        scheduleRows,
-        item,
-        targetVisitDate,
-        targetVisitRound,
-      );
+      const scheduleResponse = await fetchAllMySchedules({
+        includeAll: true,
+        siteId: currentSite.id,
+      });
+      const matchedByLinkedKey =
+        scheduleResponse.rows.find(
+          (row) => normalizeText(row.linkedReportKey) === item.reportKey,
+        ) ?? null;
+      const matchedByRound =
+        scheduleResponse.rows.find((row) => row.roundNo === targetVisitRound) ??
+        null;
+      const matchedSchedule = matchedByLinkedKey ?? matchedByRound;
 
       if (!matchedSchedule) {
         throw new SafetyApiError('Matching schedule for the legacy report was not found.', 400);
@@ -674,7 +600,7 @@ export function useSiteReportListState(
 
       const contractWindow = resolveContractWindow(
         buildContractWindowFromSafetySite(safetySite),
-        buildContractWindowFromScheduleRows(scheduleRows),
+        buildContractWindowFromScheduleRows(scheduleResponse.rows),
       );
       if (!contractWindow.windowStart || !contractWindow.windowEnd) {
         throw new SafetyApiError('?꾩옣 怨꾩빟湲곌컙???ㅼ젙?섏뼱 ?덉? ?딆븘 諛⑸Ц?쇱쓣 ??ν븷 ???놁뒿?덈떎.', 400);
@@ -735,13 +661,11 @@ export function useSiteReportListState(
 
       previousLinkedReportKey = linkedReportKey;
       previousPlannedDate = normalizeText(matchedSchedule.plannedDate);
-      if (!isAdminView) {
-        await updateMySchedule(matchedSchedule.id, {
-          linkedReportKey: createdSession.id,
-          plannedDate: targetVisitDate,
-        });
-        relinkedScheduleId = matchedSchedule.id;
-      }
+      await updateMySchedule(matchedSchedule.id, {
+        linkedReportKey: createdSession.id,
+        plannedDate: targetVisitDate,
+      });
+      relinkedScheduleId = matchedSchedule.id;
       await saveNow({ ignorePersistErrors: true, throwOnError: true });
 
       router.push(buildReportHref(createdSession.id, options.buildReportHref));
