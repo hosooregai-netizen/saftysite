@@ -34,6 +34,7 @@ import type {
   SafetyAdminOverviewResponse,
   SafetyAdminReportsResponse,
   SafetyAdminScheduleCalendarResponse,
+  SafetyAdminScheduleListResponse,
   SafetyAdminScheduleLookupsResponse,
   SafetyAdminScheduleQueueResponse,
   SafetyInspectionSchedule,
@@ -390,6 +391,34 @@ function buildScheduleCalendarResponse(
   };
 }
 
+function buildScheduleListResponse(
+  harness: ErpSmokeHarness,
+  url: URL,
+): SafetyAdminScheduleListResponse {
+  const filters = {
+    assigneeUserId: url.searchParams.get('assignee_user_id') || '',
+    month: url.searchParams.get('month') || '',
+    plannedDate: url.searchParams.get('planned_date') || '',
+    query: url.searchParams.get('query') || '',
+    siteId: url.searchParams.get('site_id') || '',
+    status: url.searchParams.get('status') || '',
+  };
+  const limit = Number(url.searchParams.get('limit') || '200');
+  const offset = Number(url.searchParams.get('offset') || '0');
+  const rows = buildScheduleRows(harness);
+  const selectedRows = buildAdminCalendarSchedules(rows, filters, new Date(NOW));
+  const unselectedRows = buildAdminQueueSchedules(rows, filters, new Date(NOW));
+  const combinedRows = [...selectedRows, ...unselectedRows];
+
+  return {
+    limit,
+    month: filters.month,
+    offset,
+    rows: clone(combinedRows.slice(offset, offset + limit)),
+    total: combinedRows.length,
+  };
+}
+
 function buildScheduleQueueResponse(
   harness: ErpSmokeHarness,
   url: URL,
@@ -632,6 +661,11 @@ async function installAdminRoutes(harness: ErpSmokeHarness) {
 
     if (pathname === '/api/admin/dashboard/analytics/detail' && request.method() === 'GET') {
       await fulfillJson(route, buildAnalyticsDetailResponse(harness, url));
+      return;
+    }
+
+    if (pathname === '/api/admin/schedules' && request.method() === 'GET') {
+      await fulfillJson(route, buildScheduleListResponse(harness, url));
       return;
     }
 
