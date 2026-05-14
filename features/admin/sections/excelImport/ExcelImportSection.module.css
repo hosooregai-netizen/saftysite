@@ -70,6 +70,51 @@
   background: #fbfcfe;
 }
 
+.k2bPreviewSection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--erp-line);
+}
+
+.k2bPreviewList {
+  overflow-x: auto;
+  border-top: 1px solid var(--erp-line);
+}
+
+.k2bPreviewRow {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.2fr)
+    minmax(240px, 1.6fr)
+    minmax(130px, 0.8fr)
+    minmax(190px, 1.1fr)
+    minmax(140px, 0.8fr)
+    minmax(130px, 0.7fr);
+  min-width: 1010px;
+  border-bottom: 1px solid var(--erp-line);
+}
+
+.k2bPreviewHeader {
+  background: #fbfcfe;
+}
+
+.k2bPreviewCell {
+  min-width: 0;
+  padding: 10px 12px;
+  overflow: hidden;
+  color: var(--erp-dark);
+  font-size: var(--text-body);
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.k2bPreviewHeader .k2bPreviewCell {
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  font-weight: 700;
+}
+
 .candidateList {
   display: grid;
   gap: 6px;
@@ -221,5 +266,14 @@
   .summaryGrid,
   .mappingGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .k2bPreviewSection {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .k2bPreviewRow {
+    min-width: 920px;
   }
 }

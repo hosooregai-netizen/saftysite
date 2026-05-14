@@ -9,6 +9,7 @@ import type {
   ExcelImportPreviewRow,
   ExcelImportScope,
   ExcelImportScopeSummary,
+  ExcelImportSheetPreview,
 } from '@/types/excelImport';
 import styles from './ExcelImportSection.module.css';
 
@@ -52,6 +53,16 @@ const FIELD_LABELS: Record<string, string> = {
   visit_date: '기술지도일',
 };
 
+interface K2bPreviewRow {
+  companyName: string;
+  contractPeriod: string;
+  contractSignedDate: string;
+  projectAmount: string;
+  rowIndex: number;
+  siteName: string;
+  totalRounds: string;
+}
+
 function buildScopeSummary(scope: ExcelImportScope): ExcelImportScopeSummary {
   return {
     ...scope,
@@ -91,6 +102,47 @@ function getFieldLabel(field: string) {
   return FIELD_LABELS[field] ?? field;
 }
 
+function displayValue(value: string | null | undefined) {
+  const normalized = (value ?? '').trim();
+  return normalized || '-';
+}
+
+function getMappedRowValue(
+  row: ExcelImportPreviewRow,
+  selectedSheet: ExcelImportSheetPreview | null,
+  field: string,
+) {
+  const header = selectedSheet?.suggestedMapping[field]?.trim();
+  if (!header) return '';
+  return row.values[header]?.trim() ?? '';
+}
+
+function formatContractPeriod(startDate: string, endDate: string) {
+  if (!startDate && !endDate) return '-';
+  return `${displayValue(startDate)} ~ ${displayValue(endDate)}`;
+}
+
+function buildK2bPreviewRow(
+  row: ExcelImportPreviewRow,
+  selectedSheet: ExcelImportSheetPreview | null,
+): K2bPreviewRow {
+  const projectAmount =
+    getMappedRowValue(row, selectedSheet, 'project_amount') ||
+    getMappedRowValue(row, selectedSheet, 'total_contract_amount');
+  return {
+    companyName: displayValue(getMappedRowValue(row, selectedSheet, 'headquarter_name')),
+    contractPeriod: formatContractPeriod(
+      getMappedRowValue(row, selectedSheet, 'contract_start_date'),
+      getMappedRowValue(row, selectedSheet, 'contract_end_date'),
+    ),
+    contractSignedDate: displayValue(getMappedRowValue(row, selectedSheet, 'contract_signed_date')),
+    projectAmount: displayValue(projectAmount),
+    rowIndex: row.rowIndex,
+    siteName: displayValue(getMappedRowValue(row, selectedSheet, 'site_name')),
+    totalRounds: displayValue(getMappedRowValue(row, selectedSheet, 'total_rounds')),
+  };
+}
+
 export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<ExcelImportPreview | null>(null);
@@ -102,6 +154,7 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
     '업로드할 .xlsx 파일을 선택해 주세요.',
   );
 
+  const isK2bImport = scope.importKind === 'k2b_guidance';
   const scopeSummary = preview?.scope ?? buildScopeSummary(scope);
   const selectedSheet = useMemo(
     () => preview?.sheets.find((sheet) => sheet.name === selectedSheetName) ?? preview?.sheets[0] ?? null,
@@ -131,6 +184,10 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
         : [],
     [selectedSheet],
   );
+  const k2bPreviewRows = useMemo(
+    () => includedRows.map((row) => buildK2bPreviewRow(row, selectedSheet)),
+    [includedRows, selectedSheet],
+  );
 
   const handleFileSelection = async (file: File | null) => {
     if (!file) return;
@@ -143,7 +200,7 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
       setPreview(nextPreview);
       setSelectedSheetName(nextPreview.sheets[0]?.name || '');
       setNotice(
-        scope.importKind === 'k2b_guidance'
+        isK2bImport
           ? 'K2B 엑셀 파일을 읽었습니다. 포함 행은 건설사, 현장, 회차 일정, 기술지도 보고서로 반영됩니다.'
           : '엑셀 파일을 읽었습니다. 포함 행과 제외 행을 확인한 뒤 반영할 수 있습니다.',
       );
@@ -183,8 +240,8 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
         <div className={sharedStyles.sectionHeader}>
           <div>
             <h2 className={sharedStyles.sectionTitle}>엑셀 업로드</h2>
-              <p className={styles.stepDescription}>
-              {scope.importKind === 'k2b_guidance'
+            <p className={styles.stepDescription}>
+              {isK2bImport
                 ? '회차와 기술지도일이 있는 K2B 행만 자동등록 대상에 포함됩니다.'
                 : (
                   <>
@@ -195,7 +252,7 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
             </p>
           </div>
           <div className={sharedStyles.sectionHeaderActions}>
-            <span className="app-chip">{scopeSummary.label}</span>
+            {!isK2bImport ? <span className="app-chip">{scopeSummary.label}</span> : null}
             <button
               type="button"
               className="app-button app-button-primary"
@@ -226,11 +283,11 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
           <div className={sharedStyles.sectionHeader}>
             <div>
               <h2 className={sharedStyles.sectionTitle}>엑셀 미리보기</h2>
-              <p className={styles.stepDescription}>
-                {scope.importKind === 'k2b_guidance'
-                  ? '포함 행만 반영됩니다. 같은 건설사/현장/회차 보고서가 이미 있으면 새로 만들지 않습니다.'
-                  : '포함 행만 반영됩니다. 제외된 행은 반영 대상에 포함되지 않습니다.'}
-              </p>
+              {!isK2bImport ? (
+                <p className={styles.stepDescription}>
+                  포함 행만 반영됩니다. 제외된 행은 반영 대상에 포함되지 않습니다.
+                </p>
+              ) : null}
             </div>
             <div className={sharedStyles.sectionHeaderActions}>
               <button
@@ -262,30 +319,36 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
             </div>
           </div>
           <div className={sharedStyles.sectionBody}>
-            <div className={styles.inlineActions}>
-              <span className="app-chip">{preview.fileName}</span>
-              <span className="app-chip">{scopeSummary.label}</span>
-              {preview.sheets.length > 1 ? (
-                <label className={styles.selectLabel}>
-                  <span className={styles.summaryLabel}>시트</span>
-                  <select
-                    className="app-select"
-                    value={selectedSheet.name}
-                    onChange={(event) => setSelectedSheetName(event.target.value)}
-                  >
-                    {preview.sheets.map((sheet) => (
-                      <option key={sheet.name} value={sheet.name}>
-                        {sheet.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <span className="app-chip">시트 {selectedSheet.name}</span>
-              )}
-            </div>
+            {!isK2bImport || preview.sheets.length > 1 ? (
+              <div className={styles.inlineActions}>
+                {!isK2bImport ? (
+                  <>
+                    <span className="app-chip">{preview.fileName}</span>
+                    <span className="app-chip">{scopeSummary.label}</span>
+                  </>
+                ) : null}
+                {preview.sheets.length > 1 ? (
+                  <label className={styles.selectLabel}>
+                    <span className={styles.summaryLabel}>시트</span>
+                    <select
+                      className="app-select"
+                      value={selectedSheet.name}
+                      onChange={(event) => setSelectedSheetName(event.target.value)}
+                    >
+                      {preview.sheets.map((sheet) => (
+                        <option key={sheet.name} value={sheet.name}>
+                          {sheet.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : !isK2bImport ? (
+                  <span className="app-chip">시트 {selectedSheet.name}</span>
+                ) : null}
+              </div>
+            ) : null}
 
-            {missingFieldLabels.length > 0 ? (
+            {!isK2bImport && missingFieldLabels.length > 0 ? (
               <div className={styles.mappingHint}>
                 자동 감지되지 않은 필드: {missingFieldLabels.join(', ')}. 이 파일에서 값이 비어 있으면 기존
                 DB 값은 유지됩니다.
@@ -296,7 +359,7 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
               <div className={styles.warningBox}>{selectedSheet.mappingWarnings.join(' ')}</div>
             ) : null}
 
-            {selectedSheet.detectedMappings.length > 0 || selectedSheet.ignoredHeaders.length > 0 ? (
+            {!isK2bImport && (selectedSheet.detectedMappings.length > 0 || selectedSheet.ignoredHeaders.length > 0) ? (
               <div className={styles.mappingGrid}>
                 <article className={styles.mappingCard}>
                   <h3 className={styles.mappingTitle}>자동 감지된 매핑</h3>
@@ -364,6 +427,41 @@ export function ExcelImportSection({ onReload, scope }: ExcelImportSectionProps)
 
             {selectedSheet.includedRowCount === 0 ? (
               <div className={styles.emptyState}>현재 스코프에 맞는 반영 대상 행이 없습니다.</div>
+            ) : isK2bImport ? (
+              <div className={styles.k2bPreviewSection}>
+                <div className={styles.k2bPreviewList} role="table" aria-label="K2B 엑셀 포함 행 미리보기">
+                  <div className={`${styles.k2bPreviewRow} ${styles.k2bPreviewHeader}`} role="row">
+                    <span className={styles.k2bPreviewCell} role="columnheader">회사명</span>
+                    <span className={styles.k2bPreviewCell} role="columnheader">현장명</span>
+                    <span className={styles.k2bPreviewCell} role="columnheader">공사금액</span>
+                    <span className={styles.k2bPreviewCell} role="columnheader">계약기간</span>
+                    <span className={styles.k2bPreviewCell} role="columnheader">계약체결일</span>
+                    <span className={styles.k2bPreviewCell} role="columnheader">총 지도 회차 수</span>
+                  </div>
+                  {k2bPreviewRows.map((row) => (
+                    <div className={styles.k2bPreviewRow} role="row" key={`k2b-preview-row-${row.rowIndex}`}>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.companyName}>
+                        {row.companyName}
+                      </span>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.siteName}>
+                        {row.siteName}
+                      </span>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.projectAmount}>
+                        {row.projectAmount}
+                      </span>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.contractPeriod}>
+                        {row.contractPeriod}
+                      </span>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.contractSignedDate}>
+                        {row.contractSignedDate}
+                      </span>
+                      <span className={styles.k2bPreviewCell} role="cell" title={row.totalRounds}>
+                        {row.totalRounds}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : (
               <div className={styles.previewGrid}>
                 <table className={styles.rowTable}>
