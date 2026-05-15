@@ -604,6 +604,14 @@ function valueOrDash(value: unknown): string {
   return normalized;
 }
 
+function formatProgressRateValue(value: unknown): string {
+  const normalized = valueOrBlank(value);
+  if (!normalized) {
+    return '';
+  }
+  return normalized.endsWith('%') ? normalized.replace(/\s*%$/u, '%') : `${normalized}%`;
+}
+
 function normalizeCoverVisitRound(value: unknown): string {
   const normalized =
     typeof value === 'number' && Number.isFinite(value) ? String(value) : valueOrBlank(value);
@@ -1743,7 +1751,7 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
 
   text['sec2.guidance_date'] = valueOrDash(formatDateText(overview.guidanceDate));
   text['sec2.construction_type'] = valueOrDash(overview.constructionType);
-  text['sec2.progress_rate'] = valueOrDash(overview.progressRate);
+  text['sec2.progress_rate'] = formatProgressRateValue(overview.progressRate);
   text['sec2.visit_count'] = valueOrDash(overview.visitCount);
   text['sec2.total_visit_count'] = valueOrDash(overview.totalVisitCount);
   text['footer.visit_page_prefix'] = buildVisitPagePrefix(overview.visitCount);

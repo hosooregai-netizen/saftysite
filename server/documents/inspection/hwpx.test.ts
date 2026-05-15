@@ -193,6 +193,22 @@ test('mapSessionToTemplateBinding keeps cover signature fields blank even when m
   assert.equal(binding.text['cover.approver'], '');
 });
 
+test('mapSessionToTemplateBinding appends percent sign to progress rate values', () => {
+  const session = createInspectionSession({}, 'progress-rate-site', 1);
+
+  session.document2Overview.progressRate = '50';
+  assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '50%');
+
+  session.document2Overview.progressRate = '50%';
+  assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '50%');
+
+  session.document2Overview.progressRate = '50 %';
+  assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '50%');
+
+  session.document2Overview.progressRate = '';
+  assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '');
+});
+
 test('mapSessionToTemplateBinding appends compact visit round to the cover site name', () => {
   const session = createInspectionSession(
     {
@@ -248,6 +264,22 @@ test('buildInspectionHwpxDocument clears cover signature placeholders for both i
     for (const token of signatureTokens) {
       assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(`{${token}}`)));
     }
+  }
+});
+
+test('buildInspectionHwpxDocument appends percent sign to progress rate for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession({}, `progress-rate-site-${accidentOccurred}`, 1);
+    session.document2Overview.accidentOccurred = accidentOccurred;
+    session.document2Overview.progressRate = '73';
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    assert.match(sectionXml, />73%<\/hp:t>/);
+    assert.doesNotMatch(sectionXml, /\{sec2\.progress_rate\}/);
   }
 });
 
