@@ -150,7 +150,7 @@ export async function resolveInspectionSessionBootstrapByReportKey(
       documentKind: 'technical_guidance',
       reportKey: targetReport.report_key,
       updatedAt: targetReport.updated_at || '',
-      version: 'inspection-v10-template-text-layout-v1',
+      version: 'inspection-v10-template-text-layout-v2-measurement-unit',
     },
     site,
     session,

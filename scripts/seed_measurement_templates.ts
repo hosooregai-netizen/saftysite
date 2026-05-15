@@ -209,6 +209,18 @@ function buildTemplateCode(index: number): string {
   return `measurement-template-${String(index + 1).padStart(2, '0')}`;
 }
 
+function resolveSeedMeasurementUnit(index: number): string {
+  const unitsByIndex = new Map<number, string>([
+    [0, 'Lux'],
+    [1, 'dB'],
+    [3, 'm/s'],
+    [5, '℃'],
+    [7, 'm/s²'],
+    [9, 'mSv'],
+  ]);
+  return unitsByIndex.get(index) ?? '';
+}
+
 function buildTemplatePayload(item: SeedMeasurementTemplate, index: number) {
   return {
     content_type: 'measurement_template',
@@ -218,6 +230,7 @@ function buildTemplatePayload(item: SeedMeasurementTemplate, index: number) {
       instrumentName: item.equipment_name,
       equipmentName: item.equipment_name,
       safetyCriteria: item.safety_standard.join('\n'),
+      measurementUnit: resolveSeedMeasurementUnit(index),
       safety_standard: item.safety_standard,
     },
     tags: ['seed', 'measurement-template'],
@@ -236,12 +249,19 @@ function needsUpdate(existing: SafetyContentItem, nextPayload: ReturnType<typeof
     (Array.isArray(body.safety_standard)
       ? body.safety_standard.map((entry) => normalizeText(entry)).filter(Boolean).join('\n')
       : '');
+  const existingMeasurementUnit =
+    normalizeText(body.measurementUnit) ||
+    normalizeText(body.measurement_unit) ||
+    normalizeText(body.unit) ||
+    normalizeText(body.valueUnit) ||
+    normalizeText(body.value_unit);
 
   return (
     existing.title !== nextPayload.title ||
     (existing.code || '') !== nextPayload.code ||
     getMeasurementTemplateName(existing) !== nextPayload.title ||
     existingCriteria !== nextPayload.body.safetyCriteria ||
+    existingMeasurementUnit !== nextPayload.body.measurementUnit ||
     existing.sort_order !== nextPayload.sort_order ||
     existing.is_active !== nextPayload.is_active
   );

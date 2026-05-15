@@ -19,6 +19,7 @@ function createDoc7Form(
     title: '',
     code: '',
     text_body: '작업발판을 설치하고 안전대를 체결한다.',
+    measurement_unit: '',
     image_url: 'https://example.com/reference.png',
     image_name: '',
     file_url_1: '',
@@ -59,6 +60,15 @@ function createDoc7ContentItem(body: unknown): SafetyContentItem {
   };
 }
 
+function createMeasurementContentItem(body: unknown): SafetyContentItem {
+  return {
+    ...createDoc7ContentItem(body),
+    id: 'measurement-content-1',
+    content_type: 'measurement_template',
+    title: '가스 측정기',
+  };
+}
+
 test('DOC7 참고자료 저장 바디는 4개 필드로 단순화된다', () => {
   const form = createDoc7Form();
 
@@ -69,6 +79,41 @@ test('DOC7 참고자료 저장 바디는 4개 필드로 단순화된다', () => 
     causativeAgentKey: '일반',
     imageUrl: 'https://example.com/reference.png',
   });
+});
+
+test('measurement template form stores measurementUnit in canonical body', () => {
+  const form = createDoc7Form({
+    content_type: 'measurement_template',
+    title: '가스 측정기',
+    text_body: '일산화탄소: 30ppm 미만',
+    measurement_unit: 'ppm',
+  });
+
+  assert.deepEqual(buildContentBody(form), {
+    instrumentName: '가스 측정기',
+    safetyCriteria: '일산화탄소: 30ppm 미만',
+    measurementUnit: 'ppm',
+  });
+});
+
+test('measurement template form reads legacy unit aliases', () => {
+  const unitForm = mapContentItemToForm(
+    createMeasurementContentItem({
+      instrumentName: '소음계',
+      safetyCriteria: '85dB 미만',
+      unit: 'dB',
+    }),
+  );
+  const snakeForm = mapContentItemToForm(
+    createMeasurementContentItem({
+      instrumentName: '조도계',
+      safetyCriteria: '300 Lux 이상',
+      measurement_unit: 'Lux',
+    }),
+  );
+
+  assert.equal(unitForm.measurement_unit, 'dB');
+  assert.equal(snakeForm.measurement_unit, 'Lux');
 });
 
 test('레거시 DOC7 참고자료도 폼에서 안전하게 읽고 재저장할 수 있다', () => {

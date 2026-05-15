@@ -160,6 +160,12 @@ function mapLegalReferenceItem(item: SafetyContentItem): SafetyLegalReference {
 function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementTemplate | null {
   const body = asMapperRecord(item.body);
   const title = normalizeMapperText(item.title);
+  const measurementUnit =
+    normalizeMapperText(body.measurementUnit) ||
+    normalizeMapperText(body.measurement_unit) ||
+    normalizeMapperText(body.unit) ||
+    normalizeMapperText(body.valueUnit) ||
+    normalizeMapperText(body.value_unit);
   const instrumentName =
     normalizeMapperText(body.instrumentName) ||
     normalizeMapperText(body.instrument_name) ||
@@ -195,6 +201,7 @@ function mapMeasurementTemplateItem(item: SafetyContentItem): SafetyMeasurementT
     title: title || instrumentName || 'measurement-template',
     instrumentName: fallbackInstrument,
     safetyCriteria: safetyCriteria || DEFAULT_MEASUREMENT_CRITERIA,
+    measurementUnit,
     effectiveFrom: normalizeContentDate(item.effective_from),
     effectiveTo: normalizeContentDate(item.effective_to),
     isActive: item.is_active,
@@ -439,9 +446,30 @@ export function mergeMasterDataIntoSession(
   masterData: SafetyMasterData,
 ): InspectionSession {
   const reportDate = getSessionGuidanceDate(session);
+  const document10Measurements = session.document10Measurements.map((measurement) => {
+    if (normalizeMapperText(measurement.measurementUnit)) {
+      return measurement;
+    }
+
+    const matchedTemplate = resolveMeasurementTemplate(
+      masterData,
+      measurement.instrumentType,
+      reportDate,
+    );
+    const measurementUnit = normalizeMapperText(matchedTemplate?.measurementUnit);
+    if (!measurementUnit) {
+      return measurement;
+    }
+
+    return {
+      ...measurement,
+      measurementUnit,
+    };
+  });
 
   return finalizeInspectionSession({
     ...session,
+    document10Measurements,
     document13Cases: getCaseFeedForReportDate(masterData, reportDate),
     document14SafetyInfos: getSafetyInfosForReportDate(masterData, reportDate),
   });

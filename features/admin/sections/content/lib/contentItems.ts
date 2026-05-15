@@ -27,6 +27,7 @@ export interface ContentFormState {
   title: string;
   code: string;
   text_body: string;
+  measurement_unit: string;
   image_url: string;
   image_name: string;
   file_url_1: string;
@@ -68,6 +69,17 @@ function readMeasurementSafetyCriteria(body: unknown) {
     normalizeMapperText(record.safety_criteria) ||
     listText ||
     readText(body, 'measurement_template')
+  );
+}
+
+export function readMeasurementUnit(body: unknown) {
+  const record = bodyRecord(body);
+  return (
+    normalizeMapperText(record.measurementUnit) ||
+    normalizeMapperText(record.measurement_unit) ||
+    normalizeMapperText(record.unit) ||
+    normalizeMapperText(record.valueUnit) ||
+    normalizeMapperText(record.value_unit)
   );
 }
 
@@ -123,6 +135,7 @@ export function createEmptyContentForm(
     title: '',
     code: '',
     text_body: '',
+    measurement_unit: '',
     image_url: '',
     image_name: '',
     file_url_1: '',
@@ -164,6 +177,7 @@ export function mapContentItemToForm(item: SafetyContentItem): ContentFormState 
     text_body: isMeasurementTemplate
       ? readMeasurementSafetyCriteria(item.body)
       : doc7ReferenceMaterial?.body ?? readText(item.body, item.content_type),
+    measurement_unit: isMeasurementTemplate ? readMeasurementUnit(item.body) : '',
     image_url: isSafetyNews ? contentBodyToAssetUrl(item.body) : contentBodyToImageUrl(item.body),
     image_name:
       doc7ReferenceMaterial?.imageName ||
@@ -227,6 +241,7 @@ export function buildContentBody(form: ContentFormState): Record<string, unknown
     return {
       instrumentName: form.title.trim(),
       safetyCriteria: textBody,
+      measurementUnit: form.measurement_unit.trim(),
     };
   }
 

@@ -4065,6 +4065,31 @@ button.uploadPreviewHit {
   box-shadow: none;
 }
 
+.doc10MeasuredValueField {
+  position: relative;
+  min-width: 0;
+}
+
+.doc10CellControlWithUnit:global(.app-input) {
+  padding-right: clamp(56px, 35%, 96px);
+}
+
+.doc10MeasuredValueUnit {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  max-width: min(42%, 84px);
+  overflow: hidden;
+  color: var(--erp-text-muted);
+  font-size: var(--text-ui-sm);
+  line-height: 1;
+  opacity: 0.72;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
 .doc10CellTextarea:global(.app-textarea) {
   width: 100%;
   min-width: 0;

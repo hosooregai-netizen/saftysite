@@ -13,6 +13,7 @@ import {
   selectInspectionTemplateVariant,
   type InspectionTemplateVariant,
 } from '@/lib/documents/inspection/templateVariant';
+import { formatMeasuredValueWithUnit } from '@/lib/documents/inspection/measurementFormatting';
 import type { ChecklistRating, InspectionSession } from '@/types/inspectionSession';
 
 const DOC5_CHART_TOP_N = 5;
@@ -1476,6 +1477,7 @@ function createEmptyMeasurement() {
     measurementLocation: '',
     photoUrl: '',
     measuredValue: '',
+    measurementUnit: '',
     safetyCriteria: '',
     actionTaken: '',
   };
@@ -1714,7 +1716,9 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
   measurements.forEach((item, index) => {
     text[`sec10.measurements[${index}].instrument_type`] = valueOrDash(item.instrumentType);
     text[`sec10.measurements[${index}].measurement_location`] = valueOrDash(item.measurementLocation);
-    text[`sec10.measurements[${index}].measured_value`] = valueOrDash(item.measuredValue);
+    text[`sec10.measurements[${index}].measured_value`] = valueOrDash(
+      formatMeasuredValueWithUnit(item.measuredValue, item.measurementUnit),
+    );
     text[`sec10.measurements[${index}].safety_criteria`] = valueOrDash(item.safetyCriteria);
     text[`sec10.measurements[${index}].action_taken`] = valueOrDash(item.actionTaken);
     images[`sec10.measurements[${index}].photo_image`] = valueOrBlank(item.photoUrl);
@@ -2858,6 +2862,14 @@ function ensureCoverClientRepresentativePlaceholder(sectionXml: string): string 
   );
   if (replacedAfterLabel.replaced) {
     return replacedAfterLabel.sectionXml;
+  }
+
+  const inlineLabelPattern = /(<hp:t>발주자\s*:\s*)[^<]*(<\/hp:t>)/;
+  if (inlineLabelPattern.test(sectionXml)) {
+    return sectionXml.replace(
+      inlineLabelPattern,
+      '$1{cover.client_representative_name}$2',
+    );
   }
 
   return sectionXml.replace(

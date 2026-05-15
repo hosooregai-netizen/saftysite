@@ -206,6 +206,12 @@ export function normalizeMeasurement(raw: unknown): MeasurementCheckItem {
     measurementLocation: normalizeText(source.measurementLocation) || normalizeText(source.measurementLocationDetail) || normalizeText(source.measurementLocationValue) || normalizeText(source.measurementLocationName),
     photoUrl: normalizeAssetValue(source.photoUrl),
     measuredValue: normalizeText(source.measuredValue) || normalizeText(source.measurementValue),
+    measurementUnit:
+      normalizeText(source.measurementUnit) ||
+      normalizeText(source.measurement_unit) ||
+      normalizeText(source.unit) ||
+      normalizeText(source.valueUnit) ||
+      normalizeText(source.value_unit),
     safetyCriteria: normalizeText(source.safetyCriteria) || normalizeText(source.measurementCriteria) || DEFAULT_MEASUREMENT_CRITERIA,
     actionTaken: normalizeText(source.actionTaken) || normalizeText(source.actionStatus) || normalizeText(source.suitability),
   });

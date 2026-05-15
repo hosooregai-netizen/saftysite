@@ -37,6 +37,7 @@ export function MobileInspectionSessionStep10MeasurementCard({
   openPhotoSourcePicker,
   screen,
 }: MobileInspectionSessionStep10MeasurementCardProps) {
+  const measurementUnit = measurement.measurementUnit ?? '';
   const updateMeasurement = (
     patch: Partial<InspectionSessionDraft['document10Measurements'][number]>,
   ) => {
@@ -122,6 +123,7 @@ export function MobileInspectionSessionStep10MeasurementCard({
               updateMeasurement({
                 instrumentType: nextType,
                 safetyCriteria: matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
+                measurementUnit: matchedTemplate?.measurementUnit ?? (nextType ? measurement.measurementUnit : ''),
               });
             }}
             style={{ width: '100%' }}
@@ -139,7 +141,45 @@ export function MobileInspectionSessionStep10MeasurementCard({
               </option>
             ))}
           </select>
-          <input className="app-input" value={measurement.measuredValue} onChange={(event) => updateMeasurement({ measuredValue: event.target.value })} placeholder="측정값" style={{ width: '100%' }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ position: 'relative', minWidth: 0 }}>
+              <input
+                className="app-input"
+                value={measurement.measuredValue}
+                onChange={(event) => updateMeasurement({ measuredValue: event.target.value })}
+                placeholder="측정값"
+                style={{
+                  width: '100%',
+                  paddingRight: measurementUnit && measurementUnit.length <= 6 ? '76px' : undefined,
+                }}
+              />
+              {measurementUnit && measurementUnit.length <= 6 ? (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    right: '12px',
+                    maxWidth: '56px',
+                    overflow: 'hidden',
+                    color: '#64748b',
+                    fontSize: '12px',
+                    opacity: 0.72,
+                    pointerEvents: 'none',
+                    textOverflow: 'ellipsis',
+                    transform: 'translateY(-50%)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {measurementUnit}
+                </span>
+              ) : null}
+            </div>
+            {measurementUnit && measurementUnit.length > 6 ? (
+              <span style={{ display: 'block', marginTop: '4px', color: '#64748b', fontSize: '12px' }}>
+                단위: {measurementUnit}
+              </span>
+            ) : null}
+          </div>
           <input className="app-input" value={measurement.measurementLocation} onChange={(event) => updateMeasurement({ measurementLocation: event.target.value })} placeholder="측정 위치" style={{ width: '100%' }} />
           <input className="app-input" value={measurement.actionTaken} onChange={(event) => updateMeasurement({ actionTaken: event.target.value })} placeholder="조치 여부" style={{ width: '100%' }} />
         </div>

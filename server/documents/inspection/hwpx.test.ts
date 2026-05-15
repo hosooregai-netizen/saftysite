@@ -94,6 +94,7 @@ function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
       instrumentType: '습구흑구온도지수(WBGT) 측정기',
       measurementLocation: '123',
       measuredValue: '29.1℃',
+      measurementUnit: '',
       actionTaken: '양호',
       safetyCriteria: '경작업: 30.0~32.2℃ 이하',
     },
@@ -102,6 +103,7 @@ function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
       instrumentType: '조도계',
       measurementLocation: 'B1 통로',
       measuredValue: '750 Lux',
+      measurementUnit: 'Lux',
       actionTaken: '개선 필요',
       safetyCriteria: '정밀작업: 300 Lux 이상',
     },
@@ -110,6 +112,7 @@ function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
       instrumentType: '가스측정기',
       measurementLocation: '지하층',
       measuredValue: '정상',
+      measurementUnit: '',
       actionTaken: '모니터링',
       safetyCriteria: '허용기준 이내',
     },
@@ -207,6 +210,33 @@ test('mapSessionToTemplateBinding appends percent sign to progress rate values',
 
   session.document2Overview.progressRate = '';
   assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '');
+});
+
+test('mapSessionToTemplateBinding appends measurement units without duplication', () => {
+  const session = buildMeasurementFixture('no');
+  session.document10Measurements = [
+    {
+      ...session.document10Measurements[0],
+      measuredValue: '20.9',
+      measurementUnit: 'ppm',
+    },
+    {
+      ...session.document10Measurements[1],
+      measuredValue: '20.9 ppm',
+      measurementUnit: 'ppm',
+    },
+    {
+      ...session.document10Measurements[2],
+      measuredValue: '',
+      measurementUnit: 'ppm',
+    },
+  ];
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.text['sec10.measurements[0].measured_value'], '20.9 ppm');
+  assert.equal(binding.text['sec10.measurements[1].measured_value'], '20.9 ppm');
+  assert.equal(binding.text['sec10.measurements[2].measured_value'], '');
 });
 
 test('mapSessionToTemplateBinding hides stale accident details when accident is marked not occurred', () => {
@@ -412,6 +442,31 @@ test('buildInspectionHwpxDocument binds doc10 measurement values for both inspec
       assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(token)));
     }
   }
+});
+
+test('buildInspectionHwpxDocument renders measured values with units once', async () => {
+  const session = buildMeasurementFixture('no');
+  session.document10Measurements = [
+    {
+      ...session.document10Measurements[0],
+      measuredValue: '20.9',
+      measurementUnit: 'ppm',
+    },
+    {
+      ...session.document10Measurements[1],
+      measuredValue: '20.9 ppm',
+      measurementUnit: 'ppm',
+    },
+  ];
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  const flattenedText = flattenXmlText(sectionXml);
+  assert.match(flattenedText, /20\.9 ppm/);
+  assert.doesNotMatch(flattenedText, /20\.9 ppm ppm/);
 });
 
 test('buildInspectionHwpxDocument applies text layout policy for single-line and multiline fields in both template variants', async () => {

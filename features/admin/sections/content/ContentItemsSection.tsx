@@ -773,6 +773,16 @@ export function ContentItemsSection(props: ContentItemsSectionProps) {
                     />
                   </label>
                   <label className={styles.modalFieldWide}>
+                    <span className={styles.label}>단위</span>
+                    <input
+                      className="app-input"
+                      value={form.measurement_unit}
+                      placeholder="예: Lux, dB, ppm, %, m/s, MΩ"
+                      onChange={(e) => setForm({ ...form, measurement_unit: e.target.value })}
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className={styles.modalFieldWide}>
                     <span className={styles.label}>안전 기준</span>
                     <textarea
                       className="app-textarea"

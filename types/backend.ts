@@ -14,6 +14,7 @@ export interface SafetyMeasurementTemplate {
   title: string;
   instrumentName: string;
   safetyCriteria: string;
+  measurementUnit: string;
   effectiveFrom: string | null;
   effectiveTo: string | null;
   isActive: boolean;

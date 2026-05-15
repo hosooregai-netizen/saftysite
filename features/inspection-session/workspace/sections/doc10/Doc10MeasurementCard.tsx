@@ -54,6 +54,7 @@ export function Doc10MeasurementCard({
       ...measurement,
       instrumentType,
       safetyCriteria: matchedTemplate?.safetyCriteria ?? measurement.safetyCriteria,
+      measurementUnit: matchedTemplate?.measurementUnit ?? (instrumentType ? measurement.measurementUnit : ''),
     }));
   };
 
@@ -84,6 +85,7 @@ export function Doc10MeasurementCard({
         photoUrl: dataUrl,
         instrumentType: matchedTemplate.instrumentName,
         safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+        measurementUnit: matchedTemplate.measurementUnit || measurement.measurementUnit,
       }));
     } catch (error) {
       setInstrumentMatchError(
@@ -194,17 +196,26 @@ export function Doc10MeasurementCard({
                   <tr>
                     <th scope="row">측정치</th>
                     <td>
-                      <input
-                        type="text"
-                        className={`${styles.doc10CellControl} app-input`}
-                        value={item.measuredValue}
-                        onChange={(event) =>
-                          updateMeasurement((measurement) => ({
-                            ...measurement,
-                            measuredValue: event.target.value,
-                          }))
-                        }
-                      />
+                      <div className={styles.doc10MeasuredValueField}>
+                        <input
+                          type="text"
+                          className={`${styles.doc10CellControl} ${
+                            item.measurementUnit ? styles.doc10CellControlWithUnit : ''
+                          } app-input`}
+                          value={item.measuredValue}
+                          onChange={(event) =>
+                            updateMeasurement((measurement) => ({
+                              ...measurement,
+                              measuredValue: event.target.value,
+                            }))
+                          }
+                        />
+                        {item.measurementUnit ? (
+                          <span className={styles.doc10MeasuredValueUnit}>
+                            {item.measurementUnit}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <th scope="row">조치 여부</th>
                     <td>

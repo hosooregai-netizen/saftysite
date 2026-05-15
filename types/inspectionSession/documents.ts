@@ -134,6 +134,7 @@ export interface MeasurementCheckItem {
   measurementLocation: string;
   photoUrl: string;
   measuredValue: string;
+  measurementUnit: string;
   safetyCriteria: string;
   actionTaken: string;
 }

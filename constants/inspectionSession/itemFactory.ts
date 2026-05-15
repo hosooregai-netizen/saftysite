@@ -113,6 +113,7 @@ export function createMeasurementCheckItem(
     measurementLocation: '',
     photoUrl: '',
     measuredValue: '',
+    measurementUnit: 'Lux',
     safetyCriteria: DEFAULT_MEASUREMENT_CRITERIA,
     actionTaken: '',
     ...initial,

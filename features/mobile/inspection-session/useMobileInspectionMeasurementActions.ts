@@ -55,6 +55,7 @@ export function useMobileInspectionMeasurementActions({
                 photoUrl,
                 instrumentType: matchedTemplate.instrumentName,
                 safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+                measurementUnit: matchedTemplate.measurementUnit || measurement.measurementUnit,
               }
             : measurement,
         ),
@@ -108,6 +109,7 @@ export function useMobileInspectionMeasurementActions({
                 photoUrl: dataUrl,
                 instrumentType: matchedTemplate.instrumentName,
                 safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+                measurementUnit: matchedTemplate.measurementUnit || measurement.measurementUnit,
               }
             : measurement,
         ),
