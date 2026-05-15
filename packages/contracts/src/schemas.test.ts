@@ -27,6 +27,7 @@ test('reportPayloadSchema allows empty photoObservations', () => {
       guidanceAgencyName: '대한안전산업연구원',
       visitDate: '2026-04-29',
       drafterName: '홍길동',
+      previousImplementationStatus: 'not_applicable',
     },
     reviewMeta: {
       reviewCompleted: false,

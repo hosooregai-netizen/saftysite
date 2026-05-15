@@ -38,6 +38,7 @@ export const PREVIOUS_IMPLEMENTATION_OPTIONS = [
   { value: 'implemented', label: '이행' },
   { value: 'partial', label: '부분 이행' },
   { value: 'not_implemented', label: '미이행' },
+  { value: 'not_applicable', label: '해당없음' },
 ] as const;
 
 export const ACCIDENT_OCCURRENCE_OPTIONS = [

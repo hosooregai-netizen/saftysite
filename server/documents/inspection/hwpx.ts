@@ -980,13 +980,15 @@ function formatDateText(value: string): string {
 function mapPreviousImplementationStatus(value: string): string {
   switch (value) {
     case 'implemented':
-      return `${checkbox(true)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589`;
+      return `${checkbox(true)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589 / ${checkbox(false)}\uD574\uB2F9\uC5C6\uC74C`;
     case 'partial':
-      return `${checkbox(true)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589`;
+      return `${checkbox(true)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589 / ${checkbox(false)}\uD574\uB2F9\uC5C6\uC74C`;
     case 'not_implemented':
-      return `${checkbox(false)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589`;
+      return `${checkbox(false)}\uC774\uD589 / ${checkbox(true)}\uBD88\uC774\uD589 / ${checkbox(false)}\uD574\uB2F9\uC5C6\uC74C`;
+    case 'not_applicable':
+      return `${checkbox(false)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589 / ${checkbox(true)}\uD574\uB2F9\uC5C6\uC74C`;
     default:
-      return `${checkbox(false)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589`;
+      return `${checkbox(false)}\uC774\uD589 / ${checkbox(false)}\uBD88\uC774\uD589 / ${checkbox(false)}\uD574\uB2F9\uC5C6\uC74C`;
   }
 }
 

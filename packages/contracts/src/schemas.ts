@@ -23,6 +23,7 @@ export const previousImplementationStatusSchema = z.enum([
   'implemented',
   'partial',
   'not_implemented',
+  'not_applicable',
   '',
 ]);
 export const notificationMethodSchema = z.enum([

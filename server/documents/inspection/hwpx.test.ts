@@ -12,6 +12,13 @@ import { buildInspectionHwpxDocument, mapSessionToTemplateBinding } from './hwpx
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
+const PREVIOUS_STATUS_EXPECTED = {
+  implemented: '\u2611\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  partial: '\u2611\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  not_implemented: '\u2610\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  not_applicable: '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2611\uD574\uB2F9\uC5C6\uC74C',
+  unchecked: '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+} as const;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -212,6 +219,27 @@ test('mapSessionToTemplateBinding appends percent sign to progress rate values',
   assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '');
 });
 
+test('mapSessionToTemplateBinding renders previous implementation status as three checkboxes', () => {
+  const cases = [
+    { expected: PREVIOUS_STATUS_EXPECTED.implemented, value: 'implemented' },
+    { expected: PREVIOUS_STATUS_EXPECTED.partial, value: 'partial' },
+    { expected: PREVIOUS_STATUS_EXPECTED.not_implemented, value: 'not_implemented' },
+    { expected: PREVIOUS_STATUS_EXPECTED.not_applicable, value: 'not_applicable' },
+    { expected: PREVIOUS_STATUS_EXPECTED.unchecked, value: '' },
+    { expected: PREVIOUS_STATUS_EXPECTED.unchecked, value: 'unexpected-status' },
+  ];
+
+  for (const { expected, value } of cases) {
+    const session = createInspectionSession({}, `previous-status-${value || 'blank'}`, 1);
+    (session.document2Overview as { previousImplementationStatus: string }).previousImplementationStatus =
+      value;
+
+    const binding = mapSessionToTemplateBinding(session);
+
+    assert.equal(binding.text['sec2.previous_implementation_status'], expected);
+  }
+});
+
 test('mapSessionToTemplateBinding appends measurement units without duplication', () => {
   const session = buildMeasurementFixture('no');
   session.document10Measurements = [
@@ -343,6 +371,25 @@ test('buildInspectionHwpxDocument appends percent sign to progress rate for both
     assert.ok(sectionXml);
     assert.match(sectionXml, />73%<\/hp:t>/);
     assert.doesNotMatch(sectionXml, /\{sec2\.progress_rate\}/);
+  }
+});
+
+test('buildInspectionHwpxDocument renders not applicable previous implementation status for both inspection template variants', async () => {
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession({}, `previous-status-hwpx-${accidentOccurred}`, 1);
+    session.document2Overview.accidentOccurred = accidentOccurred;
+    session.document2Overview.previousImplementationStatus = 'not_applicable';
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    assert.match(
+      flattenXmlText(sectionXml),
+      new RegExp(escapeRegExp(PREVIOUS_STATUS_EXPECTED.not_applicable)),
+    );
+    assert.doesNotMatch(sectionXml, /\{sec2\.previous_implementation_status\}/);
   }
 });
 

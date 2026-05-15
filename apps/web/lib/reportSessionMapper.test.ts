@@ -10,10 +10,12 @@ test('mapReportPayloadToInspectionSession maps standard draft fields into export
     ...item,
     imageUrl: `/photos/${item.photoAssetId}.jpg`,
   }));
+  report.reportMeta.previousImplementationStatus = 'not_applicable';
   const session = mapReportPayloadToInspectionSession(report.id, report);
 
   assert.ok(session.document7Findings.length > 0);
   assert.ok(session.document8Plans.length > 0);
+  assert.equal(session.document2Overview.previousImplementationStatus, 'not_applicable');
 
   const firstFinding = session.document7Findings[0];
   const firstPlan = session.document8Plans[0];

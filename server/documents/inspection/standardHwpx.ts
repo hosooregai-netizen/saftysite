@@ -433,13 +433,15 @@ function buildVisitCountText(visitCount: string, totalVisitCount: string) {
 function buildPreviousImplementationStatusText(value: string) {
   switch (value) {
     case 'implemented':
-      return '☑ 이행 / □ 불이행';
+      return '\u2611\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C';
     case 'partial':
-      return '☑ 이행 / ☑ 불이행 (일부 이행)';
+      return '\u2611\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C';
     case 'not_implemented':
-      return '□ 이행 / ☑ 불이행';
+      return '\u2610\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C';
+    case 'not_applicable':
+      return '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2611\uD574\uB2F9\uC5C6\uC74C';
     default:
-      return '□ 이행 / □ 불이행';
+      return '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C';
   }
 }
 

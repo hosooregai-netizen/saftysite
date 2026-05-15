@@ -84,6 +84,7 @@ export type PreviousImplementationStatus =
   | 'implemented'
   | 'partial'
   | 'not_implemented'
+  | 'not_applicable'
   | '';
 
 export type NotificationMethod =

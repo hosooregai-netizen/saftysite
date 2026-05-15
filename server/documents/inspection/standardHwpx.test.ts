@@ -16,6 +16,14 @@ import {
 } from '@/constants/inspectionSession/itemFactory';
 import { buildStandardInspectionHwpxDocument } from './standardHwpx';
 
+const PREVIOUS_STATUS_EXPECTED = {
+  implemented: '\u2611\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  partial: '\u2611\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  not_implemented: '\u2610\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+  not_applicable: '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2611\uD574\uB2F9\uC5C6\uC74C',
+  unchecked: '\u2610\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
+} as const;
+
 function flattenXmlText(xml: string) {
   return xml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 }
@@ -136,6 +144,31 @@ test('buildStandardInspectionHwpxDocument renders standard report content and cl
   assert.match(flattened, /향후 기초 및 토공사 공정에서 유해·위험요인 및 예방대책 재점검 필요/);
   assert.match(flattened, /12명/);
   assert.match(flattened, /다음 방문 전 추락방지 조치 재확인/);
+  assert.match(flattened, new RegExp(PREVIOUS_STATUS_EXPECTED.implemented));
   assert.doesNotMatch(flattened, /1동 3층 발코니 자리 슬라브/);
   assert.doesNotMatch(flattened, /1층 현장 출입구 낙하물 방지조치 미실시/);
+});
+
+test('buildStandardInspectionHwpxDocument renders previous implementation status as three checkboxes', async () => {
+  const cases = [
+    { expected: PREVIOUS_STATUS_EXPECTED.implemented, value: 'implemented' },
+    { expected: PREVIOUS_STATUS_EXPECTED.partial, value: 'partial' },
+    { expected: PREVIOUS_STATUS_EXPECTED.not_implemented, value: 'not_implemented' },
+    { expected: PREVIOUS_STATUS_EXPECTED.not_applicable, value: 'not_applicable' },
+    { expected: PREVIOUS_STATUS_EXPECTED.unchecked, value: '' },
+    { expected: PREVIOUS_STATUS_EXPECTED.unchecked, value: 'unexpected-status' },
+  ];
+
+  for (const { expected, value } of cases) {
+    const session = createInspectionSession({}, `standard-previous-status-${value || 'blank'}`, 1);
+    (session.document2Overview as { previousImplementationStatus: string }).previousImplementationStatus =
+      value;
+
+    const document = await buildStandardInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    assert.match(flattenXmlText(sectionXml), new RegExp(expected));
+  }
 });

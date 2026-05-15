@@ -110,6 +110,7 @@
                 "implemented",
                 "partial",
                 "not_implemented",
+                "not_applicable",
                 ""
               ],
               "default": ""

@@ -6,7 +6,12 @@ const path = require('node:path');
 const JSZip = require('jszip');
 
 type NotificationMethod = 'direct' | 'registered_mail' | 'email' | 'mobile' | 'other' | '';
-type PreviousImplementationStatus = 'implemented' | 'partial' | 'not_implemented' | '';
+type PreviousImplementationStatus =
+  | 'implemented'
+  | 'partial'
+  | 'not_implemented'
+  | 'not_applicable'
+  | '';
 type AccidentOccurrence = 'yes' | 'no' | '';
 type ChecklistRating = 'good' | 'average' | 'poor' | '';
 type WorkPlanCheckStatus = 'written' | 'not_written' | 'not_applicable';
@@ -944,13 +949,15 @@ function formatDateText(value: string): string {
 function mapPreviousImplementationStatus(value: PreviousImplementationStatus): string {
   switch (value) {
     case 'implemented':
-      return `${checkbox(true)}이행 / ${checkbox(false)}불이행`;
+      return `${checkbox(true)}이행 / ${checkbox(false)}불이행 / ${checkbox(false)}해당없음`;
     case 'partial':
-      return `${checkbox(true)}이행 / ${checkbox(true)}불이행`;
+      return `${checkbox(true)}이행 / ${checkbox(true)}불이행 / ${checkbox(false)}해당없음`;
     case 'not_implemented':
-      return `${checkbox(false)}이행 / ${checkbox(true)}불이행`;
+      return `${checkbox(false)}이행 / ${checkbox(true)}불이행 / ${checkbox(false)}해당없음`;
+    case 'not_applicable':
+      return `${checkbox(false)}이행 / ${checkbox(false)}불이행 / ${checkbox(true)}해당없음`;
     default:
-      return `${checkbox(false)}이행 / ${checkbox(false)}불이행`;
+      return `${checkbox(false)}이행 / ${checkbox(false)}불이행 / ${checkbox(false)}해당없음`;
   }
 }
 
