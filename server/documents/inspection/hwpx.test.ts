@@ -209,6 +209,39 @@ test('mapSessionToTemplateBinding appends percent sign to progress rate values',
   assert.equal(mapSessionToTemplateBinding(session).text['sec2.progress_rate'], '');
 });
 
+test('mapSessionToTemplateBinding hides stale accident details when accident is marked not occurred', () => {
+  const session = createInspectionSession({}, 'stale-accident-site', 1);
+  session.document2Overview.accidentOccurred = 'no';
+  session.document2Overview.recentAccidentDate = '2026-04-01';
+  session.document2Overview.accidentType = 'stale-accident-type';
+  session.document2Overview.accidentSummary = 'stale-accident-summary';
+  session.document2Overview.accidentPhotoUrl = TRANSPARENT_PNG_DATA_URL;
+  session.document2Overview.accidentPhotoUrl2 = TRANSPARENT_PNG_DATA_URL;
+
+  const notOccurredBinding = mapSessionToTemplateBinding(session);
+
+  assert.equal(notOccurredBinding.text['sec2.recent_accident_date'], '');
+  assert.equal(notOccurredBinding.text['sec2.accident_type'], '');
+  assert.equal(notOccurredBinding.text['sec2.accident_summary'], '');
+  assert.equal(notOccurredBinding.images['sec10.accident_tracking.photo_image'], '');
+  assert.equal(notOccurredBinding.images['sec10.accident_tracking.photo_image_2'], '');
+
+  session.document2Overview.accidentOccurred = 'yes';
+  const occurredBinding = mapSessionToTemplateBinding(session);
+
+  assert.equal(occurredBinding.text['sec2.recent_accident_date'], '2026.04.01');
+  assert.equal(occurredBinding.text['sec2.accident_type'], 'stale-accident-type');
+  assert.equal(occurredBinding.text['sec2.accident_summary'], 'stale-accident-summary');
+  assert.equal(
+    occurredBinding.images['sec10.accident_tracking.photo_image'],
+    TRANSPARENT_PNG_DATA_URL,
+  );
+  assert.equal(
+    occurredBinding.images['sec10.accident_tracking.photo_image_2'],
+    TRANSPARENT_PNG_DATA_URL,
+  );
+});
+
 test('mapSessionToTemplateBinding appends compact visit round to the cover site name', () => {
   const session = createInspectionSession(
     {
@@ -280,6 +313,32 @@ test('buildInspectionHwpxDocument appends percent sign to progress rate for both
     assert.ok(sectionXml);
     assert.match(sectionXml, />73%<\/hp:t>/);
     assert.doesNotMatch(sectionXml, /\{sec2\.progress_rate\}/);
+  }
+});
+
+test('buildInspectionHwpxDocument hides stale accident text when accident is marked not occurred', async () => {
+  const staleAccidentType = 'stale-accident-type';
+  const staleAccidentSummary = 'stale-accident-summary';
+
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession({}, `stale-accident-site-${accidentOccurred}`, 1);
+    session.document2Overview.accidentOccurred = accidentOccurred;
+    session.document2Overview.recentAccidentDate = '2026-04-01';
+    session.document2Overview.accidentType = staleAccidentType;
+    session.document2Overview.accidentSummary = staleAccidentSummary;
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    if (accidentOccurred === 'yes') {
+      assert.match(sectionXml, new RegExp(escapeRegExp(staleAccidentType)));
+      assert.match(sectionXml, new RegExp(escapeRegExp(staleAccidentSummary)));
+    } else {
+      assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(staleAccidentType)));
+      assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(staleAccidentSummary)));
+    }
   }
 });
 

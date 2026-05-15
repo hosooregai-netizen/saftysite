@@ -1588,9 +1588,10 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     ? ''
     : assetTextFallback(overview.notificationRecipientSignature);
   text['sec2.other_notification_method'] = valueOrBlank(overview.otherNotificationMethod);
-  text['sec2.recent_accident_date'] = valueOrDash(formatDateText(overview.recentAccidentDate));
-  text['sec2.accident_type'] = valueOrDash(overview.accidentType);
-  text['sec2.accident_summary'] = valueOrDash(overview.accidentSummary);
+  const hasAccidentOccurred = overview.accidentOccurred === 'yes';
+  text['sec2.recent_accident_date'] = hasAccidentOccurred ? valueOrDash(formatDateText(overview.recentAccidentDate)) : '';
+  text['sec2.accident_type'] = hasAccidentOccurred ? valueOrDash(overview.accidentType) : '';
+  text['sec2.accident_summary'] = hasAccidentOccurred ? valueOrDash(overview.accidentSummary) : '';
   text['sec2.process_and_notes'] = valueOrDash(overview.processAndNotes);
   for (const item of WORK_PLAN_PLACEHOLDERS) {
     text[item.placeholderPath] = valueOrDash(mapWorkPlanStatus(overview.workPlanChecks[item.sourceKey]));
@@ -1705,8 +1706,8 @@ function mapSessionToTemplateBinding(session: InspectionSession): TemplateBindin
     text[`sec9.risk_assessment[${index}].note`] = valueOrBlank(item.note);
   });
 
-  images['sec10.accident_tracking.photo_image'] = valueOrBlank(overview.accidentPhotoUrl);
-  images['sec10.accident_tracking.photo_image_2'] = valueOrBlank(overview.accidentPhotoUrl2);
+  images['sec10.accident_tracking.photo_image'] = hasAccidentOccurred ? valueOrBlank(overview.accidentPhotoUrl) : '';
+  images['sec10.accident_tracking.photo_image_2'] = hasAccidentOccurred ? valueOrBlank(overview.accidentPhotoUrl2) : '';
 
   const measurements = ensureRepeatItems(session.document10Measurements, createEmptyMeasurement);
   repeatCounts['sec10.measurements'] = measurements.length;
