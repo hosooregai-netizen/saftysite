@@ -4067,26 +4067,31 @@ button.uploadPreviewHit {
 
 .doc10MeasuredValueField {
   position: relative;
+  width: 100%;
   min-width: 0;
+  min-height: 44px;
 }
 
 .doc10CellControlWithUnit:global(.app-input) {
-  padding-right: clamp(56px, 35%, 96px);
+  padding-right: clamp(68px, 38%, 116px);
 }
 
 .doc10MeasuredValueUnit {
   position: absolute;
-  top: 50%;
-  right: 12px;
-  max-width: min(42%, 84px);
+  top: 0;
+  right: 16px;
+  bottom: 0;
+  display: inline-flex;
+  max-width: min(42%, 92px);
+  align-items: center;
   overflow: hidden;
   color: var(--erp-text-muted);
   font-size: var(--text-ui-sm);
-  line-height: 1;
+  line-height: 1.4;
+  letter-spacing: 0;
   opacity: 0.72;
   pointer-events: none;
   text-overflow: ellipsis;
-  transform: translateY(-50%);
   white-space: nowrap;
 }
 
