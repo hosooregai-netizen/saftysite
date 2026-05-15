@@ -856,6 +856,36 @@ function valueOrDash(value: unknown): string {
   return normalized || '-';
 }
 
+function normalizeCoverVisitRound(value: unknown): string {
+  const normalized =
+    typeof value === 'number' && Number.isFinite(value) ? String(value) : valueOrBlank(value);
+  const roundDigits = normalized
+    .replace(/\s+/g, '')
+    .replace(/(\uD68C\uCC28|\uD68C|\uCC28\uC218|\uCC28)$/u, '')
+    .match(/\d+/)?.[0];
+  if (!roundDigits) {
+    return '';
+  }
+  const roundNumber = Number.parseInt(roundDigits, 10);
+  return Number.isFinite(roundNumber) && roundNumber > 0 ? String(roundNumber) : roundDigits;
+}
+
+function stripCoverVisitRoundSuffix(value: string): string {
+  return value
+    .replace(/\s*[-,]\s*\d+\s*(\uD68C\uCC28|\uD68C|\uCC28\uC218|\uCC28)?\s*$/u, '')
+    .trim();
+}
+
+function buildCoverSiteName(siteName: unknown, visitCount: unknown, fallbackRound: unknown = ''): string {
+  const normalizedSiteName = valueOrBlank(siteName);
+  if (!normalizedSiteName) {
+    return '';
+  }
+  const baseSiteName = stripCoverVisitRoundSuffix(normalizedSiteName);
+  const visitRound = normalizeCoverVisitRound(visitCount) || normalizeCoverVisitRound(fallbackRound);
+  return visitRound ? `${baseSiteName} - ${visitRound}\uD68C\uCC28` : baseSiteName;
+}
+
 function buildVisitPagePrefix(value: unknown): string {
   const normalized = valueOrBlank(value)
     .replace(/\s+/g, '')
@@ -1273,7 +1303,9 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   const site = data.adminSiteSnapshot;
   const overview = data.document2Overview;
 
-  text['cover.site_name'] = valueOrDash(data.meta.siteName || site.siteName);
+  text['cover.site_name'] = valueOrDash(
+    buildCoverSiteName(data.meta.siteName || site.siteName, overview.visitCount),
+  );
   text['cover.report_date'] = valueOrDash(formatDateText(data.meta.reportDate));
   text['cover.drafter'] = valueOrDash(data.meta.drafter);
   text['cover.reviewer'] = valueOrDash(data.meta.reviewer);

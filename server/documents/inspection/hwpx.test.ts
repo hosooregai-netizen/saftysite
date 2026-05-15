@@ -173,12 +173,62 @@ test('mapSessionToTemplateBinding leaves empty report values blank instead of re
   assert.equal(binding.text['sec13.cases[1].title'], '');
 });
 
+test('mapSessionToTemplateBinding appends compact visit round to the cover site name', () => {
+  const session = createInspectionSession(
+    {
+      adminSiteSnapshot: {
+        siteName: 'Snapshot Site',
+      },
+      meta: {
+        siteName: 'Final Test Site , 1 \uD68C\uCC28',
+      },
+    },
+    'cover-round-site',
+    1,
+  );
+  session.document2Overview.visitCount = '1 \uD68C\uCC28';
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.text['cover.site_name'], 'Final Test Site - 1\uD68C\uCC28');
+  assert.equal(binding.text['sec1.site_name'], 'Snapshot Site');
+});
+
 test('buildInspectionHwpxDocument binds the cover client representative for both inspection template variants', async () => {
   for (const accidentOccurred of ['no', 'yes'] as const) {
     const sectionXml = await readGeneratedSectionXml(accidentOccurred);
 
     assert.match(sectionXml, /client-rep-alpha/);
     assert.doesNotMatch(sectionXml, /\{cover\.client_representative_name\}/);
+  }
+});
+
+test('buildInspectionHwpxDocument appends the visit round to the cover site name for both inspection template variants', async () => {
+  const expectedCoverSiteName = 'Final Test Site - 1\uD68C\uCC28';
+
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession(
+      {
+        adminSiteSnapshot: {
+          siteName: 'Final Test Site',
+        },
+        meta: {
+          siteName: 'Final Test Site',
+        },
+      },
+      `cover-round-site-${accidentOccurred}`,
+      1,
+    );
+    session.document2Overview.accidentOccurred = accidentOccurred;
+    session.document2Overview.visitCount = '1 \uD68C\uCC28';
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    assert.match(sectionXml, new RegExp(escapeRegExp(expectedCoverSiteName)));
+    assert.doesNotMatch(sectionXml, /Final Test Site , 1/);
   }
 });
 

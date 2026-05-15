@@ -604,6 +604,36 @@ function valueOrDash(value: unknown): string {
   return normalized;
 }
 
+function normalizeCoverVisitRound(value: unknown): string {
+  const normalized =
+    typeof value === 'number' && Number.isFinite(value) ? String(value) : valueOrBlank(value);
+  const roundDigits = normalized
+    .replace(/\s+/g, '')
+    .replace(/(\uD68C\uCC28|\uD68C|\uCC28\uC218|\uCC28)$/u, '')
+    .match(/\d+/)?.[0];
+  if (!roundDigits) {
+    return '';
+  }
+  const roundNumber = Number.parseInt(roundDigits, 10);
+  return Number.isFinite(roundNumber) && roundNumber > 0 ? String(roundNumber) : roundDigits;
+}
+
+function stripCoverVisitRoundSuffix(value: string): string {
+  return value
+    .replace(/\s*[-,]\s*\d+\s*(\uD68C\uCC28|\uD68C|\uCC28\uC218|\uCC28)?\s*$/u, '')
+    .trim();
+}
+
+function buildCoverSiteName(siteName: unknown, visitCount: unknown, fallbackRound: unknown = ''): string {
+  const normalizedSiteName = valueOrBlank(siteName);
+  if (!normalizedSiteName) {
+    return '';
+  }
+  const baseSiteName = stripCoverVisitRoundSuffix(normalizedSiteName);
+  const visitRound = normalizeCoverVisitRound(visitCount) || normalizeCoverVisitRound(fallbackRound);
+  return visitRound ? `${baseSiteName} - ${visitRound}\uD68C\uCC28` : baseSiteName;
+}
+
 function buildVisitPagePrefix(value: unknown): string {
   const normalized = valueOrBlank(value)
     .replace(/\s+/g, '')
@@ -1682,8 +1712,13 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
   const site = session.adminSiteSnapshot;
   const overview = session.document2Overview;
 
+  const coverSiteName = buildCoverSiteName(
+    session.meta.siteName || site.siteName,
+    overview.visitCount,
+    session.reportNumber,
+  );
   text['cover.site_name'] = valueOrDash(
-    `${session.meta.siteName || site.siteName}${site.isHighRiskSite ? ' (고위험 사업장)' : ''}`.trim(),
+    `${coverSiteName}${site.isHighRiskSite ? ' (고위험 사업장)' : ''}`.trim(),
   );
   text['cover.client_representative_name'] = valueOrDash(site.clientRepresentativeName);
   text['cover.report_date'] = valueOrDash(
