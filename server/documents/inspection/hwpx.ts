@@ -1724,9 +1724,9 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
   text['cover.report_date'] = valueOrDash(
     formatDateText(getSessionGuidanceDate(session)),
   );
-  text['cover.drafter'] = valueOrDash(session.meta.drafter);
-  text['cover.reviewer'] = valueOrDash(session.meta.reviewer);
-  text['cover.approver'] = valueOrDash(session.meta.approver);
+  text['cover.drafter'] = '';
+  text['cover.reviewer'] = '';
+  text['cover.approver'] = '';
 
   text['sec1.site_name'] = valueOrDash(site.siteName);
   text['sec1.construction_period'] = valueOrDash(site.constructionPeriod);

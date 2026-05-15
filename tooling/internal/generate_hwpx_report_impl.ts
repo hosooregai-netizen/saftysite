@@ -1312,9 +1312,9 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
     buildCoverSiteName(data.meta.siteName || site.siteName, overview.visitCount),
   );
   text['cover.report_date'] = valueOrDash(formatDateText(data.meta.reportDate));
-  text['cover.drafter'] = valueOrDash(data.meta.drafter);
-  text['cover.reviewer'] = valueOrDash(data.meta.reviewer);
-  text['cover.approver'] = valueOrDash(data.meta.approver);
+  text['cover.drafter'] = '';
+  text['cover.reviewer'] = '';
+  text['cover.approver'] = '';
 
   text['sec1.site_name'] = valueOrDash(site.siteName);
   text['sec1.construction_period'] = valueOrDash(site.constructionPeriod);

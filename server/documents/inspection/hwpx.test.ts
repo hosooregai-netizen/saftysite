@@ -173,6 +173,26 @@ test('mapSessionToTemplateBinding leaves empty report values blank instead of re
   assert.equal(binding.text['sec13.cases[1].title'], '');
 });
 
+test('mapSessionToTemplateBinding keeps cover signature fields blank even when meta names exist', () => {
+  const session = createInspectionSession(
+    {
+      meta: {
+        drafter: 'cover-drafter-alpha',
+        reviewer: 'cover-reviewer-alpha',
+        approver: 'cover-approver-alpha',
+      },
+    },
+    'cover-signature-site',
+    1,
+  );
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.text['cover.drafter'], '');
+  assert.equal(binding.text['cover.reviewer'], '');
+  assert.equal(binding.text['cover.approver'], '');
+});
+
 test('mapSessionToTemplateBinding appends compact visit round to the cover site name', () => {
   const session = createInspectionSession(
     {
@@ -200,6 +220,34 @@ test('buildInspectionHwpxDocument binds the cover client representative for both
 
     assert.match(sectionXml, /client-rep-alpha/);
     assert.doesNotMatch(sectionXml, /\{cover\.client_representative_name\}/);
+  }
+});
+
+test('buildInspectionHwpxDocument clears cover signature placeholders for both inspection template variants', async () => {
+  const signatureTokens = ['cover.drafter', 'cover.reviewer', 'cover.approver'];
+
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession(
+      {
+        meta: {
+          drafter: 'cover-drafter-alpha',
+          reviewer: 'cover-reviewer-alpha',
+          approver: 'cover-approver-alpha',
+        },
+      },
+      `cover-signature-site-${accidentOccurred}`,
+      1,
+    );
+    session.document2Overview.accidentOccurred = accidentOccurred;
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+    assert.ok(sectionXml);
+    for (const token of signatureTokens) {
+      assert.doesNotMatch(sectionXml, new RegExp(escapeRegExp(`{${token}}`)));
+    }
   }
 });
 
