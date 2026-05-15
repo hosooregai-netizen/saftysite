@@ -114,6 +114,16 @@ export function HeadquarterEditorModal({
                 maxLength={50}
               />
             </label>
+            <label className={styles.modalField}>
+              <span className={styles.label}>건설업면허/등록번호</span>
+              <input
+                className="app-input"
+                value={form.license_no}
+                onChange={(event) => onFormChange({ ...form, license_no: event.target.value })}
+                disabled={busy}
+                maxLength={50}
+              />
+            </label>
           </div>
         </section>
 

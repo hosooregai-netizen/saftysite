@@ -424,6 +424,21 @@ export function SiteEditorModal({
                   />
                 </label>
                 <label className={styles.modalField}>
+                  <span className={styles.label}>건설업면허/등록번호</span>
+                  <input
+                    className="app-input"
+                    value={headquarterCreateForm.license_no}
+                    onChange={(event) =>
+                      setHeadquarterCreateForm((current) => ({
+                        ...current,
+                        license_no: event.target.value,
+                      }))
+                    }
+                    maxLength={50}
+                    disabled={busy || headquarterCreateBusy}
+                  />
+                </label>
+                <label className={styles.modalField}>
                   <span className={styles.label}>건설사 담당자명</span>
                   <input
                     className="app-input"

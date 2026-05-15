@@ -125,6 +125,7 @@ function matchesHeadquarterQuery(
     headquarter.opening_number,
     headquarter.business_registration_no,
     headquarter.corporate_registration_no,
+    headquarter.license_no,
     headquarter.contact_name,
     headquarter.contact_phone,
     headquarter.address,
