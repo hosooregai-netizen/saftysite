@@ -78,7 +78,6 @@ const PREVIOUS_IMPLEMENTATION_STATUS_OPTIONS: Array<{
 }> = [
   { value: '', label: '선택' },
   { value: 'implemented', label: '이행' },
-  { value: 'partial', label: '일부 이행' },
   { value: 'not_implemented', label: '불이행' },
   { value: 'not_applicable', label: '해당없음' },
 ];
