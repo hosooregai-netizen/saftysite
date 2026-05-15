@@ -31,7 +31,6 @@ interface SiteManagementMainPanelProps {
   headquarter: SafetyHeadquarter | null;
   site: SafetySite;
   badWorkplaceHref?: string;
-  mailHref?: string;
   photoHref?: string;
   quarterlyHref?: string;
   reportHref?: string;
@@ -81,7 +80,6 @@ function renderContactList(
 export function SiteManagementMainPanel({
   badWorkplaceHref,
   headquarter,
-  mailHref,
   photoHref,
   quarterlyHref,
   reportHref,
@@ -128,9 +126,6 @@ export function SiteManagementMainPanel({
   const resolvedBadWorkplaceHref =
     badWorkplaceHref ?? buildSiteBadWorkplaceHref(site.id, getCurrentReportMonth());
   const resolvedPhotoHref = photoHref ?? buildSitePhotoAlbumHref(site.id);
-  const resolvedMailHref =
-    mailHref ??
-    `/mailbox?headquarterId=${encodeURIComponent(site.headquarter_id)}&siteId=${encodeURIComponent(site.id)}`;
 
   return (
     <section className={styles.sectionCard}>
@@ -257,10 +252,6 @@ export function SiteManagementMainPanel({
           <Link href={resolvedPhotoHref} className={styles.metricLinkCard}>
             <strong className={styles.metricLinkValue}>사진첩</strong>
             <span className={styles.metricLinkMeta}>점검 사진과 현장 이미지 확인</span>
-          </Link>
-          <Link href={resolvedMailHref} className={styles.metricLinkCard}>
-            <strong className={styles.metricLinkValue}>메일함</strong>
-            <span className={styles.metricLinkMeta}>현장 기준 메일 작성과 이력 확인</span>
           </Link>
         </div>
       </div>
