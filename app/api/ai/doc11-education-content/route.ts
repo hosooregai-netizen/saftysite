@@ -71,11 +71,6 @@ function readJsonString(record: Record<string, unknown>, key: string) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function normalizeCount(value: string) {
-  const digits = value.replace(/[^\d]/g, '').trim();
-  return digits || value.trim();
-}
-
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -193,16 +188,14 @@ async function resolvePhotoDataUrl(photoUrl: string, request: Request) {
 
 function buildUserContent(payload: {
   topic: string;
-  attendeeCount: string;
   materialName: string;
 }) {
   const lines = ['아래 정보를 바탕으로 안전교육 내용을 작성해줘.'];
 
   if (payload.topic) lines.push(`교육주제: ${payload.topic}`);
-  if (payload.attendeeCount) lines.push(`참석인원: ${payload.attendeeCount}`);
   if (payload.materialName) lines.push(`교육자료명: ${payload.materialName}`);
 
-  lines.push('출력은 5줄 구조를 유지하고, 누락된 정보는 자연스럽게 생략해줘.');
+  lines.push('출력은 4줄 구조를 유지하고, 누락된 정보는 자연스럽게 생략해줘.');
   lines.push('"미입력", "자료 없음" 같은 표현은 쓰지 말아줘.');
 
   return lines.join('\n');
@@ -259,7 +252,6 @@ export async function POST(request: Request): Promise<Response> {
 
 반드시 아래 JSON 형식만 반환한다.
 {
-  "attendeeLine": "참석인원 : N 명",
   "topicLine": "-교육주제 또는 주의 문구",
   "riskLine": "-주요위험요인 : ...",
   "measureLine": "-안전대책 : ...",
@@ -267,7 +259,6 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 작성 규칙:
-- 참석인원은 "참석인원 : 숫자 명" 형식으로 쓴다.
 - topicLine은 반드시 하이픈(-)으로 시작한다.
 - riskLine은 주요 위험요인을 쉼표로 구분한 짧은 구문으로 쓴다.
 - measureLine은 안전대책을 쉼표로 구분한 짧은 구문으로 쓴다.
@@ -317,8 +308,6 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    const attendeeCount = normalizeCount(payload.attendeeCount) || '2';
-    const attendeeLine = `참석인원 : ${attendeeCount} 명`;
     const topicLine = sanitizeTopicLine(
       readJsonString(parsed, 'topicLine'),
       payload.topic || '안전교육',
@@ -340,7 +329,7 @@ export async function POST(request: Request): Promise<Response> {
     );
 
     return NextResponse.json({
-      text: [attendeeLine, topicLine, riskLine, measureLine, caseLine].join('\n'),
+      text: [topicLine, riskLine, measureLine, caseLine].join('\n'),
     });
   } catch (error) {
     return NextResponse.json(

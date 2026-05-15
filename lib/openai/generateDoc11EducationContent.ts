@@ -7,11 +7,6 @@ export interface Doc11EducationGenerationInput {
   photoUrl?: string;
 }
 
-function normalizeCount(value: string) {
-  const digits = value.replace(/[^\d]/g, '').trim();
-  return digits || value.trim();
-}
-
 function buildRiskAndMeasureByTopic(topic: string) {
   const normalized = topic.replace(/\s+/g, '').toLowerCase();
 
@@ -58,11 +53,9 @@ export function buildLocalDoc11EducationContent(
   input: Doc11EducationGenerationInput,
 ): string {
   const topic = input.topic.trim();
-  const count = normalizeCount(input.attendeeCount);
   const profile = buildRiskAndMeasureByTopic(topic);
 
   return [
-    `참석인원 : ${count || '2'} 명`,
     `-${profile.shortTopic}`,
     `-주요위험요인 : ${profile.risks}`,
     `-안전대책 : ${profile.measures}`,
