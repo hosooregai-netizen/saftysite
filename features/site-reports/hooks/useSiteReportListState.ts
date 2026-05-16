@@ -17,6 +17,7 @@ import {
 import { mergeReportIndexItems } from '@/hooks/inspectionSessions/helpers';
 import { isAdminUserRole } from '@/lib/admin';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
+import { canArchiveReportsForSite } from '@/lib/reportArchivePermissions';
 import {
   fetchTechnicalGuidanceSeed,
   readSafetyAuthToken,
@@ -120,7 +121,7 @@ export function useSiteReportListState(
     ensureSiteReportIndexLoaded,
     getSessionById,
     getReportIndexBySiteId,
-    canArchiveReports,
+    canArchiveReports: canArchiveReportsForAccount,
     isAuthenticated,
     isReady,
     saveNow,
@@ -180,6 +181,9 @@ export function useSiteReportListState(
 
     return overrideSite ?? storedSite;
   }, [decodedSiteKey, options.siteOverride, sites]);
+  const canArchiveReports =
+    canArchiveReportsForAccount ||
+    canArchiveReportsForSite({ currentSite, currentUser });
   const { reloadReportIndex, reportIndexError, reportIndexStatus, reportItems } =
     useSiteReportIndexLoader({
       currentSite,

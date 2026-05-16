@@ -13,6 +13,7 @@ import {
 } from '@/hooks/useUrlQueryState';
 import { invalidateAdminReportMutationClientCaches } from '@/features/admin/lib/adminClientCacheInvalidation';
 import { getAdminSectionHref, isAdminUserRole } from '@/lib/admin';
+import { canArchiveReportsForSite } from '@/lib/reportArchivePermissions';
 import { buildToggledReportDispatch } from '@/lib/reportDispatch';
 import { updateReportDispatch } from '@/lib/reportDispatchApi';
 import {
@@ -86,7 +87,7 @@ export function SiteQuarterlyReportsScreen({
   const deferredQuery = useDeferredValue(query);
   const {
     authError,
-    canArchiveReports,
+    canArchiveReports: canArchiveReportsForAccount,
     currentUser,
     ensureSiteReportsLoaded,
     getSessionsBySiteId,
@@ -97,6 +98,9 @@ export function SiteQuarterlyReportsScreen({
   } = useInspectionSessions();
   const { currentSite, isResolvingSite } = useResolvedSiteRoute(siteKey);
   const isAdminView = Boolean(currentUser && isAdminUserRole(currentUser.role));
+  const canArchiveReports =
+    canArchiveReportsForAccount ||
+    canArchiveReportsForSite({ currentSite, currentUser });
   const { quarterlyReports, isLoading, error, reload } = useSiteOperationalReportIndex(
     currentSite,
     isAuthenticated && isReady && Boolean(currentSite),

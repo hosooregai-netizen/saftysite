@@ -17,6 +17,11 @@ export function MobileReportCard({
   onDeleteRequest,
 }: MobileReportCardProps) {
   const { item } = card;
+  const canDeleteReport =
+    canArchiveReports &&
+    !item.readOnly &&
+    item.reportOpenMode !== 'original_pdf' &&
+    !item.reportKey.startsWith('legacy:');
 
   return (
     <Link href={buildMobileSessionHref(item.reportKey)} style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -36,7 +41,7 @@ export function MobileReportCard({
               {item.reportTitle}
             </h2>
           </div>
-          {canArchiveReports ? (
+          {canDeleteReport ? (
             <button
               type="button"
               style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', flexShrink: 0, fontSize: '13px', padding: '4px' }}

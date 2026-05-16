@@ -7,6 +7,7 @@ import {
   buildQuarterlySummaryUpsertInput,
 } from '@/lib/erpReports/mappers';
 import { fetchAndCacheOperationalReportIndex } from '@/lib/operationalReportIndexCache';
+import { canArchiveReportsForSite } from '@/lib/reportArchivePermissions';
 import {
   archiveSafetyReportByKey,
   readSafetyAuthToken,
@@ -55,7 +56,6 @@ export function useSiteOperationalReportMutations(site: InspectionSite | null) {
       if (!token) {
         throw new SafetyApiError(getExpiredLoginMessage(), 401);
       }
-
       setIsSaving(true);
       setError(null);
       try {
@@ -82,7 +82,6 @@ export function useSiteOperationalReportMutations(site: InspectionSite | null) {
       if (!token) {
         throw new SafetyApiError(getExpiredLoginMessage(), 401);
       }
-
       setIsSaving(true);
       setError(null);
       try {
@@ -109,6 +108,9 @@ export function useSiteOperationalReportMutations(site: InspectionSite | null) {
       if (!token) {
         throw new SafetyApiError(getExpiredLoginMessage(), 401);
       }
+      if (!canArchiveReportsForSite({ currentSite: site, currentUser })) {
+        throw new SafetyApiError('보고서 삭제는 관리자 또는 해당 현장 담당자만 가능합니다.', 403);
+      }
 
       setIsSaving(true);
       setError(null);
@@ -123,7 +125,7 @@ export function useSiteOperationalReportMutations(site: InspectionSite | null) {
         setIsSaving(false);
       }
     },
-    [refreshOperationalIndex, site],
+    [currentUser, refreshOperationalIndex, site],
   );
 
   return {

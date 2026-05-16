@@ -6,6 +6,7 @@ import { buildMobileSiteQuarterlyHref } from '@/features/home/lib/siteEntry';
 import { useInspectionSessions } from '@/hooks/useInspectionSessions';
 import { useSiteOperationalReportIndex } from '@/hooks/useSiteOperationalReportIndex';
 import { useSiteOperationalReportMutations } from '@/hooks/useSiteOperationalReportMutations';
+import { canArchiveReportsForSite } from '@/lib/reportArchivePermissions';
 import {
   readEnumParam,
   readStringParam,
@@ -46,7 +47,7 @@ export function useMobileQuarterlyListScreenState({
   const decodedSiteKey = decodeURIComponent(siteKey);
   const {
     authError,
-    canArchiveReports,
+    canArchiveReports: canArchiveReportsForAccount,
     currentUser,
     ensureSiteReportsLoaded,
     getSessionsBySiteId,
@@ -60,6 +61,9 @@ export function useMobileQuarterlyListScreenState({
     () => sites.find((site) => site.id === decodedSiteKey) ?? null,
     [decodedSiteKey, sites],
   );
+  const canArchiveReports =
+    canArchiveReportsForAccount ||
+    canArchiveReportsForSite({ currentSite, currentUser });
   const { quarterlyReports, error, isLoading } = useSiteOperationalReportIndex(
     currentSite,
     isAuthenticated && isReady && Boolean(currentSite),

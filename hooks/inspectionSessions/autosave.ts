@@ -12,13 +12,13 @@ import {
   mergeReportIndexItems,
 } from '@/hooks/inspectionSessions/helpers';
 import { uploadPhotoAlbumAsset } from '@/lib/photos/apiClient';
+import { canArchiveReportsForSite } from '@/lib/reportArchivePermissions';
 import {
   archiveSafetyReportByKey,
   upsertSafetyReport,
 } from '@/lib/safetyApi';
 import {
   buildSafetyReportUpsertInput,
-  isSafetyAdmin,
   mapInspectionSessionToReportListItem,
   mapSafetyReportToInspectionSession,
   mapSafetyReportListItem,
@@ -211,18 +211,29 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
 
   const deleteSessionRemotely = useCallback(async (sessionId: string) => {
     const targetSession = sessionsRef.current.find((session) => session.id === sessionId);
-    if (!targetSession) return;
+    const indexedReport =
+      Object.values(reportIndexBySiteIdRef.current)
+        .flatMap((state) => state.items)
+        .find((item) => item.reportKey === sessionId) ?? null;
+    if (!targetSession && !indexedReport) return;
 
-    if (!currentUser || !authTokenRef.current || !isSafetyAdmin(currentUser)) {
-      setSyncError('보고서 삭제는 관리자 권한에서만 가능합니다.');
+    const targetSiteId = targetSession?.siteKey ?? indexedReport?.siteId ?? '';
+    const site = sitesRef.current.find((item) => item.id === targetSiteId) ?? null;
+
+    if (
+      !currentUser ||
+      !authTokenRef.current ||
+      !canArchiveReportsForSite({ currentSite: site, currentUser })
+    ) {
+      setSyncError('보고서 삭제는 관리자 또는 해당 현장 담당자만 가능합니다.');
       return;
     }
 
-    const site = sitesRef.current.find((item) => item.id === targetSession.siteKey) ?? null;
-
     setSyncError(null);
-    const nextSessions = sessionsRef.current.filter((session) => session.id !== sessionId);
-    setSessionState(nextSessions);
+    if (targetSession) {
+      const nextSessions = sessionsRef.current.filter((session) => session.id !== sessionId);
+      setSessionState(nextSessions);
+    }
     dirtySessionIdsRef.current.delete(sessionId);
     delete sessionVersionsRef.current[sessionId];
     if (site) {
@@ -234,18 +245,23 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
           ...current,
           [site.id]: {
             ...currentState,
-            items: currentState.items.filter((item) => item.reportKey !== targetSession.id),
+            items: currentState.items.filter((item) => item.reportKey !== sessionId),
           },
         };
       });
     }
 
     try {
-      await archiveSafetyReportByKey(authTokenRef.current, targetSession.id);
+      await archiveSafetyReportByKey(authTokenRef.current, sessionId);
     } catch (error) {
       setSyncError(getErrorMessage(error));
-      setSessionState([...sessionsRef.current, targetSession]);
+      if (targetSession) {
+        setSessionState([...sessionsRef.current, targetSession]);
+      }
       if (site) {
+        const restoredReportItem =
+          indexedReport ??
+          (targetSession ? mapInspectionSessionToReportListItem(targetSession, site) : null);
         setReportIndexBySiteId((current) => ({
           ...current,
           [site.id]: {
@@ -254,7 +270,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
             status: current[site.id]?.status ?? 'loaded',
             items: mergeReportIndexItems(
               current[site.id]?.items ?? [],
-              [mapInspectionSessionToReportListItem(targetSession, site)],
+              restoredReportItem ? [restoredReportItem] : [],
             ),
             fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
             error: current[site.id]?.error ?? null,
@@ -263,7 +279,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
       }
       sessionVersionsRef.current[sessionId] = sessionVersionsRef.current[sessionId] ?? 0;
     }
-  }, [authTokenRef, currentUser, dirtySessionIdsRef, sessionVersionsRef, sessionsRef, setReportIndexBySiteId, setSessionState, setSyncError, sitesRef]);
+  }, [authTokenRef, currentUser, dirtySessionIdsRef, reportIndexBySiteIdRef, sessionVersionsRef, sessionsRef, setReportIndexBySiteId, setSessionState, setSyncError, sitesRef]);
 
   useEffect(() => {
     if (!isReady) return;
