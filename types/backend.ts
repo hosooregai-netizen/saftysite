@@ -1438,8 +1438,13 @@ export interface SafetyTechnicalGuidanceSeedPreviousRoundAccident {
   source_report_key: string;
   source_visit_round: number;
   accident_occurred: string;
+  recent_accident_date: string;
+  accident_type: string;
   accident_summary: string;
   accident_photo_url: string;
+  accident_photo_url_2: string;
+  accident_occurrence_part: string;
+  accident_implementation_status: string;
 }
 
 export interface SafetyTechnicalGuidanceSeed {

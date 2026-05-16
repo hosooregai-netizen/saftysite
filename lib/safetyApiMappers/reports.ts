@@ -400,8 +400,15 @@ export function buildPreviousRoundAccidentOverviewSeed(
 
   return {
     accidentOccurred: 'yes',
+    recentAccidentDate: normalizeMapperText(previousRoundAccident.recent_accident_date),
+    accidentType: normalizeMapperText(previousRoundAccident.accident_type),
     accidentSummary: normalizeMapperText(previousRoundAccident.accident_summary),
     accidentPhotoUrl: normalizeMapperText(previousRoundAccident.accident_photo_url),
+    accidentPhotoUrl2: normalizeMapperText(previousRoundAccident.accident_photo_url_2),
+    accidentOccurrencePart: normalizeMapperText(previousRoundAccident.accident_occurrence_part),
+    accidentImplementationStatus: normalizeMapperText(
+      previousRoundAccident.accident_implementation_status
+    ),
   };
 }
 

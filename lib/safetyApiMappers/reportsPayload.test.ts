@@ -203,15 +203,25 @@ test('buildPreviousRoundAccidentOverviewSeed maps yes seed into doc2 accident fi
       source_report_key: 'round-10',
       source_visit_round: 10,
       accident_occurred: 'yes',
+      recent_accident_date: '2026-05-14',
+      accident_type: 'fall',
       accident_summary: '직전회차 사고 요약',
       accident_photo_url: 'https://example.test/accident.jpg',
+      accident_photo_url_2: 'https://example.test/status.jpg',
+      accident_occurrence_part: 'roof edge',
+      accident_implementation_status: 'in progress',
     },
   });
 
   assert.deepEqual(overview, {
     accidentOccurred: 'yes',
+    recentAccidentDate: '2026-05-14',
+    accidentType: 'fall',
     accidentSummary: '직전회차 사고 요약',
     accidentPhotoUrl: 'https://example.test/accident.jpg',
+    accidentPhotoUrl2: 'https://example.test/status.jpg',
+    accidentOccurrencePart: 'roof edge',
+    accidentImplementationStatus: 'in progress',
   });
 });
 
@@ -223,15 +233,25 @@ test('createNewSafetySession applies previous-round accident overview only as in
         source_report_key: 'round-10',
         source_visit_round: 10,
         accident_occurred: 'yes',
+        recent_accident_date: '2026-05-14',
+        accident_type: 'fall',
         accident_summary: '직전회차 사고 요약',
         accident_photo_url: '',
+        accident_photo_url_2: 'https://example.test/status.jpg',
+        accident_occurrence_part: 'roof edge',
+        accident_implementation_status: 'in progress',
       },
     }),
   });
 
   assert.equal(session.document2Overview.accidentOccurred, 'yes');
+  assert.equal(session.document2Overview.recentAccidentDate, '2026-05-14');
+  assert.equal(session.document2Overview.accidentType, 'fall');
   assert.equal(session.document2Overview.accidentSummary, '직전회차 사고 요약');
   assert.equal(session.document2Overview.accidentPhotoUrl, '');
+  assert.equal(session.document2Overview.accidentPhotoUrl2, 'https://example.test/status.jpg');
+  assert.equal(session.document2Overview.accidentOccurrencePart, 'roof edge');
+  assert.equal(session.document2Overview.accidentImplementationStatus, 'in progress');
 });
 
 test('createNewSafetySession keeps default no when previous-round accident seed is null', () => {
