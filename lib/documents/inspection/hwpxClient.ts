@@ -97,6 +97,7 @@ const DOC5_CHART_IMAGE_HEIGHT = DOC5_CHART_CONTENT_HEIGHT;
 const DOC5_CHART_IMAGE_WIDTH = Math.round((DOC5_CHART_IMAGE_HEIGHT * DOC5_CHART_SLOT_WIDTH_MM) / DOC5_CHART_SLOT_HEIGHT_MM);
 const DOC5_CHART_CONTENT_OFFSET_X = Math.round((DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH) / 2);
 const DOC5_CHART_CONTENT_OFFSET_Y = 0;
+const DOC5_CHART_RENDER_SCALE = 2;
 const DOC5_CHART_CENTER_X = 300;
 const DOC5_CHART_CENTER_Y = 340;
 const DOC5_CHART_OUTER_RADIUS = 270;
@@ -106,6 +107,10 @@ const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
 const DOC5_CHART_LEGEND_LABEL_GAP = 30;
+
+function scaleDoc5ChartPixel(value: number): number {
+  return Math.max(1, Math.round(value * DOC5_CHART_RENDER_SCALE));
+}
 
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
 const IMAGE_BINDING_MODE: 'embedded' | 'text_only' = 'embedded';
@@ -1234,16 +1239,17 @@ function renderDoc5ChartCardDataUrl(
   const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
 
   const canvas = document.createElement('canvas');
-  canvas.width = DOC5_CHART_IMAGE_WIDTH;
-  canvas.height = DOC5_CHART_IMAGE_HEIGHT;
+  canvas.width = scaleDoc5ChartPixel(DOC5_CHART_IMAGE_WIDTH);
+  canvas.height = scaleDoc5ChartPixel(DOC5_CHART_IMAGE_HEIGHT);
   const context = canvas.getContext('2d');
   if (!context) {
     return '';
   }
 
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
   context.save();
+  context.scale(DOC5_CHART_RENDER_SCALE, DOC5_CHART_RENDER_SCALE);
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, DOC5_CHART_IMAGE_WIDTH, DOC5_CHART_IMAGE_HEIGHT);
   context.translate(DOC5_CHART_CONTENT_OFFSET_X, DOC5_CHART_CONTENT_OFFSET_Y);
   context.textBaseline = 'middle';
 

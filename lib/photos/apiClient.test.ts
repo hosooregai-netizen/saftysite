@@ -76,7 +76,7 @@ function withAssetEnv(value: string | undefined, callback: () => Promise<void>) 
   });
 }
 
-function buildPhotoAssetResponse() {
+function buildPhotoAssetResponse(overrides: Record<string, unknown> = {}) {
   return {
     captured_at: '2026-04-23T00:00:00Z',
     content_type: 'image/jpeg',
@@ -102,6 +102,7 @@ function buildPhotoAssetResponse() {
     updated_at: '2026-04-23T00:00:00Z',
     uploaded_by_name: 'Uploader',
     uploaded_by_user_id: 'user-1',
+    ...overrides,
   };
 }
 
@@ -136,7 +137,47 @@ test('uploadPhotoAlbumAsset prefers direct upload when a secure upload origin is
       });
 
       assert.equal(uploaded.id, 'photo-1');
+      assert.match(uploaded.originalUrl, /\/photo-assets\/files\/originals\/photo\.jpg$/);
+      assert.match(uploaded.previewUrl, /\/photo-assets\/files\/thumbnails\/photo\.jpg$/);
+      assert.equal(uploaded.thumbnailUrl, uploaded.previewUrl);
       assert.equal(callCount, 2);
+    } finally {
+      globalThis.fetch = originalFetch;
+      restoreWindow();
+    }
+  });
+});
+
+test('uploadPhotoAlbumAsset maps original and thumbnail URLs separately', async () => {
+  const restoreWindow = installWindow({ protocol: 'https:', token: 'photo-token' });
+  const originalFetch = globalThis.fetch;
+
+  await withUploadEnv('https://uploads.example.com', async () => {
+    globalThis.fetch = async (input) => {
+      if (String(input) === '/api/photos/cache') {
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify(buildPhotoAssetResponse()), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+
+    try {
+      const uploaded = await uploadPhotoAlbumAsset({
+        file: new File(['img'], 'photo.jpg', { type: 'image/jpeg' }),
+        roundNo: 1,
+        siteId: 'site-1',
+      });
+
+      assert.match(uploaded.originalUrl, /\/photo-assets\/files\/originals\/photo\.jpg$/);
+      assert.match(uploaded.previewUrl, /\/photo-assets\/files\/thumbnails\/photo\.jpg$/);
+      assert.match(uploaded.thumbnailUrl, /\/photo-assets\/files\/thumbnails\/photo\.jpg$/);
+      assert.notEqual(uploaded.originalUrl, uploaded.previewUrl);
     } finally {
       globalThis.fetch = originalFetch;
       restoreWindow();

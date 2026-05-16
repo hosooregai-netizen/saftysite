@@ -156,7 +156,7 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
       if (target.onAlbumSelected) {
         await Promise.resolve(target.onAlbumSelected(item));
       } else {
-        const file = await assetUrlToFile(item.previewUrl, item.fileName || 'photo.jpg');
+        const file = await assetUrlToFile(item.originalUrl || item.previewUrl, item.fileName || 'photo.jpg');
         await Promise.resolve(target.onFileSelected(file));
       }
       setIsPhotoAlbumModalOpen(false);

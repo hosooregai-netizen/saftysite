@@ -687,7 +687,7 @@ export function useInspectionSessionScreen(sessionId: string) {
           roundNo: Math.max(1, session?.reportNumber || 1),
           siteId: site.id,
         });
-        value = uploaded.previewUrl;
+        value = uploaded.originalUrl || uploaded.previewUrl;
       } else if (canUploadAssets) {
         const uploaded = await uploadSafetyAssetFile(file);
         value = uploaded.url;

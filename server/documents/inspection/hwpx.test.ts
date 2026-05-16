@@ -700,18 +700,38 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
 
   const document = await buildInspectionHwpxDocument(session, [session]);
   const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
   const chartImage = await zip.file('BinData/tplimg23.png')?.async('nodebuffer');
 
+  assert.ok(sectionXml);
   assert.ok(chartImage);
+  for (const imageId of ['tplimg23', 'tplimg24', 'tplimg25', 'tplimg26']) {
+    assert.ok(zip.file(`BinData/${imageId}.png`), `${imageId} should be bound as a PNG asset`);
+  }
+  assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
 
   const metadata = await sharp(chartImage).metadata();
   const outerRingPixel = await sharp(chartImage)
-    .extract({ left: 575, top: 340, width: 1, height: 1 })
+    .extract({ left: 1150, top: 680, width: 1, height: 1 })
     .raw()
     .toBuffer();
+  const doc5ChartRun = Array.from(sectionXml.matchAll(/<hp:pic\b[\s\S]*?<\/hp:pic>/g))
+    .map((match) => match[0])
+    .find((picXml) => picXml.includes('binaryItemIDRef="tplimg23"'));
 
+  assert.equal(metadata.width, 3262);
+  assert.equal(metadata.height, 1440);
   assert.equal(metadata.hasAlpha, false);
   assert.notDeepEqual(Array.from(outerRingPixel), [255, 255, 255]);
+  assert.ok(doc5ChartRun);
+  const displaySize = doc5ChartRun.match(/<hp:sz\b[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/);
+  const originalSize = doc5ChartRun.match(/<hp:orgSz\b[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/);
+  assert.ok(displaySize);
+  assert.ok(originalSize);
+  assert.equal(originalSize[1], displaySize[1]);
+  assert.equal(originalSize[2], displaySize[2]);
+  assert.ok(Number.parseInt(displaySize[1], 10) < 40000);
+  assert.ok(Number.parseInt(displaySize[2], 10) < 24000);
 });
 
 test('buildInspectionHwpxDocument keeps multi-section repeated tables free of blank page-break paragraphs', async () => {

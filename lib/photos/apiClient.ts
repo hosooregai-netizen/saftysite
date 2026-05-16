@@ -170,6 +170,10 @@ function mapUploadedPhotoAsset(asset: SafetyBackendPhotoAsset): PhotoAlbumItem {
   const sourceKind = normalizeText(asset.source_kind) === 'legacy_import'
     ? 'legacy_import'
     : 'album_upload';
+  const originalPath = normalizeText(asset.original_path);
+  const thumbnailPath = normalizeText(asset.thumbnail_path || asset.original_path);
+  const originalUrl = resolveSafetyAssetUrl(originalPath);
+  const thumbnailUrl = resolveSafetyAssetUrl(thumbnailPath);
 
   return {
     capturedAt: normalizeText(asset.captured_at),
@@ -188,9 +192,8 @@ function mapUploadedPhotoAsset(asset: SafetyBackendPhotoAsset): PhotoAlbumItem {
     headquarterId: normalizeText(asset.headquarter_id),
     headquarterName: normalizeText(asset.headquarter_name),
     id: normalizeText(asset.id),
-    previewUrl: resolveSafetyAssetUrl(
-      normalizeText(asset.thumbnail_path || asset.original_path),
-    ),
+    originalUrl,
+    previewUrl: thumbnailUrl,
     roundNo: typeof asset.round_no === 'number' ? asset.round_no : 0,
     siteId: normalizeText(asset.site_id),
     siteName: normalizeText(asset.site_name),
@@ -200,6 +203,7 @@ function mapUploadedPhotoAsset(asset: SafetyBackendPhotoAsset): PhotoAlbumItem {
     sourceReportKey: normalizeText(asset.source_report_key),
     sourceReportTitle: normalizeText(asset.source_report_title),
     sourceSlotKey: normalizeText(asset.source_slot_key),
+    thumbnailUrl,
     uploadedByName: normalizeText(asset.uploaded_by_name),
     uploadedByUserId: normalizeText(asset.uploaded_by_user_id),
   };

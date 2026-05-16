@@ -36,7 +36,9 @@ export interface PhotoAlbumItem {
   roundNo: number;
   headquarterId: string;
   headquarterName: string;
+  originalUrl: string;
   previewUrl: string;
+  thumbnailUrl: string;
   downloadUrl: string;
   fileName: string;
   contentType: string;

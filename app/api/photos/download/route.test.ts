@@ -33,6 +33,7 @@ function buildAlbumUploadItem(id: string, fileName: string): PhotoAlbumItem {
     headquarterId: 'hq-1',
     headquarterName: 'HQ',
     id,
+    originalUrl: `/photo-assets/${id}/original`,
     previewUrl: `/photo-assets/${id}/thumbnail`,
     roundNo: 1,
     siteId: 'site-1',
@@ -43,6 +44,7 @@ function buildAlbumUploadItem(id: string, fileName: string): PhotoAlbumItem {
     sourceReportKey: '',
     sourceReportTitle: '',
     sourceSlotKey: '',
+    thumbnailUrl: `/photo-assets/${id}/thumbnail`,
     uploadedByName: 'Uploader',
     uploadedByUserId: 'user-1',
   };

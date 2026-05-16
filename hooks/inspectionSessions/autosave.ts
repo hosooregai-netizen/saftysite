@@ -82,7 +82,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
             roundNo: Math.max(1, session.reportNumber || 1),
             siteId,
           });
-          return uploaded.previewUrl;
+          return uploaded.originalUrl || uploaded.previewUrl;
         },
       );
 

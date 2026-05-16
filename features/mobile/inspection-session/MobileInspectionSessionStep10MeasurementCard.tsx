@@ -84,11 +84,12 @@ export function MobileInspectionSessionStep10MeasurementCard({
             openPhotoSourcePicker({
               fieldLabel: '계측 사진',
               onAlbumSelected: async (albumItem) => {
+                const documentUrl = albumItem.originalUrl || albumItem.previewUrl;
                 const file = await assetUrlToFile(
                   albumItem.previewUrl,
                   albumItem.fileName || `${measurement.id}.jpg`,
                 );
-                await applyDoc10MeasurementPhoto(measurement.id, albumItem.previewUrl, file);
+                await applyDoc10MeasurementPhoto(measurement.id, documentUrl, file);
               },
               onFileSelected: async (file) => {
                 await handleDoc10PhotoSelect(measurement.id, file);

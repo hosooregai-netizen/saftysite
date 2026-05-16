@@ -102,6 +102,7 @@ const DOC5_CHART_IMAGE_HEIGHT = DOC5_CHART_CONTENT_HEIGHT;
 const DOC5_CHART_IMAGE_WIDTH = Math.round((DOC5_CHART_IMAGE_HEIGHT * DOC5_CHART_SLOT_WIDTH_MM) / DOC5_CHART_SLOT_HEIGHT_MM);
 const DOC5_CHART_CONTENT_OFFSET_X = Math.round((DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH) / 2);
 const DOC5_CHART_CONTENT_OFFSET_Y = 0;
+const DOC5_CHART_RENDER_SCALE = 2;
 const DOC5_CHART_CENTER_X = 300;
 const DOC5_CHART_CENTER_Y = 340;
 const DOC5_CHART_OUTER_RADIUS = 270;
@@ -111,6 +112,10 @@ const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
 const DOC5_CHART_LEGEND_LABEL_GAP = 30;
+
+function scaleDoc5ChartPixel(value: number, scale = DOC5_CHART_RENDER_SCALE): number {
+  return Math.round(value * scale);
+}
 
 export interface GeneratedInspectionHwpxDocument {
   buffer: Buffer;
@@ -1246,16 +1251,17 @@ function renderDoc5ChartCardDataUrl(
   const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
 
   const canvas = document.createElement('canvas');
-  canvas.width = DOC5_CHART_IMAGE_WIDTH;
-  canvas.height = DOC5_CHART_IMAGE_HEIGHT;
+  canvas.width = scaleDoc5ChartPixel(DOC5_CHART_IMAGE_WIDTH);
+  canvas.height = scaleDoc5ChartPixel(DOC5_CHART_IMAGE_HEIGHT);
   const context = canvas.getContext('2d');
   if (!context) {
     return '';
   }
 
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, canvas.width, canvas.height);
   context.save();
+  context.scale(DOC5_CHART_RENDER_SCALE, DOC5_CHART_RENDER_SCALE);
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, DOC5_CHART_IMAGE_WIDTH, DOC5_CHART_IMAGE_HEIGHT);
   context.translate(DOC5_CHART_CONTENT_OFFSET_X, DOC5_CHART_CONTENT_OFFSET_Y);
 
   context.textBaseline = 'top';
@@ -1362,7 +1368,7 @@ function buildDoc5ChartSlicePath(
   ].join(' ');
 }
 
-function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
+function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
   const width = DOC5_CHART_CONTENT_WIDTH;
   const height = DOC5_CHART_CONTENT_HEIGHT;
   const total = entries.reduce((sum, item) => sum + item.count, 0);
@@ -1384,7 +1390,7 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[]): string {
   const countX = legendRight;
   const labelMaxChars = entries.length >= 5 ? 15 : entries.length >= 3 ? 16 : 18;
   const svgParts = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${scaleDoc5ChartPixel(width, scale)}" height="${scaleDoc5ChartPixel(height, scale)}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
   ];
 
@@ -1465,13 +1471,13 @@ async function renderDoc5ChartCardDataUrlEmbedded(
   const entries: Doc5ChartEntry[] = Array.isArray(rawEntries) ? rawEntries : [];
   const sharp = (await import('sharp')).default;
   const rightPadding = DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH - DOC5_CHART_CONTENT_OFFSET_X;
-  const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries)))
+  const pngBuffer = await sharp(Buffer.from(buildDoc5ChartSvg(entries, DOC5_CHART_RENDER_SCALE)))
     .flatten({ background: '#ffffff' })
     .extend({
-      top: DOC5_CHART_CONTENT_OFFSET_Y,
-      bottom: DOC5_CHART_IMAGE_HEIGHT - DOC5_CHART_CONTENT_HEIGHT - DOC5_CHART_CONTENT_OFFSET_Y,
-      left: DOC5_CHART_CONTENT_OFFSET_X,
-      right: rightPadding,
+      top: scaleDoc5ChartPixel(DOC5_CHART_CONTENT_OFFSET_Y),
+      bottom: scaleDoc5ChartPixel(DOC5_CHART_IMAGE_HEIGHT - DOC5_CHART_CONTENT_HEIGHT - DOC5_CHART_CONTENT_OFFSET_Y),
+      left: scaleDoc5ChartPixel(DOC5_CHART_CONTENT_OFFSET_X),
+      right: scaleDoc5ChartPixel(rightPadding),
       background: '#ffffff',
     })
     .png()

@@ -64,9 +64,15 @@ test('POST /api/photos/upload invalidates photo album route cache after a succes
     },
   });
 
-  const payload = (await response.json()) as { item?: { id?: string }; ok?: boolean };
+  const payload = (await response.json()) as {
+    item?: { id?: string; originalUrl?: string; previewUrl?: string; thumbnailUrl?: string };
+    ok?: boolean;
+  };
 
   assert.equal(invalidateCount, 1);
   assert.equal(payload.ok, true);
   assert.equal(payload.item?.id, 'asset-1');
+  assert.match(payload.item?.originalUrl ?? '', /\/photo-assets\/files\/originals\/photo\.jpg$/);
+  assert.match(payload.item?.previewUrl ?? '', /\/photo-assets\/files\/thumbnails\/photo\.jpg$/);
+  assert.equal(payload.item?.thumbnailUrl, payload.item?.previewUrl);
 });

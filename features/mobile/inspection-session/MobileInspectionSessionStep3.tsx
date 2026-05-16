@@ -95,11 +95,12 @@ export function MobileInspectionSessionStep3({
                   openPhotoSourcePicker({
                     fieldLabel: getMobileDoc3SlotLabel(index),
                     onAlbumSelected: async (albumItem) => {
+                      const documentUrl = albumItem.originalUrl || albumItem.previewUrl;
                       const file = await assetUrlToFile(
                         albumItem.previewUrl,
                         albumItem.fileName || `${scene.id}.jpg`,
                       );
-                      await applyDoc3ScenePhoto(scene.id, index, albumItem.previewUrl, file);
+                      await applyDoc3ScenePhoto(scene.id, index, documentUrl, file);
                     },
                     onFileSelected: async (file) => {
                       const dataUrl = await screen.withFileData(file);

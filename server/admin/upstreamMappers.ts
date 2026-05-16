@@ -1131,6 +1131,9 @@ export function mapBackendAnalyticsMonthDetailResponse(
 }
 
 export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhotoAsset {
+  const originalPath = normalizeText(asset.original_path);
+  const thumbnailPath = normalizeText(asset.thumbnail_path || asset.original_path);
+
   return {
     capturedAt: normalizeText(asset.captured_at),
     contentType: normalizeText(asset.content_type),
@@ -1148,14 +1151,14 @@ export function mapBackendPhotoAsset(asset: SafetyBackendPhotoAsset): SafetyPhot
     headquarterId: normalizeText(asset.headquarter_id),
     headquarterName: normalizeText(asset.headquarter_name),
     id: normalizeText(asset.id),
-    originalPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.original_path)),
+    originalPath: originalPath ? buildSafetyAdminUpstreamUrl(originalPath) : '',
     roundNo: typeof asset.round_no === 'number' ? asset.round_no : 0,
     sizeBytes: typeof asset.size_bytes === 'number' ? asset.size_bytes : 0,
     siteId: normalizeText(asset.site_id),
     siteName: normalizeText(asset.site_name),
     sourceKind:
       normalizeText(asset.source_kind) === 'legacy_import' ? 'legacy_import' : 'album_upload',
-    thumbnailPath: buildSafetyAdminUpstreamUrl(normalizeText(asset.thumbnail_path || asset.original_path)),
+    thumbnailPath: thumbnailPath ? buildSafetyAdminUpstreamUrl(thumbnailPath) : '',
     uploadedByName: normalizeText(asset.uploaded_by_name),
     uploadedByUserId: normalizeText(asset.uploaded_by_user_id),
     sourceDocumentKey: normalizeText(asset.source_document_key),
@@ -1506,6 +1509,9 @@ export function buildPhotoAlbumItemFromAsset(
     '건설사';
   const siteName = normalizeText(asset.siteName) || normalizeText(site?.site_name) || '현장';
 
+  const originalUrl = normalizeSafetyAssetUrl(asset.originalPath);
+  const thumbnailUrl = normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath);
+
   return {
     capturedAt: asset.capturedAt,
     contentType: asset.contentType,
@@ -1517,7 +1523,8 @@ export function buildPhotoAlbumItemFromAsset(
     headquarterId: asset.headquarterId,
     headquarterName,
     id: asset.id,
-    previewUrl: normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath),
+    originalUrl,
+    previewUrl: thumbnailUrl,
     roundNo: asset.roundNo,
     siteId: asset.siteId,
     siteName,
@@ -1527,6 +1534,7 @@ export function buildPhotoAlbumItemFromAsset(
     sourceReportKey: asset.sourceReportKey || '',
     sourceReportTitle: asset.sourceReportTitle || '',
     sourceSlotKey: asset.sourceSlotKey || '',
+    thumbnailUrl,
     uploadedByName: asset.uploadedByName,
     uploadedByUserId: asset.uploadedByUserId,
   };

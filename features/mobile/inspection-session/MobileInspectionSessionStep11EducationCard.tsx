@@ -70,7 +70,7 @@ export function MobileInspectionSessionStep11EducationCard({
               onClick={() =>
                 openPhotoSourcePicker({
                   fieldLabel: '안전교육 사진',
-                  onAlbumSelected: (albumItem) => updateRecord({ photoUrl: albumItem.previewUrl }),
+                  onAlbumSelected: (albumItem) => updateRecord({ photoUrl: albumItem.originalUrl || albumItem.previewUrl }),
                   onFileSelected: async (file) => {
                     await screen.withFileData(file, (value) => updateRecord({ photoUrl: value }));
                   },

@@ -16,6 +16,7 @@ function buildItem(input: Partial<PhotoAlbumItem> & Pick<PhotoAlbumItem, 'id' | 
     headquarterId: 'hq-1',
     headquarterName: 'HQ',
     id: input.id,
+    originalUrl: '',
     previewUrl: '',
     roundNo: input.roundNo,
     siteId: input.siteId ?? 'site-1',
@@ -26,6 +27,7 @@ function buildItem(input: Partial<PhotoAlbumItem> & Pick<PhotoAlbumItem, 'id' | 
     sourceReportKey: '',
     sourceReportTitle: '',
     sourceSlotKey: '',
+    thumbnailUrl: '',
     uploadedByName: '',
     uploadedByUserId: '',
   };

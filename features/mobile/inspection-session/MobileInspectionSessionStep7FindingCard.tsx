@@ -96,7 +96,7 @@ export function MobileInspectionSessionStep7FindingCard({
   ) =>
     openPhotoSourcePicker({
       fieldLabel,
-      onAlbumSelected: (albumItem) => updateFinding({ [key]: albumItem.previewUrl }),
+      onAlbumSelected: (albumItem) => updateFinding({ [key]: albumItem.originalUrl || albumItem.previewUrl }),
       onFileSelected: async (file) => {
         await screen.withFileData(file, (value) => updateFinding({ [key]: value }));
       },

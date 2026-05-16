@@ -125,6 +125,9 @@ function inferLegacyFileName(
 }
 
 function buildAlbumUploadItem(asset: SafetyPhotoAsset, site: SafetySite): PhotoAlbumItem {
+  const originalUrl = normalizeSafetyAssetUrl(asset.originalPath);
+  const thumbnailUrl = normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath);
+
   return {
     capturedAt: asset.capturedAt,
     contentType: asset.contentType,
@@ -136,7 +139,8 @@ function buildAlbumUploadItem(asset: SafetyPhotoAsset, site: SafetySite): PhotoA
     headquarterId: asset.headquarterId,
     headquarterName: getHeadquarterName(site),
     id: asset.id,
-    previewUrl: normalizeSafetyAssetUrl(asset.thumbnailPath || asset.originalPath),
+    originalUrl,
+    previewUrl: thumbnailUrl,
     roundNo: asset.roundNo || 0,
     siteId: asset.siteId,
     siteName: getSiteName(site),
@@ -146,6 +150,7 @@ function buildAlbumUploadItem(asset: SafetyPhotoAsset, site: SafetySite): PhotoA
     sourceReportKey: '',
     sourceReportTitle: '',
     sourceSlotKey: '',
+    thumbnailUrl,
     uploadedByName: asset.uploadedByName,
     uploadedByUserId: asset.uploadedByUserId,
   };
@@ -164,6 +169,8 @@ function buildLegacyItem(input: {
   documentKey: string;
 }): PhotoAlbumItem {
   const id = `legacy:${input.reportKey}:${input.documentKey}:${input.slotKey}`;
+  const sourceUrl = normalizeSafetyAssetUrl(input.source);
+
   return {
     capturedAt: '',
     contentType: inferContentType(input.source),
@@ -175,7 +182,8 @@ function buildLegacyItem(input: {
     headquarterId: input.site.headquarter_id,
     headquarterName: getHeadquarterName(input.site),
     id,
-    previewUrl: normalizeSafetyAssetUrl(input.source),
+    originalUrl: sourceUrl,
+    previewUrl: sourceUrl,
     roundNo: input.roundNo ?? 0,
     siteId: input.site.id,
     siteName: getSiteName(input.site),
@@ -185,6 +193,7 @@ function buildLegacyItem(input: {
     sourceReportKey: input.reportKey,
     sourceReportTitle: input.reportTitle,
     sourceSlotKey: input.slotKey,
+    thumbnailUrl: sourceUrl,
     uploadedByName: input.uploadedByName,
     uploadedByUserId: '',
   };
@@ -563,8 +572,9 @@ export async function resolvePhotoAlbumItemBinary(
     throw new Error('원본 사진을 찾지 못했습니다.');
   }
 
-  if (legacyItem.previewUrl.startsWith('data:image/')) {
-    const binary = decodeDataUrl(legacyItem.previewUrl);
+  const legacySourceUrl = legacyItem.originalUrl || legacyItem.previewUrl;
+  if (legacySourceUrl.startsWith('data:image/')) {
+    const binary = decodeDataUrl(legacySourceUrl);
     return {
       ...binary,
       fileName: sanitizeFileName(item.fileName, binary.fileName),
@@ -572,7 +582,7 @@ export async function resolvePhotoAlbumItemBinary(
   }
 
   return fetchRemoteBinary(
-    buildSafetyAssetUrl(legacyItem.previewUrl),
+    buildSafetyAssetUrl(legacySourceUrl),
     sanitizeFileName(item.fileName, 'legacy-photo.jpg'),
   );
 }

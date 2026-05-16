@@ -142,7 +142,7 @@ export function MobileInspectionSessionStep4({
                       onClick={() =>
                         openPhotoSourcePicker({
                           fieldLabel: '개선 후',
-                          onAlbumSelected: (albumItem) => updateFollowUp(item.id, { afterPhotoUrl: albumItem.previewUrl }),
+                          onAlbumSelected: (albumItem) => updateFollowUp(item.id, { afterPhotoUrl: albumItem.originalUrl || albumItem.previewUrl }),
                           onFileSelected: async (file) => {
                             await screen.withFileData(file, (value) => updateFollowUp(item.id, { afterPhotoUrl: value }));
                           },
