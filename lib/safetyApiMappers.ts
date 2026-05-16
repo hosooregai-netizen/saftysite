@@ -3,6 +3,7 @@ export {
   mergeMasterDataIntoSession,
 } from '@/lib/safetyApiMappers/masterData';
 export {
+  buildPreviousRoundAccidentOverviewSeed,
   buildSafetyReportUpsertInput,
   createNewSafetySession,
   isSafetyAdmin,

@@ -13,6 +13,7 @@ import type {
   SafetyMasterData,
   SafetyReport,
   SafetyReportListItem,
+  SafetyTechnicalGuidanceSeed,
   SafetyUpsertReportInput,
   SafetyUser,
 } from '@/types/backend';
@@ -346,31 +347,58 @@ export function createNewSafetySession(
     meta?: Partial<InspectionSession['meta']>;
     scheduleId?: string | null;
     scheduleRoundNo?: number | null;
+    document2Overview?: Partial<InspectionSession['document2Overview']>;
     document4FollowUps?: InspectionSession['document4FollowUps'];
     technicalGuidanceRelations?: Partial<InspectionSession['technicalGuidanceRelations']>;
   }
 ): InspectionSession {
-  return mergeMasterDataIntoSession(
-    createInspectionSession(
-      {
-        adminSiteSnapshot: site.adminSiteSnapshot,
-        meta: {
-          siteName: site.siteName,
-          drafter: site.assigneeName,
-          ...initial?.meta,
-        },
-        scheduleId: initial?.scheduleId,
-        scheduleRoundNo: initial?.scheduleRoundNo,
-        document13Cases: masterData.caseFeed,
-        document14SafetyInfos: masterData.safetyInfos,
-        document4FollowUps: initial?.document4FollowUps,
-        technicalGuidanceRelations: initial?.technicalGuidanceRelations,
+  const session = createInspectionSession(
+    {
+      adminSiteSnapshot: site.adminSiteSnapshot,
+      meta: {
+        siteName: site.siteName,
+        drafter: site.assigneeName,
+        ...initial?.meta,
       },
-      site.id,
-      reportNumber
-    ),
+      scheduleId: initial?.scheduleId,
+      scheduleRoundNo: initial?.scheduleRoundNo,
+      document13Cases: masterData.caseFeed,
+      document14SafetyInfos: masterData.safetyInfos,
+      document4FollowUps: initial?.document4FollowUps,
+      technicalGuidanceRelations: initial?.technicalGuidanceRelations,
+    },
+    site.id,
+    reportNumber
+  );
+  const sessionWithInitialOverview = initial?.document2Overview
+    ? {
+        ...session,
+        document2Overview: {
+          ...session.document2Overview,
+          ...initial.document2Overview,
+        },
+      }
+    : session;
+
+  return mergeMasterDataIntoSession(
+    sessionWithInitialOverview,
     masterData
   );
+}
+
+export function buildPreviousRoundAccidentOverviewSeed(
+  seed: Pick<SafetyTechnicalGuidanceSeed, 'previous_round_accident'> | null | undefined,
+): Partial<InspectionSession['document2Overview']> | undefined {
+  const previousRoundAccident = seed?.previous_round_accident;
+  if (previousRoundAccident?.accident_occurred !== 'yes') {
+    return undefined;
+  }
+
+  return {
+    accidentOccurred: 'yes',
+    accidentSummary: normalizeMapperText(previousRoundAccident.accident_summary),
+    accidentPhotoUrl: normalizeMapperText(previousRoundAccident.accident_photo_url),
+  };
 }
 
 export function isSafetyAdmin(user: Pick<SafetyUser, 'role'> | null): boolean {

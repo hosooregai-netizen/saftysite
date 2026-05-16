@@ -1434,6 +1434,14 @@ export interface SafetyTechnicalGuidanceSeedFollowUp {
   result: string;
 }
 
+export interface SafetyTechnicalGuidanceSeedPreviousRoundAccident {
+  source_report_key: string;
+  source_visit_round: number;
+  accident_occurred: string;
+  accident_summary: string;
+  accident_photo_url: string;
+}
+
 export interface SafetyTechnicalGuidanceSeed {
   next_visit_round: number;
   projection_version: number;
@@ -1441,6 +1449,7 @@ export interface SafetyTechnicalGuidanceSeed {
   cumulative_accident_entries: SafetyAiChartEntry[];
   cumulative_agent_entries: SafetyAiChartEntry[];
   previous_authoritative_report: SafetyReportListItem | null;
+  previous_round_accident?: SafetyTechnicalGuidanceSeedPreviousRoundAccident | null;
 }
 
 export interface SafetyQuarterlySummarySeedSourceReport {

@@ -22,7 +22,10 @@ import {
   readSafetyAuthToken,
   SafetyApiError,
 } from '@/lib/safetyApi';
-import { mapInspectionSessionToReportListItem } from '@/lib/safetyApiMappers';
+import {
+  buildPreviousRoundAccidentOverviewSeed,
+  mapInspectionSessionToReportListItem,
+} from '@/lib/safetyApiMappers';
 import {
   applyScheduleReportUpdateToSession,
   buildContractWindowFromScheduleRows,
@@ -421,6 +424,7 @@ export function useSiteReportListState(
       targetVisitDate: normalizedReportDate,
       targetVisitRound: seedReportNumber,
     });
+    const previousRoundAccidentOverview = buildPreviousRoundAccidentOverviewSeed(seed);
     const normalizedReportTitle = buildDefaultReportTitle(normalizedReportDate, seedReportNumber);
     const nextSession = createSession(currentSite, {
       reportNumber: seedReportNumber,
@@ -432,6 +436,7 @@ export function useSiteReportListState(
         reportTitle: normalizedReportTitle,
         drafter: currentUser?.name || currentSite.assigneeName,
       },
+      document2Overview: previousRoundAccidentOverview,
       document4FollowUps: seed.open_followups.map((item) => ({
         id: item.id,
         sourceSessionId: item.source_session_id ?? undefined,

@@ -22,6 +22,7 @@ import { isAdminUserRole, getAdminSectionHref } from '@/lib/admin';
 import { buildDefaultReportTitle } from '@/features/site-reports/report-list/reportListHelpers';
 import { fetchAllMySchedules, reserveNextMySchedule, updateMySchedule } from '@/lib/calendar/apiClient';
 import { fetchTechnicalGuidanceSeed, readSafetyAuthToken } from '@/lib/safetyApi';
+import { buildPreviousRoundAccidentOverviewSeed } from '@/lib/safetyApiMappers';
 import homeStyles from '@/features/home/components/HomeScreen.module.css';
 import {
   applyScheduleReportUpdateToSession,
@@ -808,6 +809,9 @@ export function WorkerCalendarScreen() {
     let document4FollowUps:
       | NonNullable<Parameters<typeof createSession>[1]>['document4FollowUps']
       | undefined;
+    let document2Overview:
+      | NonNullable<Parameters<typeof createSession>[1]>['document2Overview']
+      | undefined;
 
     try {
       const token = readSafetyAuthToken();
@@ -816,6 +820,7 @@ export function WorkerCalendarScreen() {
           targetVisitDate: schedule.plannedDate,
           targetVisitRound: schedule.roundNo,
         });
+        document2Overview = buildPreviousRoundAccidentOverviewSeed(seed);
         document4FollowUps = seed.open_followups.map((item) => ({
           id: item.id,
           sourceSessionId: item.source_session_id ?? undefined,
@@ -840,12 +845,14 @@ export function WorkerCalendarScreen() {
         });
       }
     } catch {
+      document2Overview = undefined;
       document4FollowUps = undefined;
       technicalGuidanceRelations = undefined;
     }
 
     const reportDate = schedule.plannedDate || new Date().toISOString().slice(0, 10);
     const createdSession = createSession(site, {
+      document2Overview,
       document4FollowUps,
       meta: {
         drafter: currentUser?.name || site.assigneeName,

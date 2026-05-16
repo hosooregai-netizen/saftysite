@@ -2,8 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createInspectionSession, createInspectionSite } from '@/constants/inspectionSession';
-import type { SafetyReportListItem } from '@/types/backend';
-import { buildSafetyReportUpsertInput, mapSafetyReportListItem } from './reports';
+import type { SafetyMasterData, SafetyReportListItem } from '@/types/backend';
+import {
+  buildPreviousRoundAccidentOverviewSeed,
+  buildSafetyReportUpsertInput,
+  createNewSafetySession,
+  mapSafetyReportListItem,
+} from './reports';
+
+function buildEmptyMasterData(): SafetyMasterData {
+  return {
+    caseFeed: [],
+    safetyInfos: [],
+    legalReferences: [],
+    correctionResultOptions: [],
+    measurementTemplates: [],
+    doc7ReferenceMaterials: [],
+    hazardCountermeasureCatalog: [],
+  };
+}
 
 function buildReportListItem(
   overrides: Partial<SafetyReportListItem> & Record<string, unknown> = {},
@@ -67,6 +84,56 @@ test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   assert.equal(snapshot?.companyName, 'Acme Construction');
   assert.equal(snapshot?.headquartersAddress, '1 Test-ro, Seoul');
   assert.equal(payload.schedule_id, 'schedule-9');
+});
+
+test('buildPreviousRoundAccidentOverviewSeed maps yes seed into doc2 accident fields', () => {
+  const overview = buildPreviousRoundAccidentOverviewSeed({
+    previous_round_accident: {
+      source_report_key: 'round-10',
+      source_visit_round: 10,
+      accident_occurred: 'yes',
+      accident_summary: '직전회차 사고 요약',
+      accident_photo_url: 'https://example.test/accident.jpg',
+    },
+  });
+
+  assert.deepEqual(overview, {
+    accidentOccurred: 'yes',
+    accidentSummary: '직전회차 사고 요약',
+    accidentPhotoUrl: 'https://example.test/accident.jpg',
+  });
+});
+
+test('createNewSafetySession applies previous-round accident overview only as initial doc2 values', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createNewSafetySession(site, 11, buildEmptyMasterData(), {
+    document2Overview: buildPreviousRoundAccidentOverviewSeed({
+      previous_round_accident: {
+        source_report_key: 'round-10',
+        source_visit_round: 10,
+        accident_occurred: 'yes',
+        accident_summary: '직전회차 사고 요약',
+        accident_photo_url: '',
+      },
+    }),
+  });
+
+  assert.equal(session.document2Overview.accidentOccurred, 'yes');
+  assert.equal(session.document2Overview.accidentSummary, '직전회차 사고 요약');
+  assert.equal(session.document2Overview.accidentPhotoUrl, '');
+});
+
+test('createNewSafetySession keeps default no when previous-round accident seed is null', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createNewSafetySession(site, 11, buildEmptyMasterData(), {
+    document2Overview: buildPreviousRoundAccidentOverviewSeed({
+      previous_round_accident: null,
+    }),
+  });
+
+  assert.equal(session.document2Overview.accidentOccurred, 'no');
+  assert.equal(session.document2Overview.accidentSummary, '');
+  assert.equal(session.document2Overview.accidentPhotoUrl, '');
 });
 
 test('buildSafetyReportUpsertInput omits unknown first-round schedule links', () => {
