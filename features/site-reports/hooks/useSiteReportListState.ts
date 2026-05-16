@@ -381,6 +381,8 @@ export function useSiteReportListState(
       throw new SafetyApiError('로그인이 만료되었습니다. 다시 로그인해 주세요.', 401);
     }
 
+    await saveNow({ throwOnError: true });
+
     const safetySite = await ensureAssignedSafetySite(currentSite.id);
     const initialScheduleResponse = await fetchAllMySchedules({
       includeAll: true,

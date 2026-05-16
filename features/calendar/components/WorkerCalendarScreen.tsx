@@ -813,6 +813,8 @@ export function WorkerCalendarScreen() {
       | NonNullable<Parameters<typeof createSession>[1]>['document2Overview']
       | undefined;
 
+    await saveNow({ throwOnError: true });
+
     try {
       const token = readSafetyAuthToken();
       if (token) {

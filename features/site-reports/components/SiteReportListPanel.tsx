@@ -145,6 +145,7 @@ export function SiteReportListPanel({
   } =
     useInspectionSessions();
   const [dialogSessionId, setDialogSessionId] = useState<string | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
   const [dispatchOverrides, setDispatchOverrides] = useState<Record<string, DispatchOverride>>({});
@@ -189,6 +190,18 @@ export function SiteReportListPanel({
   useEffect(() => {
     setDispatchOverrides({});
   }, [currentSite.id]);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!dialogSessionId || isDeletingReport) return;
+    const targetSessionId = dialogSessionId;
+    setIsDeletingReport(true);
+    try {
+      await deleteSession(targetSessionId);
+      setDialogSessionId(null);
+    } finally {
+      setIsDeletingReport(false);
+    }
+  }, [deleteSession, dialogSessionId, isDeletingReport]);
 
   const handleToggleDispatch = useCallback(
     async (item: InspectionReportListItem) => {
@@ -351,13 +364,10 @@ export function SiteReportListPanel({
       <SiteReportDeleteDialog
         canArchiveReports={canArchiveReports}
         deletingSession={deletingSession}
+        isDeleting={isDeletingReport}
         open={Boolean(dialogSessionId)}
         onClose={() => setDialogSessionId(null)}
-        onConfirm={() => {
-          if (!dialogSessionId) return;
-          void deleteSession(dialogSessionId);
-          setDialogSessionId(null);
-        }}
+        onConfirm={handleConfirmDelete}
       />
     </>
   );

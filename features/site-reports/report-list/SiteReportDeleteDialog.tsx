@@ -6,14 +6,16 @@ import type { InspectionReportListItem } from '@/types/inspectionSession';
 interface SiteReportDeleteDialogProps {
   canArchiveReports: boolean;
   deletingSession: InspectionReportListItem | null;
+  isDeleting?: boolean;
   open: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 }
 
 export function SiteReportDeleteDialog({
   canArchiveReports,
   deletingSession,
+  isDeleting = false,
   open,
   onClose,
   onConfirm,
@@ -25,10 +27,10 @@ export function SiteReportDeleteDialog({
       onClose={onClose}
       actions={
         <>
-          <button type="button" className="app-button app-button-secondary" onClick={onClose}>
+          <button type="button" className="app-button app-button-secondary" onClick={onClose} disabled={isDeleting}>
             취소
           </button>
-          <button type="button" className="app-button app-button-danger" onClick={onConfirm}>
+          <button type="button" className="app-button app-button-danger" onClick={onConfirm} disabled={isDeleting}>
             삭제
           </button>
         </>
