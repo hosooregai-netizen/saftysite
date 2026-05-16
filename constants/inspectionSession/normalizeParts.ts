@@ -30,6 +30,7 @@ import { calculateRiskAssessmentResult } from '@/lib/riskAssessment';
 import { resolveSafetyAssetUrl, resolveSafetyAssetUrlIfPathLike } from '@/lib/safetyApi/assetUrls';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type {
+  ActivityRecord,
   CaseFeedItem,
   ChecklistQuestion,
   InspectionDocumentMeta,
@@ -234,15 +235,97 @@ export function normalizeEducationRecord(raw: unknown): SafetyEducationRecord {
   });
 }
 
+function hasActivityRecordContent(item: ActivityRecord): boolean {
+  return Boolean(
+    normalizeText(item.activityTitle) ||
+      normalizeAssetValue(item.photoUrl) ||
+      normalizeText(item.content) ||
+      normalizeAssetValue(item.photoUrl2) ||
+      normalizeText(item.activityType),
+  );
+}
+
 export function normalizeActivity(raw: unknown) {
   const source = asRecord(raw);
+  const activityTitle =
+    normalizeText(source.activityTitle) ||
+    normalizeText(source.activity_title) ||
+    normalizeText(source.title);
+  const legacyActivityType =
+    normalizeText(source.activityType) ||
+    normalizeText(source.activity_type) ||
+    normalizeText(source.supportItem);
+  const content =
+    normalizeText(source.content) ||
+    normalizeText(source.details) ||
+    (!activityTitle ? legacyActivityType : '');
+
   return createActivityRecord({
     id: normalizeText(source.id) || generateId('activity'),
     photoUrl: normalizeAssetValue(source.photoUrl),
     photoUrl2: normalizeAssetValue(source.photoUrl2),
-    activityType: normalizeText(source.activityType) || normalizeText(source.supportItem),
-    content: normalizeText(source.content) || normalizeText(source.details),
+    activityTitle,
+    activityType: legacyActivityType,
+    content,
   });
+}
+
+export function normalizeDocument12Activities(raw: unknown): ActivityRecord[] {
+  const items = Array.isArray(raw) ? raw : [];
+  const normalized: ActivityRecord[] = [];
+
+  items.forEach((item) => {
+    const source = asRecord(item);
+    const id = normalizeText(source.id) || generateId('activity');
+    const activityTitle =
+      normalizeText(source.activityTitle) ||
+      normalizeText(source.activity_title) ||
+      normalizeText(source.title);
+    const photoUrl = normalizeAssetValue(source.photoUrl);
+    const photoUrl2 = normalizeAssetValue(source.photoUrl2);
+    const legacyActivityType =
+      normalizeText(source.activityType) ||
+      normalizeText(source.activity_type) ||
+      normalizeText(source.supportItem);
+    const content = normalizeText(source.content) || normalizeText(source.details);
+    const hasLegacySecondSlot = !activityTitle && Boolean(photoUrl2 || (legacyActivityType && content));
+
+    if (hasLegacySecondSlot) {
+      const firstActivity = createActivityRecord({
+        id,
+        photoUrl,
+        activityType: legacyActivityType,
+        content: legacyActivityType,
+      });
+      const secondActivity = createActivityRecord({
+        photoUrl: photoUrl2,
+        content,
+      });
+
+      if (hasActivityRecordContent(firstActivity)) {
+        normalized.push(firstActivity);
+      }
+      if (hasActivityRecordContent(secondActivity)) {
+        normalized.push(secondActivity);
+      }
+      return;
+    }
+
+    const activity = createActivityRecord({
+      id,
+      photoUrl,
+      photoUrl2,
+      activityTitle,
+      activityType: legacyActivityType,
+      content: content || (!activityTitle ? legacyActivityType : ''),
+    });
+
+    if (hasActivityRecordContent(activity)) {
+      normalized.push(activity);
+    }
+  });
+
+  return normalized;
 }
 
 export function normalizeCaseFeedItem(raw: unknown, fallback: CaseFeedItem): CaseFeedItem {

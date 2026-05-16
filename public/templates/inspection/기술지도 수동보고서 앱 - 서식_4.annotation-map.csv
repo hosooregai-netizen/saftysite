@@ -180,9 +180,10 @@ sec11,11. Education,text,sec11.education[0].topic,sec11.education,,,,,,false,
 sec11,11. Education,text,sec11.education[0].content,sec11.education,,,,,,false,
 sec11,11. Education,image,sec11.education[0].photo_image,sec11.education,9,2,0,tplimg14,false,false,material_image_or_file is image-only in the current template-ready HWPX.
 sec11,11. Education,image,sec11.education[0].material_image_or_file,sec11.education,9,2,1,tplimg15,false,false,material_image_or_file is image-only in the current template-ready HWPX.
-sec12,12. Activities,text,sec12.activities[0].activity_type,sec12.activities,,,,,,false,
-sec12,12. Activities,text,sec12.activities[0].content,sec12.activities,,,,,,false,
-sec12,12. Activities,image,sec12.activities[0].photo_image,sec12.activities,9,6,0,tplimg16,false,false,
+sec12,12. Activities,text,sec12.activities[0].activity_type,sec12.activities,,,,,,false,Activity 1 title in fixed two-column layout
+sec12,12. Activities,text,sec12.activities[0].content,sec12.activities,,,,,,false,Activity 2 title in fixed two-column layout
+sec12,12. Activities,image,sec12.activities[0].photo_image,sec12.activities,9,6,0,tplimg16,false,false,Activity 1 image
+sec12,12. Activities,image,sec12.activities[0].photo_image_2,sec12.activities,9,6,1,tplimg29,false,false,Activity 2 image
 sec13,13. Case Studies,text,sec13.cases[0].title,,,,,,,false,
 sec13,13. Case Studies,text,sec13.cases[0].summary,,,,,,,false,
 sec13,13. Case Studies,text,sec13.cases[1].title,,,,,,,false,

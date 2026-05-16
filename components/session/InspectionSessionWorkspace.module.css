@@ -839,6 +839,7 @@
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  padding: 14px;
 }
 
 .doc12ActivityBlock .field {

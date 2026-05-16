@@ -8,6 +8,7 @@ import { collapseChartEntriesToTopOther } from '@/components/session/workspace/u
 import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
+import { normalizeDocument12Activities } from '@/constants/inspectionSession/normalizeParts';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import {
   getInspectionTemplateFilename,
@@ -22,6 +23,8 @@ import type { ChecklistRating, InspectionSession } from '@/types/inspectionSessi
 
 const DOC5_CHART_TOP_N = 5;
 const HWPX_CONTENT_TYPE = 'application/haansofthwpx';
+const DOC12_TEMPLATE_TABLE_INDEX = 9;
+const DOC12_CONTENT_ROW = 7;
 
 export type RepeatBlockPath =
   | 'sec4.follow_ups'
@@ -39,6 +42,7 @@ interface RepeatBlockConfig {
 export interface TemplateBindingData {
   text: Record<string, string>;
   images: Record<string, string>;
+  doc12FixedContents: [string, string];
   repeatCounts: Record<RepeatBlockPath, number>;
   deferred: string[];
   warnings: string[];
@@ -1688,7 +1692,21 @@ function createEmptyEducationRecord() {
 }
 
 function createEmptyActivity() {
-  return { id: '', photoUrl: '', photoUrl2: '', activityType: '', content: '' };
+  return { id: '', photoUrl: '', activityTitle: '', photoUrl2: '', activityType: '', content: '' };
+}
+
+function document12ActivityContent(item: ReturnType<typeof createEmptyActivity>): string {
+  return valueOrBlank(item.content) || valueOrBlank(item.activityType);
+}
+
+function hasDocument12ActivityContent(item: ReturnType<typeof createEmptyActivity>): boolean {
+  return Boolean(
+    valueOrBlank(item.activityTitle) ||
+      valueOrBlank(item.photoUrl) ||
+      valueOrBlank(item.content) ||
+      valueOrBlank(item.photoUrl2) ||
+      valueOrBlank(item.activityType),
+  );
 }
 
 function createEmptyCase() {
@@ -1933,17 +1951,22 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
     }
   });
 
-  const activities = ensureRepeatItems(
-    session.document12Activities.filter((item) => isFilledObject(item)),
+  const activities = padFixedSlots(
+    normalizeDocument12Activities(session.document12Activities)
+      .filter((item) => hasDocument12ActivityContent(item))
+      .slice(0, 2),
+    2,
     createEmptyActivity,
   );
-  repeatCounts['sec12.activities'] = activities.length;
-  activities.forEach((item, index) => {
-    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.content || item.activityType);
-    text[`sec12.activities[${index}].content`] = valueOrDash(item.content);
-    images[`sec12.activities[${index}].photo_image`] = valueOrBlank(item.photoUrl);
-    images[`sec12.activities[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
-  });
+  repeatCounts['sec12.activities'] = 1;
+  text['sec12.activities[0].activity_type'] = valueOrBlank(activities[0].activityTitle);
+  text['sec12.activities[0].content'] = valueOrBlank(activities[1].activityTitle);
+  images['sec12.activities[0].photo_image'] = valueOrBlank(activities[0].photoUrl);
+  images['sec12.activities[0].photo_image_2'] = valueOrBlank(activities[1].photoUrl);
+  const doc12FixedContents: [string, string] = [
+    document12ActivityContent(activities[0]),
+    document12ActivityContent(activities[1]),
+  ];
 
   const cases = padFixedSlots(session.document13Cases.slice(0, 4), 4, createEmptyCase);
   cases.forEach((item, index) => {
@@ -1961,6 +1984,7 @@ export function mapSessionToTemplateBinding(session: InspectionSession): Templat
   return {
     text,
     images,
+    doc12FixedContents,
     repeatCounts,
     deferred: [...DEFERRED_SECTIONS],
     warnings: Array.from(new Set(warnings)),
@@ -3174,6 +3198,85 @@ function extractCellSubListXml(cellXml: string): string | null {
   return cellXml.match(/<hp:subList\b[\s\S]*?<\/hp:subList>/)?.[0] ?? null;
 }
 
+function buildDoc12ContentParagraph(paragraphXml: string, text: string): string {
+  const paragraphMatch = paragraphXml.match(/^(<hp:p\b[^>]*>)([\s\S]*)(<\/hp:p>)$/);
+  if (!paragraphMatch) {
+    return paragraphXml;
+  }
+
+  const [, paragraphOpen, paragraphBody, paragraphClose] = paragraphMatch;
+  const lineSegArrayXml = paragraphBody.match(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/)?.[0] ?? '';
+  const charPrIDRef = paragraphBody.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '0';
+  const escapedText = normalizeHwpxPlainText(text)
+    .split('\n')
+    .map((line) => escapeXmlText(line))
+    .join('<hp:lineBreak/>');
+
+  return `${paragraphOpen}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${escapedText}</hp:t></hp:run>${lineSegArrayXml}${paragraphClose}`;
+}
+
+function injectDoc12ContentIntoCell(cellXml: string, text: string): string {
+  const subListXml = extractCellSubListXml(cellXml);
+  if (!subListXml) {
+    return cellXml;
+  }
+
+  const subListOpen = subListXml.match(/^<hp:subList\b[^>]*>/)?.[0];
+  const paragraphs = subListXml.match(/<hp:p\b[\s\S]*?<\/hp:p>/g);
+  if (!subListOpen || !paragraphs?.length) {
+    return cellXml;
+  }
+
+  const patchedParagraph = buildDoc12ContentParagraph(paragraphs[0], text);
+  const patchedSubListXml = `${setSubListLineWrap(subListOpen, 'BREAK')}${patchedParagraph}</hp:subList>`;
+
+  return cellXml.replace(subListXml, patchedSubListXml);
+}
+
+function findDoc12TableIndex(sectionXml: string): number {
+  const tables = tableSpans(sectionXml);
+  const tableIndex = tables.findIndex((table) => {
+    const tableXml = sectionXml.slice(table.start, table.end);
+    return (
+      tableXml.includes('binaryItemIDRef="tplimg16"') ||
+      tableXml.includes('binaryItemIDRef="tplimg29"') ||
+      tableXml.includes('{sec12.activities[0].activity_type}') ||
+      tableXml.includes('{sec12.activities[0].content}')
+    );
+  });
+
+  return tableIndex >= 0 ? tableIndex : DOC12_TEMPLATE_TABLE_INDEX;
+}
+
+function applyDoc12FixedContentCells(
+  sectionXml: string,
+  contents: [string, string],
+  warnings: string[],
+): string {
+  let nextSectionXml = sectionXml;
+  const tableIndex = findDoc12TableIndex(nextSectionXml);
+
+  contents.forEach((content, col) => {
+    const located = locateTemplateCell(nextSectionXml, {
+      table: tableIndex,
+      row: DOC12_CONTENT_ROW,
+      col,
+    });
+
+    if (!located) {
+      warnings.push(`Document 12 content cell not found at table=${tableIndex}, row=${DOC12_CONTENT_ROW}, col=${col}.`);
+      return;
+    }
+
+    const patchedCellXml = injectDoc12ContentIntoCell(located.cellXml, content);
+    if (patchedCellXml !== located.cellXml) {
+      nextSectionXml = replaceLocatedTemplateCell(nextSectionXml, located, patchedCellXml);
+    }
+  });
+
+  return nextSectionXml;
+}
+
 function restoreTargetCellImageSlot(targetCellXml: string, donorCellXml: string): string | null {
   const targetSubListXml = extractCellSubListXml(targetCellXml);
   const donorSubListXml = extractCellSubListXml(donorCellXml);
@@ -3721,6 +3824,12 @@ export async function buildInspectionHwpxDocument(
     if (Object.values(binding.images).some((value) => valueOrBlank(value))) {
       binding.warnings.push('Template-native mode keeps the original template image placeholders and does not embed uploaded images.');
     }
+
+    boundSectionXml = applyDoc12FixedContentCells(
+      boundSectionXml,
+      binding.doc12FixedContents,
+      binding.warnings,
+    );
   } else {
     const contentHpfWithRepairs = repairLegacyContentHpfMetadata(contentHpf);
     let boundContentHpf = contentHpfWithRepairs;
@@ -3791,6 +3900,11 @@ export async function buildInspectionHwpxDocument(
       );
     }
 
+    boundSectionXml = applyDoc12FixedContentCells(
+      boundSectionXml,
+      binding.doc12FixedContents,
+      binding.warnings,
+    );
     validateGeneratedHwpxOrThrow(zip, boundSectionXml, boundContentHpf);
     zip.file('Contents/content.hpf', boundContentHpf, buildZipWriteOptions(contentEntry, 'DEFLATE'));
     if (IMAGE_BINDING_MODE === 'embedded') {

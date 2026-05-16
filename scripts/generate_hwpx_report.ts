@@ -165,6 +165,7 @@ interface ExistingWebReportData {
     id?: string;
     photoUrl: string;
     photoUrl2: string;
+    activityTitle?: string;
     activityType: string;
     content: string;
   }>;
@@ -185,6 +186,7 @@ interface ExistingWebReportData {
 interface TemplateBindingData {
   text: Record<string, string>;
   images: Record<string, string>;
+  doc12FixedContents: [string, string];
   repeatCounts: Record<RepeatBlockPath, number>;
   deferred: string[];
   warnings: string[];
@@ -272,6 +274,8 @@ const ZIP_DEFAULT_EXTERNAL_ATTR = 0x81800020;
 const ZIP_OLE_EXTERNAL_ATTR = 0x81000021;
 const HWPX_UNITCHAR_NAMESPACE = 'xmlns:hwpunitchar="http://www.hancom.co.kr/hwpml/2016/HwpUnitChar"';
 const HWPX_LASTSAVEBY_META = '<opf:meta name="lastsaveby" content="text">장정규</opf:meta>';
+const DOC12_TEMPLATE_TABLE_INDEX = 9;
+const DOC12_CONTENT_ROW = 7;
 
 const WORK_PLAN_PLACEHOLDERS: Array<{
   sourceKey: WorkPlanCheckKey;
@@ -1276,7 +1280,51 @@ function createEmptyEducationRecord() {
 }
 
 function createEmptyActivity() {
-  return { photoUrl: '', photoUrl2: '', activityType: '', content: '' };
+  return { photoUrl: '', activityTitle: '', photoUrl2: '', activityType: '', content: '' };
+}
+
+function document12ActivityContent(item: ReturnType<typeof createEmptyActivity>): string {
+  return valueOrBlank(item.content) || valueOrBlank(item.activityType);
+}
+
+function normalizeDocument12ScriptActivities(items: ExistingWebReportData['document12Activities']) {
+  const normalized: ReturnType<typeof createEmptyActivity>[] = [];
+
+  for (const item of items) {
+    const activityTitle =
+      valueOrBlank(item.activityTitle) ||
+      valueOrBlank((item as { activity_title?: string }).activity_title) ||
+      valueOrBlank((item as { title?: string }).title);
+    const legacyActivityType = valueOrBlank(item.activityType);
+    const photoUrl = valueOrBlank(item.photoUrl);
+    const photoUrl2 = valueOrBlank(item.photoUrl2);
+    const content = valueOrBlank(item.content);
+
+    if (!activityTitle && (photoUrl2 || (legacyActivityType && content))) {
+      normalized.push({ ...createEmptyActivity(), photoUrl, activityType: legacyActivityType, content: legacyActivityType });
+      normalized.push({ ...createEmptyActivity(), photoUrl: photoUrl2, content });
+      continue;
+    }
+
+    normalized.push({
+      ...createEmptyActivity(),
+      photoUrl,
+      photoUrl2,
+      activityTitle,
+      activityType: legacyActivityType,
+      content: content || (!activityTitle ? legacyActivityType : ''),
+    });
+  }
+
+  return normalized.filter((item) =>
+    Boolean(
+      valueOrBlank(item.activityTitle) ||
+        valueOrBlank(item.photoUrl) ||
+        valueOrBlank(item.content) ||
+        valueOrBlank(item.photoUrl2) ||
+        valueOrBlank(item.activityType),
+    ),
+  );
 }
 
 function createEmptyCase() {
@@ -1510,17 +1558,20 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
     }
   });
 
-  const activities = ensureRepeatItems(
-    data.document12Activities.filter((item) => isFilledObject(item)),
+  const activities = padFixedSlots(
+    normalizeDocument12ScriptActivities(data.document12Activities).slice(0, 2),
+    2,
     createEmptyActivity,
   );
-  repeatCounts['sec12.activities'] = activities.length;
-  activities.forEach((item, index) => {
-    text[`sec12.activities[${index}].activity_type`] = valueOrDash(item.content || item.activityType);
-    text[`sec12.activities[${index}].content`] = valueOrDash(item.content);
-    images[`sec12.activities[${index}].photo_image`] = valueOrBlank(item.photoUrl);
-    images[`sec12.activities[${index}].photo_image_2`] = valueOrBlank(item.photoUrl2);
-  });
+  repeatCounts['sec12.activities'] = 1;
+  text['sec12.activities[0].activity_type'] = valueOrBlank(activities[0].activityTitle);
+  text['sec12.activities[0].content'] = valueOrBlank(activities[1].activityTitle);
+  images['sec12.activities[0].photo_image'] = valueOrBlank(activities[0].photoUrl);
+  images['sec12.activities[0].photo_image_2'] = valueOrBlank(activities[1].photoUrl);
+  const doc12FixedContents: [string, string] = [
+    document12ActivityContent(activities[0]),
+    document12ActivityContent(activities[1]),
+  ];
 
   const cases = padFixedSlots(data.document13Cases.slice(0, 4), 4, createEmptyCase);
   if (data.document13Cases.length > 4) {
@@ -1545,6 +1596,7 @@ function mapWebDataToTemplateBinding(data: ExistingWebReportData): TemplateBindi
   return {
     text,
     images,
+    doc12FixedContents,
     repeatCounts,
     deferred: [...TEMPLATE_CONTRACT.deferred],
     warnings: Array.from(new Set(warnings)),
@@ -2449,6 +2501,91 @@ function extractCellSubListXml(cellXml: string): string | null {
   return cellXml.match(/<hp:subList\b[\s\S]*?<\/hp:subList>/)?.[0] ?? null;
 }
 
+function setSubListLineWrap(openTag: string, lineWrap: 'BREAK' | 'SQUEEZE'): string {
+  return /lineWrap=/.test(openTag)
+    ? openTag.replace(/lineWrap="[^"]*"/, `lineWrap="${lineWrap}"`)
+    : openTag.replace(/>$/, ` lineWrap="${lineWrap}">`);
+}
+
+function buildDoc12ContentParagraph(paragraphXml: string, text: string): string {
+  const paragraphMatch = paragraphXml.match(/^(<hp:p\b[^>]*>)([\s\S]*)(<\/hp:p>)$/);
+  if (!paragraphMatch) {
+    return paragraphXml;
+  }
+
+  const [, paragraphOpen, paragraphBody, paragraphClose] = paragraphMatch;
+  const lineSegArrayXml = paragraphBody.match(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/)?.[0] ?? '';
+  const charPrIDRef = paragraphBody.match(/<hp:run\b[^>]*charPrIDRef="(\d+)"/)?.[1] ?? '0';
+  const escapedText = normalizeHwpxPlainText(text)
+    .split('\n')
+    .map((line) => escapeXmlText(line))
+    .join('<hp:lineBreak/>');
+
+  return `${paragraphOpen}<hp:run charPrIDRef="${charPrIDRef}"><hp:t>${escapedText}</hp:t></hp:run>${lineSegArrayXml}${paragraphClose}`;
+}
+
+function injectDoc12ContentIntoCell(cellXml: string, text: string): string {
+  const subListXml = extractCellSubListXml(cellXml);
+  if (!subListXml) {
+    return cellXml;
+  }
+
+  const subListOpen = subListXml.match(/^<hp:subList\b[^>]*>/)?.[0];
+  const paragraphs = subListXml.match(/<hp:p\b[\s\S]*?<\/hp:p>/g);
+  if (!subListOpen || !paragraphs?.length) {
+    return cellXml;
+  }
+
+  const patchedParagraph = buildDoc12ContentParagraph(paragraphs[0], text);
+  const patchedSubListXml = `${setSubListLineWrap(subListOpen, 'BREAK')}${patchedParagraph}</hp:subList>`;
+
+  return cellXml.replace(subListXml, patchedSubListXml);
+}
+
+function findDoc12TableIndex(sectionXml: string): number {
+  const tables = tableSpans(sectionXml);
+  const tableIndex = tables.findIndex((table) => {
+    const tableXml = sectionXml.slice(table.start, table.end);
+    return (
+      tableXml.includes('binaryItemIDRef="tplimg16"') ||
+      tableXml.includes('binaryItemIDRef="tplimg29"') ||
+      tableXml.includes('{sec12.activities[0].activity_type}') ||
+      tableXml.includes('{sec12.activities[0].content}')
+    );
+  });
+
+  return tableIndex >= 0 ? tableIndex : DOC12_TEMPLATE_TABLE_INDEX;
+}
+
+function applyDoc12FixedContentCells(
+  sectionXml: string,
+  contents: [string, string],
+  warnings: string[],
+): string {
+  let nextSectionXml = sectionXml;
+  const tableIndex = findDoc12TableIndex(nextSectionXml);
+
+  contents.forEach((content, col) => {
+    const located = locateTemplateCell(nextSectionXml, {
+      table: tableIndex,
+      row: DOC12_CONTENT_ROW,
+      col,
+    });
+
+    if (!located) {
+      warnings.push(`Document 12 content cell not found at table=${tableIndex}, row=${DOC12_CONTENT_ROW}, col=${col}.`);
+      return;
+    }
+
+    const patchedCellXml = injectDoc12ContentIntoCell(located.cellXml, content);
+    if (patchedCellXml !== located.cellXml) {
+      nextSectionXml = replaceLocatedTemplateCell(nextSectionXml, located, patchedCellXml);
+    }
+  });
+
+  return nextSectionXml;
+}
+
 function restoreTargetCellImageSlot(targetCellXml: string, donorCellXml: string): string | null {
   const targetSubListXml = extractCellSubListXml(targetCellXml);
   const donorSubListXml = extractCellSubListXml(donorCellXml);
@@ -2900,6 +3037,12 @@ async function generateHwpxReport(options: {
     if (Object.values(options.binding.images).some((value) => valueOrBlank(value))) {
       warnings.push('Template-native mode keeps the original template image placeholders and does not embed uploaded images.');
     }
+
+    boundSectionXml = applyDoc12FixedContentCells(
+      boundSectionXml,
+      options.binding.doc12FixedContents,
+      warnings,
+    );
   } else {
     const contentHpfWithRepairs = repairLegacyContentHpfMetadata(contentHpf);
     let boundContentHpf = contentHpfWithRepairs;
@@ -2939,6 +3082,11 @@ async function generateHwpxReport(options: {
       );
     }
 
+    boundSectionXml = applyDoc12FixedContentCells(
+      boundSectionXml,
+      options.binding.doc12FixedContents,
+      warnings,
+    );
     validateGeneratedHwpxOrThrow(zip, boundSectionXml, boundContentHpf);
     zip.file('Contents/content.hpf', boundContentHpf, buildZipWriteOptions(contentEntry, 'DEFLATE'));
     if (IMAGE_BINDING_MODE === 'embedded') {

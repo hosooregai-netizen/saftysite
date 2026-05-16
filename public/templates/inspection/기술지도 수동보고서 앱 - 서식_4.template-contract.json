@@ -527,8 +527,10 @@
         "sec12.activities[0].content"
       ],
       "imagePlaceholders": [
-        "sec12.activities[0].photo_image"
-      ]
+        "sec12.activities[0].photo_image",
+        "sec12.activities[0].photo_image_2"
+      ],
+      "note": "Document 12 uses one fixed two-column table. activity_type is activity 1 title; content is activity 2 title. Bottom content row cells are injected by row/cell position at table=9 row=7 col=0/1."
     },
     {
       "key": "sec13",
@@ -681,6 +683,14 @@
       "col": 0,
       "placeholderPath": "sec12.activities[0].photo_image",
       "binaryItemId": "tplimg16",
+      "repeatBlockPath": "sec12.activities"
+    },
+    {
+      "table": 9,
+      "row": 6,
+      "col": 1,
+      "placeholderPath": "sec12.activities[0].photo_image_2",
+      "binaryItemId": "tplimg29",
       "repeatBlockPath": "sec12.activities"
     },
     {

@@ -9,6 +9,7 @@ import {
   UNTITLED_SITE_KEY,
 } from '@/constants/inspectionSession/catalog';
 import {
+  DOC12_ACTIVITY_GRID_SLOTS,
   createActivityRecord,
   createCurrentHazardFinding,
   createFatalAccidentMeasureItem,
@@ -197,7 +198,7 @@ export function createInspectionSession(
     document9SafetyChecks: createSafetyCheckDocument(),
     document10Measurements: Array.from({ length: 3 }, () => createMeasurementCheckItem()),
     document11EducationRecords: [createSafetyEducationRecord()],
-    document12Activities: Array.from({ length: 4 }, () => createActivityRecord()),
+    document12Activities: Array.from({ length: DOC12_ACTIVITY_GRID_SLOTS }, () => createActivityRecord()),
     document13Cases: (options.document13Cases ?? DEFAULT_CASE_FEED).map((item) => ({ ...item })),
     document14SafetyInfos: (options.document14SafetyInfos ?? DEFAULT_SAFETY_INFOS).map((item) => ({ ...item })),
     technicalGuidanceRelations: createEmptyTechnicalGuidanceRelations(

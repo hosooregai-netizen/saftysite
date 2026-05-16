@@ -749,7 +749,7 @@ export function useInspectionSessionScreen(sessionId: string) {
       }
     }
 
-    await saveNow();
+    await saveNow({ throwOnError: true });
     const latestSession = getSessionById(session.id) ?? session;
     const latestSiteSessions = getSessionsBySiteId(latestSession.siteKey);
 
@@ -822,7 +822,7 @@ export function useInspectionSessionScreen(sessionId: string) {
         }
       }
 
-      await saveNow();
+      await saveNow({ throwOnError: true });
       const latestSession = getSessionById(session.id) ?? session;
       const authToken = readSafetyAuthToken();
       const canCreateDownloadUrl = canUploadContentAssets(currentUser?.role);

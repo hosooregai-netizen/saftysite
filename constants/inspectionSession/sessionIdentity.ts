@@ -180,6 +180,7 @@ function hasActivityContent(session: InspectionSession): boolean {
     Boolean(
       normalizeText(item.photoUrl) ||
         normalizeText(item.photoUrl2) ||
+        normalizeText(item.activityTitle) ||
         normalizeText(item.activityType) ||
         normalizeText(item.content),
     ),

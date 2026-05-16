@@ -8,6 +8,7 @@ import {
   createInspectionSession,
   createInspectionSite,
 } from '@/constants/inspectionSession/sessionFactory';
+import { createActivityRecord } from '@/constants/inspectionSession/itemFactory';
 import { buildInspectionHwpxDocument, mapSessionToTemplateBinding } from './hwpx';
 
 const TRANSPARENT_PNG_DATA_URL =
@@ -74,6 +75,25 @@ function findCellContainingText(xml: string, text: string): string | null {
   );
 }
 
+function findCellByAddress(tableXml: string, row: number, col: number): string | null {
+  const marker = `<hp:cellAddr colAddr="${col}" rowAddr="${row}"`;
+  return (
+    (tableXml.match(/<hp:tc\b[\s\S]*?<\/hp:tc>/g) ?? []).find((cellXml) =>
+      cellXml.includes(marker),
+    ) ?? null
+  );
+}
+
+function findDoc12GeneratedTable(xml: string): string | null {
+  return (
+    (xml.match(/<hp:tbl\b[\s\S]*?<\/hp:tbl>/g) ?? []).find((tableXml) =>
+      tableXml.includes('binaryItemIDRef="tplimg16"') ||
+      tableXml.includes('binaryItemIDRef="tplimg29"') ||
+      flattenXmlText(tableXml).includes('Doc12 Title 1'),
+    ) ?? null
+  );
+}
+
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   const site = createInspectionSite({
     clientRepresentativeName: 'client-rep-alpha',
@@ -128,6 +148,72 @@ function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
   return session;
 }
 
+test('mapSessionToTemplateBinding maps document 12 fixed two-column layout', () => {
+  const session = createInspectionSession({}, 'doc12-binding-site', 1);
+  session.document12Activities = [
+    createActivityRecord({
+      activityTitle: 'Activity 1 Title',
+      photoUrl: 'https://example.test/activity-1.jpg',
+      content: 'Activity 1 Content',
+    }),
+    createActivityRecord({
+      activityTitle: 'Activity 2 Title',
+      photoUrl: 'https://example.test/activity-2.jpg',
+      content: 'Activity 2 Content',
+    }),
+  ];
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.repeatCounts['sec12.activities'], 1);
+  assert.equal(binding.text['sec12.activities[0].activity_type'], 'Activity 1 Title');
+  assert.equal(binding.text['sec12.activities[0].content'], 'Activity 2 Title');
+  assert.equal(binding.images['sec12.activities[0].photo_image'], 'https://example.test/activity-1.jpg');
+  assert.equal(binding.images['sec12.activities[0].photo_image_2'], 'https://example.test/activity-2.jpg');
+  assert.deepEqual(binding.doc12FixedContents, ['Activity 1 Content', 'Activity 2 Content']);
+});
+
+test('mapSessionToTemplateBinding splits legacy document 12 photoUrl2 without moving content into title', () => {
+  const session = createInspectionSession({}, 'doc12-legacy-binding-site', 1);
+  session.document12Activities = [
+    createActivityRecord({
+      photoUrl: 'https://example.test/activity-1.jpg',
+      photoUrl2: 'https://example.test/activity-2.jpg',
+      activityType: '활동 1 내용',
+      content: '활동 2 내용',
+    }),
+  ];
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.repeatCounts['sec12.activities'], 1);
+  assert.equal(binding.text['sec12.activities[0].activity_type'], '');
+  assert.equal(binding.text['sec12.activities[0].content'], '');
+  assert.equal(binding.images['sec12.activities[0].photo_image'], 'https://example.test/activity-1.jpg');
+  assert.equal(binding.images['sec12.activities[0].photo_image_2'], 'https://example.test/activity-2.jpg');
+  assert.deepEqual(binding.doc12FixedContents, ['활동 1 내용', '활동 2 내용']);
+});
+
+test('mapSessionToTemplateBinding uses legacy activityType only for document 12 bottom content fallback', () => {
+  const session = createInspectionSession({}, 'doc12-legacy-content-fallback-site', 1);
+  session.document12Activities = [
+    createActivityRecord({
+      activityTitle: 'Legacy Mixed Title 1',
+      activityType: 'Legacy Mixed Content 1',
+    }),
+    createActivityRecord({
+      activityTitle: 'Legacy Mixed Title 2',
+      activityType: 'Legacy Mixed Content 2',
+    }),
+  ];
+
+  const binding = mapSessionToTemplateBinding(session);
+
+  assert.equal(binding.text['sec12.activities[0].activity_type'], 'Legacy Mixed Title 1');
+  assert.equal(binding.text['sec12.activities[0].content'], 'Legacy Mixed Title 2');
+  assert.deepEqual(binding.doc12FixedContents, ['Legacy Mixed Content 1', 'Legacy Mixed Content 2']);
+});
+
 async function readGeneratedSectionXml(accidentOccurred: 'no' | 'yes') {
   const session = buildMeasurementFixture(accidentOccurred);
   const document = await buildInspectionHwpxDocument(session, [session]);
@@ -137,6 +223,50 @@ async function readGeneratedSectionXml(accidentOccurred: 'no' | 'yes') {
   assert.ok(sectionXml);
   return sectionXml;
 }
+
+test('buildInspectionHwpxDocument binds document 12 fixed cells and second image for both template variants', async () => {
+  const expectedImage = Buffer.from(TRANSPARENT_PNG_DATA_URL.split(',')[1], 'base64');
+
+  for (const accidentOccurred of ['no', 'yes'] as const) {
+    const session = createInspectionSession({}, `doc12-hwpx-site-${accidentOccurred}`, 1);
+    session.document2Overview.accidentOccurred = accidentOccurred;
+    session.document12Activities = [
+      createActivityRecord({
+        activityTitle: 'Doc12 Title 1',
+        photoUrl: TRANSPARENT_PNG_DATA_URL,
+        content: 'Doc12 Content 1',
+      }),
+      createActivityRecord({
+        activityTitle: 'Doc12 Title 2',
+        photoUrl: TRANSPARENT_PNG_DATA_URL,
+        content: 'Doc12 Content 2',
+      }),
+    ];
+
+    const document = await buildInspectionHwpxDocument(session, [session]);
+    const zip = await JSZip.loadAsync(document.buffer);
+    const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+    const image1 = await zip.file('BinData/tplimg16.png')?.async('nodebuffer');
+    const image2 = await zip.file('BinData/tplimg29.png')?.async('nodebuffer');
+
+    assert.ok(sectionXml);
+    assert.doesNotMatch(document.warnings.join('\n'), /Document 12 content cell not found/);
+    const doc12Table = findDoc12GeneratedTable(sectionXml);
+    assert.ok(doc12Table);
+
+    assert.match(flattenXmlText(findCellByAddress(doc12Table, 5, 0) ?? ''), /Doc12 Title 1/);
+    assert.match(flattenXmlText(findCellByAddress(doc12Table, 5, 1) ?? ''), /Doc12 Title 2/);
+    assert.match(flattenXmlText(findCellByAddress(doc12Table, 7, 0) ?? ''), /Doc12 Content 1/);
+    assert.match(flattenXmlText(findCellByAddress(doc12Table, 7, 1) ?? ''), /Doc12 Content 2/);
+    assert.match(sectionXml, /binaryItemIDRef="tplimg16"/);
+    assert.match(sectionXml, /binaryItemIDRef="tplimg29"/);
+    assert.ok(image1);
+    assert.ok(image2);
+    assert.deepEqual(image1, expectedImage);
+    assert.deepEqual(image2, expectedImage);
+    assert.doesNotMatch(sectionXml, /\{sec12\.activities/);
+  }
+});
 
 test('mapSessionToTemplateBinding leaves empty report values blank instead of rendering dashes', () => {
   const session = createInspectionSession(
@@ -721,6 +851,7 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
 
   assert.equal(metadata.width, 3262);
   assert.equal(metadata.height, 1440);
+
   assert.equal(metadata.hasAlpha, false);
   assert.notDeepEqual(Array.from(outerRingPixel), [255, 255, 255]);
   assert.ok(doc5ChartRun);

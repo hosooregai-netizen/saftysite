@@ -7,7 +7,7 @@ import {
 import { createFatalAccidentMeasureItem, createSiteScenePhoto } from '@/constants/inspectionSession/itemFactory';
 import { migrateLegacyInspectionSession } from '@/constants/inspectionSession/legacy';
 import {
-  normalizeActivity,
+  normalizeDocument12Activities,
   normalizeDocumentMetaMap,
   normalizeEducationRecord,
   normalizeFollowUpItem,
@@ -176,7 +176,7 @@ export function normalizeInspectionSession(raw: unknown): InspectionSession {
       ? source.document11EducationRecords.map((item) => normalizeEducationRecord(item))
       : session.document11EducationRecords,
     document12Activities: Array.isArray(source.document12Activities) && source.document12Activities.length > 0
-      ? source.document12Activities.map((item) => normalizeActivity(item))
+      ? normalizeDocument12Activities(source.document12Activities)
       : session.document12Activities,
     document13Cases: normalizeCases(Array.isArray(source.document13Cases) ? source.document13Cases : []),
     document14SafetyInfos: normalizeSafetyInfos(Array.isArray(source.document14SafetyInfos) ? source.document14SafetyInfos : []),

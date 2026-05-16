@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import JSZip from 'jszip';
 
 import { DEFAULT_GUIDANCE_AGENCY } from '@/constants/inspectionSession/catalog';
+import { normalizeDocument12Activities } from '@/constants/inspectionSession/normalizeParts';
 import { resolveTemplateAssetPath } from '@/server/documents/shared/documentAssetPaths';
 import type {
   CurrentHazardFinding,
@@ -691,7 +692,7 @@ function buildFuturePlansTable(session: InspectionSession, tableXml: string) {
 
 function buildSupportTable(session: InspectionSession, tableXml: string) {
   const education = session.document11EducationRecords[0];
-  const support = session.document12Activities[0];
+  const support = normalizeDocument12Activities(session.document12Activities)[0];
   const memo = session.document14SafetyInfos[0];
   let nextTable = tableXml;
 
@@ -713,7 +714,7 @@ function buildSupportTable(session: InspectionSession, tableXml: string) {
     nextTable,
     4,
     1,
-    `ㅇ 보급한 교육자료 ${formatOptionalText(support?.activityType) || formatOptionalText(education?.materialName) || ''}`,
+    `ㅇ 보급한 교육자료 ${formatOptionalText(support?.activityTitle) || formatOptionalText(education?.materialName) || ''}`,
     { reflow: true },
   );
   nextTable = replaceCellText(nextTable, 5, 1, formatCellText(support?.content), { reflow: true });

@@ -115,7 +115,7 @@ test('buildStandardInspectionHwpxDocument renders standard report content and cl
   ];
   session.document12Activities = [
     createActivityRecord({
-      activityType: '안전보건교육자료 배포',
+      activityTitle: '안전보건교육자료 배포',
       content: '작업 전 교육자료 전달 및 확인',
     }),
   ];

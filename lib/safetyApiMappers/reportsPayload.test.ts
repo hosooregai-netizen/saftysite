@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createInspectionSession, createInspectionSite } from '@/constants/inspectionSession';
-import type { SafetyMasterData, SafetyReportListItem } from '@/types/backend';
+import {
+  createActivityRecord,
+  createInspectionSession,
+  createInspectionSite,
+} from '@/constants/inspectionSession';
+import type { SafetyMasterData, SafetyReport, SafetyReportListItem } from '@/types/backend';
 import {
   buildPreviousRoundAccidentOverviewSeed,
   buildSafetyReportUpsertInput,
   createNewSafetySession,
+  mapSafetyReportToInspectionSession,
   mapSafetyReportListItem,
 } from './reports';
 
@@ -50,6 +55,36 @@ function buildReportListItem(
   } as SafetyReportListItem;
 }
 
+function buildSafetyReport(
+  overrides: Partial<SafetyReport> & Record<string, unknown> = {},
+): SafetyReport {
+  return {
+    id: 'report-1',
+    report_key: 'report-1',
+    report_title: 'Report 1',
+    site_id: 'site-1',
+    headquarter_id: null,
+    schedule_id: null,
+    assigned_user_id: null,
+    visit_date: '2026-04-01',
+    visit_round: 1,
+    total_round: 10,
+    progress_rate: 20,
+    status: 'draft',
+    payload_version: 1,
+    latest_revision_no: 0,
+    submitted_at: null,
+    published_at: null,
+    last_autosaved_at: null,
+    dispatch_completed: false,
+    meta: {},
+    created_at: '2026-04-01T00:00:00.000Z',
+    updated_at: '2026-04-01T00:00:00.000Z',
+    payload: {},
+    ...overrides,
+  } as SafetyReport;
+}
+
 test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   const site = createInspectionSite({
     siteName: 'Site Alpha',
@@ -84,6 +119,82 @@ test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   assert.equal(snapshot?.companyName, 'Acme Construction');
   assert.equal(snapshot?.headquartersAddress, '1 Test-ro, Seoul');
   assert.equal(payload.schedule_id, 'schedule-9');
+});
+
+test('buildSafetyReportUpsertInput persists document 12 activity title image and content', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession({}, site.id, 1);
+  session.document12Activities = [
+    createActivityRecord({
+      activityTitle: '정기 안전교육',
+      photoUrl: 'https://example.test/activity-1.jpg',
+      content: '작업 전 안전교육을 실시함',
+    }),
+  ];
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+  const activities = (payload.payload as { document12Activities?: Array<Record<string, unknown>> })
+    .document12Activities;
+
+  assert.ok(activities);
+  assert.equal(activities?.[0]?.activityTitle, '정기 안전교육');
+  assert.equal(activities?.[0]?.photoUrl, 'https://example.test/activity-1.jpg');
+  assert.equal(activities?.[0]?.content, '작업 전 안전교육을 실시함');
+  assert.equal(activities?.[0]?.activityType, '');
+});
+
+test('buildSafetyReportUpsertInput splits legacy document 12 second photo slot', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession({}, site.id, 1);
+  session.document12Activities = [
+    createActivityRecord({
+      photoUrl: 'https://example.test/activity-1.jpg',
+      photoUrl2: 'https://example.test/activity-2.jpg',
+      activityType: '활동 1 내용',
+      content: '활동 2 내용',
+    }),
+  ];
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+  const activities = (payload.payload as { document12Activities?: Array<Record<string, unknown>> })
+    .document12Activities;
+
+  assert.ok(activities);
+  assert.equal(activities?.[0]?.activityTitle, '');
+  assert.equal(activities?.[0]?.photoUrl, 'https://example.test/activity-1.jpg');
+  assert.equal(activities?.[0]?.content, '활동 1 내용');
+  assert.equal(activities?.[1]?.activityTitle, '');
+  assert.equal(activities?.[1]?.photoUrl, 'https://example.test/activity-2.jpg');
+  assert.equal(activities?.[1]?.content, '활동 2 내용');
+});
+
+test('mapSafetyReportToInspectionSession preserves legacy document 12 content without using it as title', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = mapSafetyReportToInspectionSession(
+    buildSafetyReport({
+      payload: {
+        document12Activities: [
+          {
+            id: 'legacy-activity',
+            photoUrl: 'https://example.test/activity-1.jpg',
+            photoUrl2: 'https://example.test/activity-2.jpg',
+            activityType: '활동 1 내용',
+            content: '활동 2 내용',
+          },
+        ],
+      },
+      site_id: site.id,
+    }),
+    site,
+    buildEmptyMasterData(),
+  );
+
+  assert.equal(session.document12Activities[0]?.activityTitle, '');
+  assert.equal(session.document12Activities[0]?.content, '활동 1 내용');
+  assert.equal(session.document12Activities[0]?.photoUrl, 'https://example.test/activity-1.jpg');
+  assert.equal(session.document12Activities[1]?.activityTitle, '');
+  assert.equal(session.document12Activities[1]?.content, '활동 2 내용');
+  assert.equal(session.document12Activities[1]?.photoUrl, 'https://example.test/activity-2.jpg');
 });
 
 test('buildPreviousRoundAccidentOverviewSeed maps yes seed into doc2 accident fields', () => {

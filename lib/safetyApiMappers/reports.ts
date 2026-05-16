@@ -6,7 +6,9 @@ import {
   getSessionTitle,
   mergeAdminSiteSnapshots,
   normalizeInspectionSession,
+  padDocument12Activities,
 } from '@/constants/inspectionSession';
+import { normalizeDocument12Activities } from '@/constants/inspectionSession/normalizeParts';
 import { normalizeControllerReview } from '@/lib/admin/reportMeta';
 import { TECHNICAL_GUIDANCE_REPORT_KIND } from '@/lib/erpReports/shared';
 import type {
@@ -141,7 +143,9 @@ function buildTechnicalGuidancePayloadForSave(
     document9SafetyChecks: session.document9SafetyChecks,
     document10Measurements: session.document10Measurements,
     document11EducationRecords: session.document11EducationRecords,
-    document12Activities: session.document12Activities,
+    document12Activities: padDocument12Activities(
+      normalizeDocument12Activities(session.document12Activities),
+    ),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     lastSavedAt: session.lastSavedAt,

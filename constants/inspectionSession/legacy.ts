@@ -25,7 +25,7 @@ import {
 import type { CausativeAgentKey } from '@/types/siteOverview';
 import type { AdminSiteSnapshot, InspectionSession } from '@/types/inspectionSession';
 import {
-  normalizeActivity,
+  normalizeDocument12Activities,
   normalizeEducationRecord,
   normalizeFollowUpItem,
   normalizeFuturePlan,
@@ -126,7 +126,7 @@ export function migrateLegacyInspectionSession(raw: unknown): InspectionSession 
       ? technicalMaterials.map((item) => normalizeEducationRecord(item))
       : session.document11EducationRecords,
     document12Activities: [...educationSupports, ...otherSupports].length > 0
-      ? [...educationSupports, ...otherSupports].map((item) => normalizeActivity(item))
+      ? normalizeDocument12Activities([...educationSupports, ...otherSupports])
       : session.document12Activities,
     document13Cases: DEFAULT_CASE_FEED.map((item) => ({ ...item })),
     document14SafetyInfos: DEFAULT_SAFETY_INFOS.map((item) => ({ ...item })),

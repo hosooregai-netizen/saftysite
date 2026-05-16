@@ -141,6 +141,7 @@ export function createActivityRecord(
   return {
     id: initial.id ?? generateId('activity'),
     photoUrl: '',
+    activityTitle: '',
     photoUrl2: '',
     activityType: '',
     content: '',
@@ -148,13 +149,13 @@ export function createActivityRecord(
   };
 }
 
-/** 12번 안전보건 활동실적: 워크스페이스·템플릿 모두 2×2(4칸) 고정 */
-export const DOC12_ACTIVITY_GRID_SLOTS = 4;
+// Document 12 shows two activity slots; keep any legacy extra records in memory.
+export const DOC12_ACTIVITY_GRID_SLOTS = 2;
 
 export function padDocument12Activities(items: ActivityRecord[]): ActivityRecord[] {
   const list = [...items];
   while (list.length < DOC12_ACTIVITY_GRID_SLOTS) {
     list.push(createActivityRecord());
   }
-  return list.slice(0, DOC12_ACTIVITY_GRID_SLOTS);
+  return list;
 }
