@@ -145,12 +145,15 @@ export async function resolveInspectionSessionBootstrapByReportKey(
     throw new Error('문서 생성에 필요한 기술지도 보고서를 불러오지 못했습니다.');
   }
 
+  const cacheTotalRounds =
+    session.document2Overview.totalVisitCount.trim() || String(site.totalRounds || '');
+
   return {
     cacheKey: {
       documentKind: 'technical_guidance',
       reportKey: targetReport.report_key,
       updatedAt: targetReport.updated_at || '',
-      version: 'inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v1',
+      version: `inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v1-total-${cacheTotalRounds || 'none'}`,
     },
     site,
     session,

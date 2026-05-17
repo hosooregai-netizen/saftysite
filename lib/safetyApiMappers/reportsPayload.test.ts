@@ -11,6 +11,7 @@ import {
   buildPreviousRoundAccidentOverviewSeed,
   buildSafetyReportUpsertInput,
   createNewSafetySession,
+  mapInspectionSessionToReportListItem,
   mapSafetyReportToInspectionSession,
   mapSafetyReportListItem,
 } from './reports';
@@ -84,6 +85,70 @@ function buildSafetyReport(
     ...overrides,
   } as SafetyReport;
 }
+
+test('createNewSafetySession derives document 2 round labels from report number and site total rounds', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  site.totalRounds = 14;
+
+  const session = createNewSafetySession(site, 11, buildEmptyMasterData());
+
+  assert.equal(session.document2Overview.visitCount, '11');
+  assert.equal(session.document2Overview.totalVisitCount, '14');
+});
+
+test('mapSafetyReportToInspectionSession prefers site total rounds over report and payload totals', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  site.totalRounds = 14;
+
+  const session = mapSafetyReportToInspectionSession(
+    buildSafetyReport({
+      visit_round: 11,
+      total_round: 10,
+      payload: {
+        reportNumber: 99,
+        document2Overview: {
+          visitCount: '99',
+          totalVisitCount: '10',
+        },
+      },
+      site_id: site.id,
+    }),
+    site,
+    buildEmptyMasterData(),
+  );
+
+  assert.equal(session.reportNumber, 11);
+  assert.equal(session.document2Overview.visitCount, '11');
+  assert.equal(session.document2Overview.totalVisitCount, '14');
+});
+
+test('buildSafetyReportUpsertInput overrides stale session total rounds from the site', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  site.totalRounds = 14;
+  const session = createInspectionSession({}, site.id, 11);
+  session.document2Overview.totalVisitCount = '10';
+  session.document2Overview.visitCount = '99';
+
+  const payload = buildSafetyReportUpsertInput(session, site);
+  const overview = (payload.payload as { document2Overview?: Record<string, unknown> })
+    .document2Overview;
+
+  assert.equal(payload.total_round, 14);
+  assert.equal(overview?.totalVisitCount, '14');
+  assert.equal(overview?.visitCount, '11');
+});
+
+test('mapInspectionSessionToReportListItem uses site total rounds for totalRound', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  site.totalRounds = 14;
+  const session = createInspectionSession({}, site.id, 11);
+  session.document2Overview.totalVisitCount = '10';
+
+  const item = mapInspectionSessionToReportListItem(session, site);
+
+  assert.equal(item.visitRound, 11);
+  assert.equal(item.totalRound, 14);
+});
 
 test('buildSafetyReportUpsertInput persists session adminSiteSnapshot', () => {
   const site = createInspectionSite({

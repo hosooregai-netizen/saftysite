@@ -80,20 +80,18 @@ export function Doc2OverviewFields({ props }: Doc2OverviewFieldsProps) {
                     type="number"
                     min={1}
                     step={1}
-                    className="app-input"
+                    className={`app-input ${styles.doc2OverviewReadonlyInput}`}
                     value={String(session.reportNumber || '')}
-                    onChange={(event) => updateOverviewField(props, 'visitCount', event.target.value)}
+                    readOnly
                   />
                 </td>
                 <th scope="row" className={styles.doc2OverviewLabelCell}>총회차</th>
                 <td className={styles.doc2OverviewValueCell}>
                   <input
                     type="text"
-                    className="app-input"
+                    className={`app-input ${styles.doc2OverviewReadonlyInput}`}
                     value={session.document2Overview.totalVisitCount}
-                    onChange={(event) =>
-                      updateOverviewField(props, 'totalVisitCount', event.target.value)
-                    }
+                    readOnly
                   />
                 </td>
               </tr>

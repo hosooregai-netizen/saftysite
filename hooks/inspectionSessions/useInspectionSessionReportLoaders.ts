@@ -72,6 +72,7 @@ function mergePreferredSite(
     customerName: primary.customerName || fallback.customerName,
     siteName: primary.siteName || fallback.siteName,
     assigneeName: primary.assigneeName || fallback.assigneeName,
+    totalRounds: fallback.totalRounds ?? primary.totalRounds,
     adminSiteSnapshot: mergeAdminSiteSnapshots(
       primary.adminSiteSnapshot,
       fallback.adminSiteSnapshot,
@@ -89,7 +90,8 @@ function hasSiteChanged(current: InspectionSite | null, next: InspectionSite) {
     current.title !== next.title ||
     current.customerName !== next.customerName ||
     current.siteName !== next.siteName ||
-    current.assigneeName !== next.assigneeName
+    current.assigneeName !== next.assigneeName ||
+    current.totalRounds !== next.totalRounds
   ) {
     return true;
   }
@@ -203,9 +205,10 @@ export function useInspectionSessionReportLoaders(
             return;
           }
 
+          const site = resolveKnownSite(siteId);
           const items = reports
             .filter(isTechnicalGuidanceReport)
-            .map(mapSafetyReportListItem);
+            .map((report) => mapSafetyReportListItem(report, site));
           const localItems = buildLocalReportIndexItems(
             siteId,
             sessionsRef.current,
@@ -284,6 +287,7 @@ export function useInspectionSessionReportLoaders(
       clearAuthState,
       dirtySessionIdsRef,
       reportIndexBySiteIdRef,
+      resolveKnownSite,
       runtime,
       sessionsRef,
       setAuthError,
@@ -366,7 +370,7 @@ export function useInspectionSessionReportLoaders(
               status: 'loaded',
               items: mergeReportIndexItems(
                 current[site.id]?.items ?? [],
-                [mapSafetyReportListItem(report)],
+                [mapSafetyReportListItem(report, site)],
               ),
               fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
               error: null,
@@ -533,7 +537,7 @@ export function useInspectionSessionReportLoaders(
             [siteId]: buildReportIndexState(current[siteId], {
               status: 'loaded',
               items: mergeReportIndexItems(
-                technicalReports.map(mapSafetyReportListItem),
+                technicalReports.map((report) => mapSafetyReportListItem(report, resolvedSite)),
                 localItems,
               ),
               fetchedAt: new Date().toISOString(),

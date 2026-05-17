@@ -5,10 +5,8 @@ import SignaturePad from '@/components/ui/SignaturePad';
 import { NOTIFICATION_METHOD_OPTIONS, PREVIOUS_IMPLEMENTATION_OPTIONS } from '@/components/session/workspace/constants';
 import {
   applyInspectionSessionGuidanceDateChange,
-  buildInspectionAutoReportTitle,
 } from '@/features/inspection-session/lib/applyInspectionSessionGuidanceDateChange';
 import type { useInspectionSessionScreen } from '@/features/inspection-session/hooks/useInspectionSessionScreen';
-import { buildAutoReportTitle, parsePositiveRound } from './mobileInspectionSessionHelpers';
 import { MobileInspectionSessionStep2ProcessSection } from './MobileInspectionSessionStep2ProcessSection';
 import styles from '@/features/mobile/components/MobileShell.module.css';
 
@@ -73,43 +71,14 @@ export function MobileInspectionSessionStep2({
                 type="number"
                 min={1}
                 step={1}
-                value={session.document2Overview.visitCount || String(session.reportNumber || '')}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  screen.applyDocumentUpdate('doc2', 'manual', (current) => {
-                    const nextRound = parsePositiveRound(value);
-                    if (!nextRound) {
-                      return { ...current, document2Overview: { ...current.document2Overview, visitCount: value } };
-                    }
-                    const preferredDate = current.document2Overview.guidanceDate.trim() || current.meta.reportDate.trim();
-                    const currentTitle = current.meta.reportTitle.trim();
-                    const autoTitleCandidates = new Set([
-                      buildAutoReportTitle(preferredDate, current.reportNumber),
-                      buildAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
-                      buildInspectionAutoReportTitle(preferredDate, current.reportNumber),
-                      buildInspectionAutoReportTitle(current.meta.reportDate.trim(), current.reportNumber),
-                      buildInspectionAutoReportTitle('', current.reportNumber),
-                      `보고서 ${current.reportNumber}`,
-                    ]);
-                    return {
-                      ...current,
-                      scheduleId: nextRound === current.reportNumber ? current.scheduleId : null,
-                      scheduleRoundNo: nextRound === current.reportNumber ? current.scheduleRoundNo : null,
-                      reportNumber: nextRound,
-                      meta: {
-                        ...current.meta,
-                        reportTitle: autoTitleCandidates.has(currentTitle) ? buildInspectionAutoReportTitle(preferredDate, nextRound) : current.meta.reportTitle,
-                      },
-                      document2Overview: { ...current.document2Overview, visitCount: String(nextRound) },
-                    };
-                  });
-                }}
+                value={String(session.reportNumber || '')}
+                readOnly
                 placeholder="1"
               />
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>총회차</span>
-              <input className="app-input" value={session.document2Overview.totalVisitCount} onChange={(event) => updateOverview({ totalVisitCount: event.target.value })} placeholder="예: 12" />
+              <input className="app-input" value={session.document2Overview.totalVisitCount} readOnly placeholder="예: 12" />
             </label>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>

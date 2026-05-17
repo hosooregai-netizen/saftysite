@@ -238,7 +238,7 @@ export function SiteReportListPanel({
         const updatedReport = isLegacyReport
           ? await updateAdminReportDispatch(item.reportKey, nextDispatch)
           : await updateReportDispatch(item.reportKey, nextDispatch);
-        const updatedRemoteItem = mapSafetyReportListItem(updatedReport);
+        const updatedRemoteItem = mapSafetyReportListItem(updatedReport, currentSite);
         const updatedDispatch = getReportDispatch(updatedReport);
         const updatedItem = mergeReportIndexItem(updatedRemoteItem, {
           ...item,

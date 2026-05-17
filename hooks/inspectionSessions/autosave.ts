@@ -140,7 +140,7 @@ export function useInspectionSessionsAutosave(store: InspectionSessionsStore) {
             status: 'loaded',
             items: mergeReportIndexItems(
               current[site.id]?.items ?? [],
-              [mapSafetyReportListItem(savedReport)],
+              [mapSafetyReportListItem(savedReport, site)],
             ),
             fetchedAt: current[site.id]?.fetchedAt ?? new Date().toISOString(),
             error: null,

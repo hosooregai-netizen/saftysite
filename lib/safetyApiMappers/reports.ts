@@ -119,21 +119,70 @@ function mapTechnicalGuidanceRelations(
   });
 }
 
+function resolvePositiveInteger(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.trunc(value);
+  }
+  return parsePositiveInteger(String(value ?? ''));
+}
+
+function resolveSiteTotalRounds(site: InspectionSite): number | null {
+  return resolvePositiveInteger(site.totalRounds);
+}
+
+function buildAuthoritativeDocument2Overview(
+  overview: InspectionSession['document2Overview'],
+  reportNumber: unknown,
+  site: InspectionSite,
+): InspectionSession['document2Overview'] {
+  const resolvedReportNumber = resolvePositiveInteger(reportNumber);
+  const totalRounds = resolveSiteTotalRounds(site);
+
+  return {
+    ...overview,
+    visitCount: resolvedReportNumber ? String(resolvedReportNumber) : '',
+    totalVisitCount: totalRounds ? String(totalRounds) : '',
+  };
+}
+
+function applyAuthoritativeRoundOverview(
+  session: InspectionSession,
+  site: InspectionSite,
+  reportNumber: unknown = session.reportNumber,
+): InspectionSession {
+  const resolvedReportNumber = resolvePositiveInteger(reportNumber) ?? session.reportNumber;
+  return {
+    ...session,
+    reportNumber: resolvedReportNumber,
+    document2Overview: buildAuthoritativeDocument2Overview(
+      session.document2Overview,
+      resolvedReportNumber,
+      site,
+    ),
+  };
+}
+
 function buildTechnicalGuidancePayloadForSave(
   session: InspectionSession,
   site: InspectionSite,
 ): Record<string, unknown> {
+  const reportNumber = resolvePositiveInteger(session.reportNumber) ?? session.reportNumber;
+
   return {
     siteKey: site.id,
     scheduleId: session.scheduleId ?? null,
     scheduleRoundNo: session.scheduleRoundNo ?? null,
-    reportNumber: session.reportNumber,
+    reportNumber,
     currentSection: session.currentSection,
     adminSiteSnapshot: session.adminSiteSnapshot,
     meta: session.meta,
     controllerReview: session.controllerReview,
     documentsMeta: session.documentsMeta,
-    document2Overview: session.document2Overview,
+    document2Overview: buildAuthoritativeDocument2Overview(
+      session.document2Overview,
+      reportNumber,
+      site,
+    ),
     document3Scenes: session.document3Scenes,
     document4FollowUps: session.document4FollowUps,
     document5Summary: session.document5Summary,
@@ -155,6 +204,7 @@ function buildTechnicalGuidancePayloadForSave(
 
 export function mapSafetyReportListItem(
   report: SafetyReportListItem,
+  site?: InspectionSite | null,
 ): InspectionReportListItem {
   const dispatchState = resolveReportDispatchListState(report);
 
@@ -172,7 +222,7 @@ export function mapSafetyReportListItem(
     assignedUserId: report.assigned_user_id,
     visitDate: report.visit_date,
     visitRound: report.visit_round,
-    totalRound: report.total_round,
+    totalRound: site ? (resolveSiteTotalRounds(site) ?? report.total_round) : report.total_round,
     progressRate: report.progress_rate,
     status: report.status,
     dispatchCompleted: dispatchState.dispatchCompleted,
@@ -209,7 +259,7 @@ export function mapInspectionSessionToReportListItem(
     assignedUserId: null,
     visitDate: getSessionGuidanceDate(session) || null,
     visitRound: session.reportNumber || null,
-    totalRound: progress.total,
+    totalRound: resolveSiteTotalRounds(site),
     progressRate: progress.percentage,
     status: 'draft',
     dispatchCompleted: false,
@@ -243,6 +293,10 @@ export function mapSafetyReportToInspectionSession(
   const payload = asMapperRecord(report.payload);
   const payloadMeta = asMapperRecord(payload.meta);
   const reportMeta = asMapperRecord(report.meta);
+  const authoritativeVisitRound =
+    resolvePositiveInteger(report.visit_round) ??
+    resolvePositiveInteger(payload.reportNumber) ??
+    1;
 
   const normalized = normalizeInspectionSession({
     ...payload,
@@ -250,8 +304,7 @@ export function mapSafetyReportToInspectionSession(
     siteKey: report.site_id,
     scheduleId: report.schedule_id ?? normalizeMapperText(payload.scheduleId) ?? null,
     scheduleRoundNo: parsePositiveInteger(String(payload.scheduleRoundNo ?? '')),
-    reportNumber:
-      typeof report.visit_round === 'number' ? report.visit_round : payload.reportNumber,
+    reportNumber: authoritativeVisitRound,
     createdAt: normalizeMapperText(payload.createdAt) || report.created_at,
     updatedAt: normalizeMapperText(payload.updatedAt) || report.updated_at,
     lastSavedAt:
@@ -294,7 +347,10 @@ export function mapSafetyReportToInspectionSession(
     ),
   });
 
-  return mergeMasterDataIntoSession(normalized, masterData);
+  return mergeMasterDataIntoSession(
+    applyAuthoritativeRoundOverview(normalized, site, authoritativeVisitRound),
+    masterData,
+  );
 }
 
 function resolveReportScheduleId(session: InspectionSession): string | null {
@@ -314,6 +370,7 @@ export function buildSafetyReportUpsertInput(
   site: InspectionSite
 ): SafetyUpsertReportInput {
   const progress = getSessionProgress(session);
+  const reportNumber = resolvePositiveInteger(session.reportNumber) ?? session.reportNumber;
 
   return {
     report_key: session.id,
@@ -321,8 +378,8 @@ export function buildSafetyReportUpsertInput(
     site_id: site.id,
     schedule_id: resolveReportScheduleId(session),
     visit_date: getSessionGuidanceDate(session) || null,
-    visit_round: session.reportNumber || null,
-    total_round: parsePositiveInteger(session.document2Overview.totalVisitCount),
+    visit_round: reportNumber || null,
+    total_round: resolveSiteTotalRounds(site),
     progress_rate: progress.percentage,
     payload: buildTechnicalGuidancePayloadForSave(session, site),
     meta: {
@@ -333,7 +390,7 @@ export function buildSafetyReportUpsertInput(
       reviewer: session.meta.reviewer,
       approver: session.meta.approver,
       currentSection: session.currentSection,
-      reportNumber: session.reportNumber,
+      reportNumber,
       scheduleRoundNo: session.scheduleRoundNo ?? null,
       controllerReview: session.controllerReview,
     },
@@ -385,7 +442,7 @@ export function createNewSafetySession(
     : session;
 
   return mergeMasterDataIntoSession(
-    sessionWithInitialOverview,
+    applyAuthoritativeRoundOverview(sessionWithInitialOverview, site, reportNumber),
     masterData
   );
 }

@@ -186,9 +186,10 @@ export function buildMergedReportIndexItems(
   sites: InspectionSite[],
   dirtySessionIds: Set<string>,
 ) {
+  const site = sites.find((item) => item.id === siteId) ?? null;
   const remoteItems = reports
     .filter(isTechnicalGuidanceReport)
-    .map(mapSafetyReportListItem);
+    .map((report) => mapSafetyReportListItem(report, site));
   const localItems = buildLocalReportIndexItems(siteId, sessions, sites, dirtySessionIds);
   return mergeReportIndexItems(remoteItems, localItems);
 }
