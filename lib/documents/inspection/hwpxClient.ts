@@ -110,7 +110,7 @@ const DOC5_CHART_LEGEND_LEFT = 684;
 const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
-const DOC5_CHART_LEGEND_LABEL_GAP = 22;
+const DOC5_CHART_LEGEND_LABEL_GAP = 30;
 
 function scaleDoc5ChartPixel(value: number): number {
   return Math.max(1, Math.round(value * DOC5_CHART_RENDER_SCALE));
@@ -1284,7 +1284,7 @@ function renderDoc5ChartCardDataUrl(
   const total = entries.reduce((sum, item) => sum + item.count, 0);
   if (entries.length === 0 || total === 0) {
     context.fillStyle = '#6b7280';
-    context.font = '400 54px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
+    context.font = '400 34px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
     context.fillText('집계된 유해위험요인 데이터가 없습니다.', 42, 126);
     context.restore();
     return canvas.toDataURL('image/png');
@@ -1324,8 +1324,8 @@ function renderDoc5ChartCardDataUrl(
   const availableLegendHeight = legendBottom - legendTop;
   const lineHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - lineHeight * entries.length) / 2));
-  const legendFontSize = Math.max(46, Math.min(66, Math.floor(lineHeight * 0.46)));
-  const markerSize = Math.max(28, Math.min(42, Math.floor(legendFontSize * 0.68)));
+  const legendFontSize = Math.max(34, Math.min(48, Math.floor(lineHeight * 0.42)));
+  const markerSize = Math.max(24, Math.min(34, Math.floor(legendFontSize * 0.84)));
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {

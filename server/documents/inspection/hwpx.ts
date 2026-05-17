@@ -115,7 +115,7 @@ const DOC5_CHART_LEGEND_LEFT = 684;
 const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
-const DOC5_CHART_LEGEND_LABEL_GAP = 22;
+const DOC5_CHART_LEGEND_LABEL_GAP = 30;
 
 function scaleDoc5ChartPixel(value: number, scale = DOC5_CHART_RENDER_SCALE): number {
   return Math.round(value * scale);
@@ -1320,8 +1320,8 @@ function renderDoc5ChartCardDataUrl(
   const availableLegendHeight = DOC5_CHART_LEGEND_BOTTOM - DOC5_CHART_LEGEND_TOP;
   const lineHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendStartY = DOC5_CHART_LEGEND_TOP + Math.max(0, Math.floor((availableLegendHeight - lineHeight * entries.length) / 2));
-  const legendFontSize = Math.max(46, Math.min(66, Math.floor(lineHeight * 0.46)));
-  const markerSize = Math.max(28, Math.min(42, Math.floor(legendFontSize * 0.68)));
+  const legendFontSize = Math.max(34, Math.min(48, Math.floor(lineHeight * 0.42)));
+  const markerSize = Math.max(24, Math.min(34, Math.floor(legendFontSize * 0.84)));
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {
@@ -1413,8 +1413,8 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
   const rowHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
   const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - legendBlockHeight) / 2));
-  const fontSize = Math.max(46, Math.min(66, Math.floor(rowHeight * 0.46)));
-  const markerSize = Math.max(28, Math.min(42, Math.floor(fontSize * 0.68)));
+  const fontSize = Math.max(34, Math.min(48, Math.floor(rowHeight * 0.42)));
+  const markerSize = Math.max(24, Math.min(34, Math.floor(fontSize * 0.84)));
   const labelX = legendLeft + markerSize + DOC5_CHART_LEGEND_LABEL_GAP;
   const countX = legendRight;
   const svgParts = [
@@ -1426,7 +1426,7 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
     svgParts.push(
       renderChartSvgTextPath('집계된 차트 데이터가 없습니다.', {
         fill: '#6b7280',
-        fontSize: 54,
+        fontSize: 34,
         fontWeight: 400,
         x: 58,
         y: 140,
