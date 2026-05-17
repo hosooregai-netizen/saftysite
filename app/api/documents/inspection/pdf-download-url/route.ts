@@ -20,6 +20,8 @@ export const maxDuration = 300;
 
 interface PdfDownloadUrlResponse {
   assetPath: string;
+  cacheStatus?: 'download-path-hit' | 'generated' | 'pdf-cache-uploaded';
+  cacheVersion?: string;
   downloadUrl: string;
   filename: string;
 }
@@ -93,11 +95,16 @@ export async function POST(request: Request): Promise<Response> {
     if (payload.cacheKey) {
       const cached = await readGeneratedReportPdfCache(payload.cacheKey);
       if (cached?.downloadPath) {
-        return NextResponse.json({
-          assetPath: cached.downloadPath,
-          downloadUrl: buildDownloadUrl(request, cached.downloadPath),
-          filename: cached.filename,
-        } satisfies PdfDownloadUrlResponse);
+        return NextResponse.json(
+          {
+            assetPath: cached.downloadPath,
+            cacheStatus: 'download-path-hit',
+            cacheVersion: payload.cacheKey.version,
+            downloadUrl: buildDownloadUrl(request, cached.downloadPath),
+            filename: cached.filename,
+          } satisfies PdfDownloadUrlResponse,
+          { headers: { 'Cache-Control': 'no-store' } },
+        );
       }
 
       if (cached) {
@@ -107,7 +114,14 @@ export async function POST(request: Request): Promise<Response> {
           downloadPath: uploaded.assetPath,
           filename: uploaded.filename,
         });
-        return NextResponse.json(uploaded);
+        return NextResponse.json(
+          {
+            ...uploaded,
+            cacheStatus: 'pdf-cache-uploaded',
+            cacheVersion: payload.cacheKey.version,
+          } satisfies PdfDownloadUrlResponse,
+          { headers: { 'Cache-Control': 'no-store' } },
+        );
       }
     }
 
@@ -130,7 +144,14 @@ export async function POST(request: Request): Promise<Response> {
       });
     }
 
-    return NextResponse.json(uploaded);
+    return NextResponse.json(
+      {
+        ...uploaded,
+        cacheStatus: 'generated',
+        cacheVersion: payload.cacheKey?.version,
+      } satisfies PdfDownloadUrlResponse,
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
   } catch (error) {
     const message =
       error instanceof Error

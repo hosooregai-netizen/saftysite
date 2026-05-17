@@ -8,6 +8,7 @@ import {
   readGeneratedReportPdfCache,
   writeGeneratedReportPdfCache,
 } from '@/server/documents/shared/generatedReportPdfCache';
+import type { GeneratedReportPdfCacheKey } from '@/server/documents/shared/generatedReportPdfCache';
 import type { GenerateInspectionDocumentRequest } from '@/types/documents';
 
 export const runtime = 'nodejs';
@@ -34,6 +35,25 @@ function getPdfRouteStatus(error: unknown, message: string): number {
   }
 
   return 500;
+}
+
+function buildPdfResponseHeaders(
+  filename: string,
+  cacheKey: GeneratedReportPdfCacheKey | null,
+  cacheStatus: 'bypass' | 'generated' | 'hit',
+): HeadersInit {
+  const headers: Record<string, string> = {
+    'Cache-Control': 'no-store',
+    'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    'Content-Type': 'application/pdf',
+    'X-Inspection-Pdf-Cache-Status': cacheStatus,
+  };
+
+  if (cacheKey?.version) {
+    headers['X-Inspection-Pdf-Cache-Version'] = cacheKey.version;
+  }
+
+  return headers;
 }
 
 async function readPdfRequest(
@@ -97,10 +117,7 @@ export async function POST(request: Request): Promise<Response> {
       if (cached) {
         return new Response(new Uint8Array(cached.buffer), {
           status: 200,
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(cached.filename)}`,
-          },
+          headers: buildPdfResponseHeaders(cached.filename, payload.cacheKey, 'hit'),
         });
       }
     }
@@ -123,10 +140,11 @@ export async function POST(request: Request): Promise<Response> {
 
     return new Response(new Uint8Array(buffer), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      },
+      headers: buildPdfResponseHeaders(
+        filename,
+        payload.kind === 'document' ? payload.cacheKey : null,
+        payload.kind === 'document' ? 'generated' : 'bypass',
+      ),
     });
   } catch (error) {
     const message =
