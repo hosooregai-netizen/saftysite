@@ -6,6 +6,7 @@ import {
   createInspectionSession,
   createInspectionSite,
 } from '@/constants/inspectionSession';
+import { updateOverviewField } from '@/components/session/workspace/sections/doc2Shared';
 import type { SafetyMasterData, SafetyReport, SafetyReportListItem } from '@/types/backend';
 import {
   buildPreviousRoundAccidentOverviewSeed,
@@ -126,16 +127,52 @@ test('buildSafetyReportUpsertInput overrides stale session total rounds from the
   const site = createInspectionSite({ siteName: 'Site Alpha' });
   site.totalRounds = 14;
   const session = createInspectionSession({}, site.id, 11);
-  session.document2Overview.totalVisitCount = '10';
+  session.document2Overview.totalVisitCount = '999';
   session.document2Overview.visitCount = '99';
+  session.scheduleId = 'schedule-11';
+  session.scheduleRoundNo = 11;
 
   const payload = buildSafetyReportUpsertInput(session, site);
-  const overview = (payload.payload as { document2Overview?: Record<string, unknown> })
-    .document2Overview;
+  const savedPayload = payload.payload as {
+    document2Overview?: Record<string, unknown>;
+    reportNumber?: unknown;
+    scheduleRoundNo?: unknown;
+  };
+  const overview = savedPayload.document2Overview;
 
   assert.equal(payload.total_round, 14);
+  assert.equal(payload.visit_round, 11);
+  assert.equal(payload.schedule_id, 'schedule-11');
+  assert.equal(savedPayload.reportNumber, 11);
+  assert.equal(savedPayload.scheduleRoundNo, 11);
   assert.equal(overview?.totalVisitCount, '14');
   assert.equal(overview?.visitCount, '11');
+});
+
+test('updateOverviewField ignores round label writes', () => {
+  const site = createInspectionSite({ siteName: 'Site Alpha' });
+  const session = createInspectionSession({ scheduleId: 'schedule-11', scheduleRoundNo: 11 }, site.id, 11);
+  session.document2Overview.visitCount = '11';
+  session.document2Overview.totalVisitCount = '14';
+  let draft = session;
+  let updateCallCount = 0;
+  const props = {
+    session,
+    applyDocumentUpdate: (_section: string, _source: string, updater: (current: typeof session) => typeof session) => {
+      updateCallCount += 1;
+      draft = updater(draft);
+    },
+  } as unknown as Parameters<typeof updateOverviewField>[0];
+
+  updateOverviewField(props, 'visitCount', '99');
+  updateOverviewField(props, 'totalVisitCount', '999');
+
+  assert.equal(draft.reportNumber, 11);
+  assert.equal(draft.scheduleId, 'schedule-11');
+  assert.equal(draft.scheduleRoundNo, 11);
+  assert.equal(draft.document2Overview.visitCount, '11');
+  assert.equal(draft.document2Overview.totalVisitCount, '14');
+  assert.equal(updateCallCount, 0);
 });
 
 test('mapInspectionSessionToReportListItem uses site total rounds for totalRound', () => {

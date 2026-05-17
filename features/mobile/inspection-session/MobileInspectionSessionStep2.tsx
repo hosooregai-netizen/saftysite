@@ -27,14 +27,21 @@ export function MobileInspectionSessionStep2({
   session,
 }: MobileInspectionSessionStep2Props) {
   const updateOverview = (patch: Partial<InspectionSessionDraft['document2Overview']>) => {
+    const editablePatch = { ...patch };
+    delete editablePatch.visitCount;
+    delete editablePatch.totalVisitCount;
+    if (Object.keys(editablePatch).length === 0) {
+      return;
+    }
+
     screen.applyDocumentUpdate('doc2', 'manual', (current) => {
       const base =
-        patch.guidanceDate !== undefined
-          ? applyInspectionSessionGuidanceDateChange(current, patch.guidanceDate)
+        editablePatch.guidanceDate !== undefined
+          ? applyInspectionSessionGuidanceDateChange(current, editablePatch.guidanceDate)
           : current;
-      const nextOverview = { ...base.document2Overview, ...patch };
+      const nextOverview = { ...base.document2Overview, ...editablePatch };
       if (
-        patch.notificationMethod === 'direct' &&
+        editablePatch.notificationMethod === 'direct' &&
         !nextOverview.notificationRecipientName.trim() &&
         base.adminSiteSnapshot.siteManagerName.trim()
       ) {
