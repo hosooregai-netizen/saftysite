@@ -115,10 +115,19 @@ const DOC5_CHART_LEGEND_LEFT = 684;
 const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
-const DOC5_CHART_LEGEND_LABEL_GAP = 30;
+const DOC5_CHART_LEGEND_LABEL_GAP = 22;
 
 function scaleDoc5ChartPixel(value: number, scale = DOC5_CHART_RENDER_SCALE): number {
   return Math.round(value * scale);
+}
+
+function estimateDoc5ChartTextWidth(text: string, fontSize: number): number {
+  return Array.from(text).reduce((sum, char) => {
+    if (/[0-9A-Za-z .,%()/-]/.test(char)) {
+      return sum + fontSize * 0.55;
+    }
+    return sum + fontSize * 0.92;
+  }, 0);
 }
 
 export interface GeneratedInspectionHwpxDocument {
@@ -1306,40 +1315,56 @@ function renderDoc5ChartCardDataUrl(
   context.fillStyle = '#ffffff';
   context.fill();
 
-  const legendFontSize = entries.length >= 6 ? 31 : entries.length >= 4 ? 35 : 38;
-  const markerSize = entries.length >= 6 ? 24 : 28;
   const legendX = DOC5_CHART_LEGEND_LEFT;
   const countX = DOC5_CHART_LEGEND_RIGHT;
-  const lineHeight = legendFontSize + 24;
-  const legendStartY = Math.max(92, centerY - ((entries.length - 1) * lineHeight) / 2);
-  const legendTextMaxWidth = countX - legendX - markerSize - DOC5_CHART_LEGEND_LABEL_GAP - 220;
+  const availableLegendHeight = DOC5_CHART_LEGEND_BOTTOM - DOC5_CHART_LEGEND_TOP;
+  const lineHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
+  const legendStartY = DOC5_CHART_LEGEND_TOP + Math.max(0, Math.floor((availableLegendHeight - lineHeight * entries.length) / 2));
+  const legendFontSize = Math.max(46, Math.min(66, Math.floor(lineHeight * 0.46)));
+  const markerSize = Math.max(28, Math.min(42, Math.floor(legendFontSize * 0.68)));
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
-    const y = legendStartY + index * lineHeight;
-    const percentText = formatDoc5ChartPercent(item.count, total);
+    const y = legendStartY + index * lineHeight + lineHeight / 2;
+    const statText = formatDoc5ChartStatText(item.count, total);
+    const labelX = legendX + markerSize + DOC5_CHART_LEGEND_LABEL_GAP;
+    const statReserveWidth = Math.max(250, estimateDoc5ChartTextWidth(statText, legendFontSize) + 34);
+    const labelMaxWidth = Math.max(210, countX - labelX - statReserveWidth);
 
     context.fillStyle = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
-    context.fillRect(legendX, y + 8, markerSize, markerSize);
+    context.fillRect(legendX, y - markerSize / 2, markerSize, markerSize);
 
     context.fillStyle = '#1f2937';
     context.textAlign = 'left';
-    context.fillText(item.label, legendX + markerSize + DOC5_CHART_LEGEND_LABEL_GAP, y, legendTextMaxWidth);
+    context.textBaseline = 'middle';
+    context.fillText(truncateDoc5ChartLabelToWidth(item.label, labelMaxWidth, legendFontSize), labelX, y);
 
     context.font = `600 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
     context.textAlign = 'right';
-    context.fillText(percentText, countX, y);
+    context.fillText(statText, countX, y);
     context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   }
 
   context.textAlign = 'left';
+  context.textBaseline = 'alphabetic';
   context.restore();
   return canvas.toDataURL('image/png');
 }
 
-function truncateDoc5ChartLabel(label: string, maxLength: number): string {
-  return label.length > maxLength ? `${label.slice(0, Math.max(1, maxLength - 3))}...` : label;
+function truncateDoc5ChartLabelToWidth(label: string, maxWidth: number, fontSize: number): string {
+  const normalizedLabel = label.trim();
+  if (!normalizedLabel || estimateDoc5ChartTextWidth(normalizedLabel, fontSize) <= maxWidth) {
+    return normalizedLabel;
+  }
+
+  const suffix = '...';
+  const suffixWidth = estimateDoc5ChartTextWidth(suffix, fontSize);
+  let nextLabel = normalizedLabel;
+  while (nextLabel.length > 1 && estimateDoc5ChartTextWidth(nextLabel, fontSize) + suffixWidth > maxWidth) {
+    nextLabel = nextLabel.slice(0, -1);
+  }
+  return `${nextLabel.trimEnd() || normalizedLabel.slice(0, 1)}${suffix}`;
 }
 
 function doc5ChartPolarPoint(centerX: number, centerY: number, radius: number, angle: number) {
@@ -1388,11 +1413,10 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
   const rowHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendBlockHeight = rowHeight * Math.max(entries.length, 1);
   const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - legendBlockHeight) / 2));
-  const fontSize = Math.max(34, Math.min(48, Math.floor(rowHeight * 0.42)));
-  const markerSize = Math.max(24, Math.min(34, Math.floor(fontSize * 0.84)));
+  const fontSize = Math.max(46, Math.min(66, Math.floor(rowHeight * 0.46)));
+  const markerSize = Math.max(28, Math.min(42, Math.floor(fontSize * 0.68)));
   const labelX = legendLeft + markerSize + DOC5_CHART_LEGEND_LABEL_GAP;
   const countX = legendRight;
-  const labelMaxChars = entries.length >= 5 ? 15 : entries.length >= 3 ? 16 : 18;
   const svgParts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${scaleDoc5ChartPixel(width, scale)}" height="${scaleDoc5ChartPixel(height, scale)}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="${width}" height="${height}" fill="#ffffff"/>`,
@@ -1402,7 +1426,7 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
     svgParts.push(
       renderChartSvgTextPath('집계된 차트 데이터가 없습니다.', {
         fill: '#6b7280',
-        fontSize: 34,
+        fontSize: 54,
         fontWeight: 400,
         x: 58,
         y: 140,
@@ -1435,12 +1459,15 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
     const item = entries[index];
     const rowCenterY = legendStartY + rowHeight * index + rowHeight / 2;
     const color = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
+    const statText = formatDoc5ChartStatText(item.count, total);
+    const statReserveWidth = Math.max(250, estimateDoc5ChartTextWidth(statText, fontSize) + 34);
+    const labelMaxWidth = Math.max(210, countX - labelX - statReserveWidth);
 
     svgParts.push(
       `<rect x="${legendLeft}" y="${(rowCenterY - markerSize / 2).toFixed(1)}" width="${markerSize}" height="${markerSize}" rx="4" ry="4" fill="${color}"/>`,
     );
     svgParts.push(
-      renderChartSvgTextPath(truncateDoc5ChartLabel(item.label, labelMaxChars), {
+      renderChartSvgTextPath(truncateDoc5ChartLabelToWidth(item.label, labelMaxWidth, fontSize), {
         fill: '#1f2937',
         fontSize,
         fontWeight: 500,
@@ -1451,7 +1478,7 @@ function buildDoc5ChartSvg(entries: Doc5ChartEntry[], scale = 1): string {
       }),
     );
     svgParts.push(
-      renderChartSvgTextPath(formatDoc5ChartStatText(item.count, total), {
+      renderChartSvgTextPath(statText, {
         fill: '#111827',
         fontSize,
         fontWeight: 700,

@@ -58,13 +58,13 @@ test('generated report pdf cache isolates uploaded assets by quality version', a
       updatedAt: '2026-04-20T09:10:11.000Z',
     };
     const previousVersion =
-      'inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v1-total-12';
+      'inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v2-total-12';
     const currentVersion = buildInspectionGeneratedPdfCacheVersion('12');
 
-    assert.equal(INSPECTION_DOC5_CHART_PDF_CACHE_VERSION, 'doc5-chart-hidpi-v2');
+    assert.equal(INSPECTION_DOC5_CHART_PDF_CACHE_VERSION, 'doc5-chart-hidpi-v3');
     assert.equal(
       currentVersion,
-      'inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v2-total-12',
+      'inspection-v10-template-text-layout-v2-measurement-unit-doc5-chart-hidpi-v3-total-12',
     );
 
     await writeGeneratedReportPdfCache(

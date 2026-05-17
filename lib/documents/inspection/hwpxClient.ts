@@ -110,10 +110,34 @@ const DOC5_CHART_LEGEND_LEFT = 684;
 const DOC5_CHART_LEGEND_RIGHT = 1456;
 const DOC5_CHART_LEGEND_TOP = 8;
 const DOC5_CHART_LEGEND_BOTTOM = 680;
-const DOC5_CHART_LEGEND_LABEL_GAP = 30;
+const DOC5_CHART_LEGEND_LABEL_GAP = 22;
 
 function scaleDoc5ChartPixel(value: number): number {
   return Math.max(1, Math.round(value * DOC5_CHART_RENDER_SCALE));
+}
+
+function estimateDoc5ChartTextWidth(text: string, fontSize: number): number {
+  return Array.from(text).reduce((sum, char) => {
+    if (/[0-9A-Za-z .,%()/-]/.test(char)) {
+      return sum + fontSize * 0.55;
+    }
+    return sum + fontSize * 0.92;
+  }, 0);
+}
+
+function truncateDoc5ChartLabelToWidth(label: string, maxWidth: number, fontSize: number): string {
+  const normalizedLabel = label.trim();
+  if (!normalizedLabel || estimateDoc5ChartTextWidth(normalizedLabel, fontSize) <= maxWidth) {
+    return normalizedLabel;
+  }
+
+  const suffix = '...';
+  const suffixWidth = estimateDoc5ChartTextWidth(suffix, fontSize);
+  let nextLabel = normalizedLabel;
+  while (nextLabel.length > 1 && estimateDoc5ChartTextWidth(nextLabel, fontSize) + suffixWidth > maxWidth) {
+    nextLabel = nextLabel.slice(0, -1);
+  }
+  return `${nextLabel.trimEnd() || normalizedLabel.slice(0, 1)}${suffix}`;
 }
 
 const HWPX_GENERATION_MODE: 'template_native' | 'advanced' = 'advanced';
@@ -1260,7 +1284,7 @@ function renderDoc5ChartCardDataUrl(
   const total = entries.reduce((sum, item) => sum + item.count, 0);
   if (entries.length === 0 || total === 0) {
     context.fillStyle = '#6b7280';
-    context.font = '400 34px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
+    context.font = '400 54px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
     context.fillText('집계된 유해위험요인 데이터가 없습니다.', 42, 126);
     context.restore();
     return canvas.toDataURL('image/png');
@@ -1300,22 +1324,24 @@ function renderDoc5ChartCardDataUrl(
   const availableLegendHeight = legendBottom - legendTop;
   const lineHeight = Math.max(82, Math.min(150, Math.floor(availableLegendHeight / Math.max(entries.length, 1))));
   const legendStartY = legendTop + Math.max(0, Math.floor((availableLegendHeight - lineHeight * entries.length) / 2));
-  const legendFontSize = Math.max(34, Math.min(48, Math.floor(lineHeight * 0.42)));
-  const markerSize = Math.max(24, Math.min(34, Math.floor(legendFontSize * 0.84)));
-  const legendTextMaxWidth = countX - legendX - markerSize - DOC5_CHART_LEGEND_LABEL_GAP - 220;
+  const legendFontSize = Math.max(46, Math.min(66, Math.floor(lineHeight * 0.46)));
+  const markerSize = Math.max(28, Math.min(42, Math.floor(legendFontSize * 0.68)));
 
   context.font = `500 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (let index = 0; index < entries.length; index += 1) {
     const item = entries[index];
     const y = legendStartY + index * lineHeight + lineHeight / 2;
     const statText = formatDoc5ChartStatText(item.count, total);
+    const labelX = legendX + markerSize + DOC5_CHART_LEGEND_LABEL_GAP;
+    const statReserveWidth = Math.max(250, estimateDoc5ChartTextWidth(statText, legendFontSize) + 34);
+    const labelMaxWidth = Math.max(210, countX - labelX - statReserveWidth);
 
     context.fillStyle = DOC5_CHART_SEGMENT_COLORS[index % DOC5_CHART_SEGMENT_COLORS.length];
     context.fillRect(legendX, y - markerSize / 2, markerSize, markerSize);
 
     context.fillStyle = '#1f2937';
     context.textAlign = 'left';
-    context.fillText(item.label, legendX + markerSize + DOC5_CHART_LEGEND_LABEL_GAP, y, legendTextMaxWidth);
+    context.fillText(truncateDoc5ChartLabelToWidth(item.label, labelMaxWidth, legendFontSize), labelX, y);
 
     context.font = `600 ${legendFontSize}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
     context.textAlign = 'right';
