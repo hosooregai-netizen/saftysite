@@ -12,6 +12,12 @@ const execFileAsync = promisify(execFile);
 const POWERSHELL_PATH = 'powershell.exe';
 const HWP_AUTOMATION_MODULE = 'FilePathCheckerModuleExample';
 const CONVERSION_TIMEOUT_MS = 120000;
+const HANCOM_PDF_SAVE_OPTION_REGISTRY_KEY =
+  'HKCU:\\Software\\HNC\\Hwp\\11.0\\PdfSaveOption\\00000207';
+const HANCOM_PDF_SAVE_RANGE_VALUE_NAME = '00004001';
+const HANCOM_PDF_IMAGE_QUALITY_VALUE_NAME = '0000403C';
+const HANCOM_PDF_SAVE_RANGE_CURRENT_DOCUMENT = 6;
+const HANCOM_PDF_IMAGE_QUALITY_MAX = 100;
 const REMOTE_CONVERTER_URL_ENV_KEYS = [
   'HWPX_PDF_CONVERTER_URL',
   'WINDOWS_HWPX_PDF_CONVERTER_URL',
@@ -223,6 +229,11 @@ try {
   if (-not (Test-Path -LiteralPath $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
   }
+
+  $pdfOptionKey = '${HANCOM_PDF_SAVE_OPTION_REGISTRY_KEY}'
+  New-Item -Path $pdfOptionKey -Force | Out-Null
+  New-ItemProperty -Path $pdfOptionKey -Name '${HANCOM_PDF_SAVE_RANGE_VALUE_NAME}' -Value ${HANCOM_PDF_SAVE_RANGE_CURRENT_DOCUMENT} -PropertyType DWord -Force | Out-Null
+  New-ItemProperty -Path $pdfOptionKey -Name '${HANCOM_PDF_IMAGE_QUALITY_VALUE_NAME}' -Value ${HANCOM_PDF_IMAGE_QUALITY_MAX} -PropertyType DWord -Force | Out-Null
 
   $hwp = New-Object -ComObject HWPFrame.HwpObject
   $null = $hwp.RegisterModule('FilePathCheckDLL', '${HWP_AUTOMATION_MODULE}')
