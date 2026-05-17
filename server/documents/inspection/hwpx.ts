@@ -107,6 +107,8 @@ const DOC5_CHART_IMAGE_WIDTH = Math.round((DOC5_CHART_IMAGE_HEIGHT * DOC5_CHART_
 const DOC5_CHART_CONTENT_OFFSET_X = Math.round((DOC5_CHART_IMAGE_WIDTH - DOC5_CHART_CONTENT_WIDTH) / 2);
 const DOC5_CHART_CONTENT_OFFSET_Y = 0;
 const DOC5_CHART_RENDER_SCALE = 2;
+const DOC5_CHART_PNG_DENSITY_DPI = 600;
+const DOC5_CHART_PDF_SHARPEN_SIGMA = 0.65;
 const DOC5_CHART_CENTER_X = 300;
 const DOC5_CHART_CENTER_Y = 340;
 const DOC5_CHART_OUTER_RADIUS = 270;
@@ -1511,7 +1513,9 @@ async function renderDoc5ChartCardDataUrlEmbedded(
       right: scaleDoc5ChartPixel(rightPadding),
       background: '#ffffff',
     })
-    .png()
+    .sharpen({ sigma: DOC5_CHART_PDF_SHARPEN_SIGMA })
+    .withMetadata({ density: DOC5_CHART_PNG_DENSITY_DPI })
+    .png({ adaptiveFiltering: true, compressionLevel: 9, palette: false })
     .toBuffer();
   return `data:image/png;base64,${pngBuffer.toString('base64')}`;
 }

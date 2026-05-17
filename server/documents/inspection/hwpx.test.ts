@@ -16,6 +16,7 @@ const TRANSPARENT_PNG_DATA_URL =
 const DOC5_CHART_IMAGE_IDS = ['tplimg23', 'tplimg24', 'tplimg25', 'tplimg26'] as const;
 const DOC5_CHART_MIN_WIDTH = 3262;
 const DOC5_CHART_MIN_HEIGHT = 1440;
+const DOC5_CHART_MIN_DENSITY = 590;
 const PREVIOUS_STATUS_EXPECTED = {
   implemented: '\u2611\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
   partial: '\u2611\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
@@ -113,6 +114,10 @@ async function assertDoc5ChartPngsAreHighQuality(zip: JSZip) {
     );
     assert.equal(metadata.channels, 3, `${imageId} should stay RGB`);
     assert.equal(metadata.hasAlpha, false, `${imageId} should stay opaque`);
+    assert.ok(
+      (metadata.density ?? 0) >= DOC5_CHART_MIN_DENSITY,
+      `${imageId} should carry high-density PNG metadata`,
+    );
   }
 }
 
