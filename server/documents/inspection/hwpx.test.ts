@@ -13,6 +13,9 @@ import { buildInspectionHwpxDocument, mapSessionToTemplateBinding } from './hwpx
 
 const TRANSPARENT_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR9kAAAAASUVORK5CYII=';
+const DOC5_CHART_IMAGE_IDS = ['tplimg23', 'tplimg24', 'tplimg25', 'tplimg26'] as const;
+const DOC5_CHART_MIN_WIDTH = 3262;
+const DOC5_CHART_MIN_HEIGHT = 1440;
 const PREVIOUS_STATUS_EXPECTED = {
   implemented: '\u2611\uC774\uD589 / \u2610\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
   partial: '\u2611\uC774\uD589 / \u2611\uBD88\uC774\uD589 / \u2610\uD574\uB2F9\uC5C6\uC74C',
@@ -92,6 +95,25 @@ function findDoc12GeneratedTable(xml: string): string | null {
       flattenXmlText(tableXml).includes('Doc12 Title 1'),
     ) ?? null
   );
+}
+
+async function assertDoc5ChartPngsAreHighQuality(zip: JSZip) {
+  for (const imageId of DOC5_CHART_IMAGE_IDS) {
+    const chartImage = await zip.file(`BinData/${imageId}.png`)?.async('nodebuffer');
+    assert.ok(chartImage, `${imageId} should be bound as a PNG asset`);
+
+    const metadata = await sharp(chartImage).metadata();
+    assert.ok(
+      (metadata.width ?? 0) >= DOC5_CHART_MIN_WIDTH,
+      `${imageId} width should be at least ${DOC5_CHART_MIN_WIDTH}`,
+    );
+    assert.ok(
+      (metadata.height ?? 0) >= DOC5_CHART_MIN_HEIGHT,
+      `${imageId} height should be at least ${DOC5_CHART_MIN_HEIGHT}`,
+    );
+    assert.equal(metadata.channels, 3, `${imageId} should stay RGB`);
+    assert.equal(metadata.hasAlpha, false, `${imageId} should stay opaque`);
+  }
 }
 
 function buildMeasurementFixture(accidentOccurred: 'no' | 'yes') {
@@ -835,10 +857,8 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
 
   assert.ok(sectionXml);
   assert.ok(chartImage);
-  for (const imageId of ['tplimg23', 'tplimg24', 'tplimg25', 'tplimg26']) {
-    assert.ok(zip.file(`BinData/${imageId}.png`), `${imageId} should be bound as a PNG asset`);
-  }
   assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
+  await assertDoc5ChartPngsAreHighQuality(zip);
 
   const metadata = await sharp(chartImage).metadata();
   const outerRingPixel = await sharp(chartImage)
@@ -849,8 +869,8 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
     .map((match) => match[0])
     .find((picXml) => picXml.includes('binaryItemIDRef="tplimg23"'));
 
-  assert.equal(metadata.width, 3262);
-  assert.equal(metadata.height, 1440);
+  assert.equal(metadata.width, DOC5_CHART_MIN_WIDTH);
+  assert.equal(metadata.height, DOC5_CHART_MIN_HEIGHT);
 
   assert.equal(metadata.hasAlpha, false);
   assert.notDeepEqual(Array.from(outerRingPixel), [255, 255, 255]);
@@ -863,6 +883,61 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
   assert.equal(originalSize[2], displaySize[2]);
   assert.ok(Number.parseInt(displaySize[1], 10) < 40000);
   assert.ok(Number.parseInt(displaySize[2], 10) < 24000);
+});
+
+test('buildInspectionHwpxDocument keeps multi-category doc5 charts high-resolution with long Korean labels', async () => {
+  const session = buildMeasurementFixture('no');
+  const baseFinding = session.document7Findings[0];
+  const longKoreanLabel =
+    '\uC548\uC804\uB09C\uAC04 \uBBF8\uC124\uCE58 \uAD6C\uAC04 \uCD94\uB77D \uC704\uD5D8 \uC7A5\uAE30 \uB77C\uBCA8';
+  const accidentTypes = [
+    longKoreanLabel,
+    '\uB5A8\uC5B4\uC9D0',
+    '\uB118\uC5B4\uC9D0',
+    '\uBB3C\uCCB4\uC5D0 \uB9DE\uC74C',
+    '\uB07C\uC784',
+    '\uBB34\uB108\uC9D0',
+  ];
+  const causativeAgentKeys = [
+    'scaffold_platform',
+    'edge_opening',
+    'steel_frame',
+    'ladder',
+    'mobile_crane',
+    'other_causative',
+  ] as const;
+
+  session.document7Findings = Array.from({ length: 8 }, (_, index) => ({
+    ...baseFinding,
+    id: `multi-chart-finding-${index + 1}`,
+    location: `multi-chart-location-${index + 1}`,
+    accidentType: accidentTypes[index % accidentTypes.length],
+    causativeAgentKey: causativeAgentKeys[index % causativeAgentKeys.length],
+    hazardDescription: `multi-chart-hazard-${index + 1}`,
+    improvementPlan: `multi-chart-plan-${index + 1}`,
+    improvementRequest: `multi-chart-plan-${index + 1}`,
+  }));
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
+  await assertDoc5ChartPngsAreHighQuality(zip);
+});
+
+test('buildInspectionHwpxDocument keeps empty doc5 charts high-resolution and opaque', async () => {
+  const session = buildMeasurementFixture('no');
+  session.document7Findings = [];
+
+  const document = await buildInspectionHwpxDocument(session, [session]);
+  const zip = await JSZip.loadAsync(document.buffer);
+  const sectionXml = await zip.file('Contents/section0.xml')?.async('string');
+
+  assert.ok(sectionXml);
+  assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
+  await assertDoc5ChartPngsAreHighQuality(zip);
 });
 
 test('buildInspectionHwpxDocument keeps multi-section repeated tables free of blank page-break paragraphs', async () => {
