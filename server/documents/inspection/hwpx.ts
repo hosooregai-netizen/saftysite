@@ -7,7 +7,10 @@ import JSZip from 'jszip';
 import { collapseChartEntriesToTopOther } from '@/components/session/workspace/utils';
 import { getSessionGuidanceDate } from '@/constants/inspectionSession';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
-import { CAUSATIVE_AGENT_LABELS } from '@/constants/inspectionSession/doc7Catalog';
+import {
+  CAUSATIVE_AGENT_LABELS,
+  formatCausativeAgentOutputLabel,
+} from '@/constants/inspectionSession/doc7Catalog';
 import { normalizeDocument12Activities } from '@/constants/inspectionSession/normalizeParts';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import {
@@ -1156,7 +1159,7 @@ function toCausativeLabel(key: string, measureLabelMap: Map<string, string>): st
     measureLabelMap.get(normalized) ??
     normalized.replace(/_/g, ' ');
 
-  return stripParentheticalText(mapped);
+  return formatCausativeAgentOutputLabel(mapped);
 }
 
 function looksLikeImageSource(source: string): boolean {
@@ -1241,6 +1244,39 @@ function buildDoc5ChartEntries(
       continue;
     }
     counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+      return left.label.localeCompare(right.label, 'ko-KR');
+    });
+}
+
+function normalizeDoc5CausativeAgentLabel(value: string): string {
+  return formatCausativeAgentOutputLabel(value);
+}
+
+function getDoc5CausativeAgentLabel(key: string): string {
+  const normalized = valueOrBlank(key);
+  if (!normalized) {
+    return '';
+  }
+
+  return normalizeDoc5CausativeAgentLabel(DOC5_CAUSATIVE_AGENT_LABELS.get(normalized) ?? normalized);
+}
+
+function normalizeDoc5CausativeAgentEntries(entries: Doc5ChartEntry[]): Doc5ChartEntry[] {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    const label = normalizeDoc5CausativeAgentLabel(entry.label);
+    if (!label || entry.count <= 0) {
+      continue;
+    }
+    counts.set(label, (counts.get(label) ?? 0) + entry.count);
   }
 
   return Array.from(counts.entries())
@@ -1548,20 +1584,23 @@ async function buildDoc5ChartImages(
     buildDoc5ChartEntries(
       currentFindings,
       (item) => {
-        const key = item.causativeAgentKey;
-        return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+        return getDoc5CausativeAgentLabel(item.causativeAgentKey);
       },
     ),
     DOC5_CHART_TOP_N,
   );
   const cumulativeAgentEntries: Doc5ChartEntry[] = hasStoredCumulativeEntries
-    ? session.technicalGuidanceRelations.cumulativeAgentEntries
+    ? collapseChartEntriesToTopOther(
+        normalizeDoc5CausativeAgentEntries(
+          session.technicalGuidanceRelations.cumulativeAgentEntries,
+        ),
+        DOC5_CHART_TOP_N,
+      )
     : collapseChartEntriesToTopOther(
         buildDoc5ChartEntries(
           cumulativeFindings,
           (item) => {
-            const key = item.causativeAgentKey;
-            return key ? DOC5_CAUSATIVE_AGENT_LABELS.get(key) ?? key : '';
+            return getDoc5CausativeAgentLabel(item.causativeAgentKey);
           },
         ),
         DOC5_CHART_TOP_N,

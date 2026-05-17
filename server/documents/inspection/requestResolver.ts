@@ -91,7 +91,7 @@ export interface ResolvedInspectionDocumentRequest extends GenerateInspectionHwp
   cacheKey: GeneratedReportPdfCacheKey | null;
 }
 
-export const INSPECTION_DOC5_CHART_PDF_CACHE_VERSION = 'doc5-chart-hidpi-v7';
+export const INSPECTION_DOC5_CHART_PDF_CACHE_VERSION = 'doc5-chart-hidpi-v8';
 
 export function buildInspectionGeneratedPdfCacheVersion(totalRounds: string): string {
   return `inspection-v10-template-text-layout-v2-measurement-unit-${INSPECTION_DOC5_CHART_PDF_CACHE_VERSION}-total-${totalRounds || 'none'}`;

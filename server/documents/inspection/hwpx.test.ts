@@ -863,6 +863,8 @@ test('buildInspectionHwpxDocument renders single-category doc5 chart slices as v
   assert.ok(sectionXml);
   assert.ok(chartImage);
   assert.doesNotMatch(sectionXml, /data:image\/png;base64/);
+  assert.match(sectionXml, /\uBE44\uACC4 \uC791\uC5C5\uBC1C\uD310/);
+  assert.doesNotMatch(sectionXml, /\uAC15\uAD00\/\uC2DC\uC2A4\uD15C \uBE44\uACC4 \uB4F1/);
   await assertDoc5ChartPngsAreHighQuality(zip);
 
   const metadata = await sharp(chartImage).metadata();

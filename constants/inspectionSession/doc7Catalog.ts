@@ -94,6 +94,20 @@ export const CAUSATIVE_AGENT_LABELS = {
   ...Object.fromEntries(CAUSATIVE_AGENT_OPTIONS.map((item) => [item.key, item.label])),
 } as Record<CausativeAgentKey, string>;
 
+export function formatCausativeAgentOutputLabel(value: string | null | undefined): string {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const stripped = normalized
+    .replace(/\s*[\(\uFF08][^()\uFF08\uFF09]*[\)\uFF09]\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return stripped || normalized;
+}
+
 const ACCIDENT_TYPE_COMPATIBILITY_MAP: Record<string, string[]> = {
   '\uB5A8\uC5B4\uC9D0': ['\uB5A8\uC5B4\uC9D0', '\uCD94\uB77D'],
   '\uB118\uC5B4\uC9D0': ['\uB118\uC5B4\uC9D0', '\uBBF8\uB044\uB7EC\uC9D0'],
