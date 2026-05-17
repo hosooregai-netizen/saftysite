@@ -523,30 +523,31 @@ export async function fetchInspectionPdfDocumentByReportKeyWithFallback(
   authToken?: string | null,
 ): Promise<PdfDocumentResult> {
   try {
-    const directPdf = await tryDirectInspectionPdfByReportKey(reportKey, authToken);
-    return { ...directPdf, fallbackToHwpx: false };
-  } catch (directError) {
-    console.warn('Inspection PDF direct export failed; falling back to server generation.', {
-      error: directError instanceof Error ? directError.message : String(directError),
+    const pdf = await fetchInspectionPdfDocumentByReportKey(reportKey, authToken);
+    return { ...pdf, fallbackToHwpx: false };
+  } catch (error) {
+    console.warn('Inspection PDF server generation failed; falling back to direct PDF export.', {
+      error: error instanceof Error ? error.message : String(error),
       reportKey,
     });
   }
 
   try {
-    const pdf = await fetchInspectionPdfDocumentByReportKey(reportKey, authToken);
-    return { ...pdf, fallbackToHwpx: false };
-  } catch (error) {
-    console.warn('Inspection PDF server generation failed; falling back to HWPX download.', {
-      error: error instanceof Error ? error.message : String(error),
+    const directPdf = await tryDirectInspectionPdfByReportKey(reportKey, authToken);
+    return { ...directPdf, fallbackToHwpx: false };
+  } catch (directError) {
+    console.warn('Inspection PDF direct export failed; falling back to HWPX download.', {
+      error: directError instanceof Error ? directError.message : String(directError),
       reportKey,
     });
-    const hwpx = await fetchInspectionHwpxDocumentByReportKey(reportKey, authToken);
-    return {
-      ...hwpx,
-      fallbackReason: error instanceof Error ? error.message : 'PDF 생성에 실패했습니다.',
-      fallbackToHwpx: true,
-    };
   }
+
+  const hwpx = await fetchInspectionHwpxDocumentByReportKey(reportKey, authToken);
+  return {
+    ...hwpx,
+    fallbackReason: '서버 및 직접 PDF 생성 시도가 모두 실패했습니다.',
+    fallbackToHwpx: true,
+  };
 }
 
 export async function fetchQuarterlyHwpxDocument(
