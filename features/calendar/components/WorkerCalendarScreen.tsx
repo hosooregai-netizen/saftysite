@@ -35,7 +35,7 @@ import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   mergeWorkerCalendarReportItems,
-  resolveWorkerCalendarReportForSchedule,
+  resolveWorkerCalendarGuidanceLinkBeforeCreate,
 } from './workerCalendarReportMatching';
 import {
   buildWorkerCalendarReportIndexSiteIds,
@@ -778,29 +778,26 @@ export function WorkerCalendarScreen() {
   const ensureDraftSessionForSchedule = async (schedule: SafetyInspectionSchedule) => {
     const reportLookup =
       reportLookupBySiteId.get(schedule.siteId) ?? buildWorkerCalendarReportLookup([]);
-    const selectedReport = resolveWorkerCalendarReportForSchedule(schedule, reportLookup);
-    if (selectedReport) {
+    const linkDecision = resolveWorkerCalendarGuidanceLinkBeforeCreate({
+      localSessions: getSessionsBySiteId(schedule.siteId),
+      lookup: reportLookup,
+      schedule,
+    });
+    if (linkDecision) {
+      if (linkDecision.shouldAttemptSessionLoad && !getSessionById(linkDecision.sessionId)) {
+        await ensureSessionLoaded(linkDecision.sessionId).catch(() => undefined);
+      }
       return {
         actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: normalizeText(selectedReport.reportKey),
-        sessionId: normalizeText(selectedReport.reportKey),
+        linkedReportKey: linkDecision.linkedReportKey,
+        sessionId: linkDecision.sessionId,
       } satisfies WorkerGuidanceSessionLink;
     }
 
     const site = sites.find((item) => item.id === schedule.siteId);
     if (!site) return null;
-
-    const existingSession = getSessionsBySiteId(site.id).find(
-      (session) =>
-        (session.scheduleId && session.scheduleId === schedule.id) ||
-        session.reportNumber === schedule.roundNo,
-    );
-    if (existingSession) {
-      return {
-        actualVisitDate: normalizeText(schedule.actualVisitDate),
-        linkedReportKey: existingSession.id,
-        sessionId: existingSession.id,
-      } satisfies WorkerGuidanceSessionLink;
+    if (schedule.status === 'completed' || schedule.status === 'canceled') {
+      throw new Error('완료/취소된 방문 일정에는 새 기술지도 보고서를 만들 수 없습니다. 기존 연결 보고서를 확인해 주세요.');
     }
 
     let technicalGuidanceRelations:
@@ -926,7 +923,7 @@ export function WorkerCalendarScreen() {
       (nextLinkedReportKey !== currentLinkedReportKey ||
         nextPlannedDate !== normalizeText(schedule.plannedDate));
 
-    if (!shouldPersistLink) {
+    if (!shouldPersistLink || schedule.status === 'completed' || schedule.status === 'canceled') {
       return mergedSchedule;
     }
 

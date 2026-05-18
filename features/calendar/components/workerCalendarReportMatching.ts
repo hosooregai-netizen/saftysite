@@ -61,6 +61,24 @@ export interface WorkerCalendarReportLookup {
   byScheduleId: Map<string, InspectionReportListItem>;
 }
 
+export interface WorkerCalendarLocalSessionCandidate {
+  id: string;
+  reportNumber?: number | null;
+  scheduleId?: string | null;
+}
+
+export type WorkerCalendarGuidanceLinkSource =
+  | 'linked-report-key'
+  | 'local-session'
+  | 'report-lookup';
+
+export interface WorkerCalendarGuidanceLinkDecision {
+  linkedReportKey: string;
+  sessionId: string;
+  shouldAttemptSessionLoad: boolean;
+  source: WorkerCalendarGuidanceLinkSource;
+}
+
 export function buildWorkerCalendarReportLookup(
   rows: InspectionReportListItem[],
 ): WorkerCalendarReportLookup {
@@ -109,12 +127,57 @@ export function resolveWorkerCalendarReportForSchedule(
   if (linkedReportKey) {
     const linkedReport = lookup.byReportKey.get(linkedReportKey) ?? null;
     if (linkedReport) return linkedReport;
+    return null;
   }
 
   const scheduleReport = lookup.byScheduleId.get(normalizeText(schedule.id)) ?? null;
   if (scheduleReport) return scheduleReport;
 
   return lookup.byRound.get(schedule.roundNo) ?? null;
+}
+
+export function resolveWorkerCalendarGuidanceLinkBeforeCreate(input: {
+  localSessions?: WorkerCalendarLocalSessionCandidate[];
+  lookup: WorkerCalendarReportLookup;
+  schedule: Pick<SafetyInspectionSchedule, 'id' | 'linkedReportKey' | 'roundNo'>;
+}): WorkerCalendarGuidanceLinkDecision | null {
+  const selectedReport = resolveWorkerCalendarReportForSchedule(input.schedule, input.lookup);
+  if (selectedReport) {
+    const reportKey = normalizeText(selectedReport.reportKey);
+    if (reportKey) {
+      return {
+        linkedReportKey: reportKey,
+        sessionId: reportKey,
+        shouldAttemptSessionLoad: false,
+        source: 'report-lookup',
+      };
+    }
+  }
+
+  const linkedReportKey = normalizeText(input.schedule.linkedReportKey);
+  if (linkedReportKey) {
+    return {
+      linkedReportKey,
+      sessionId: linkedReportKey,
+      shouldAttemptSessionLoad: true,
+      source: 'linked-report-key',
+    };
+  }
+
+  const localSession =
+    input.localSessions?.find(
+      (session) =>
+        (normalizeText(session.scheduleId) && normalizeText(session.scheduleId) === input.schedule.id) ||
+        session.reportNumber === input.schedule.roundNo,
+    ) ?? null;
+  if (!localSession) return null;
+
+  return {
+    linkedReportKey: localSession.id,
+    sessionId: localSession.id,
+    shouldAttemptSessionLoad: false,
+    source: 'local-session',
+  };
 }
 
 function createFallbackScheduleFromReport(input: {

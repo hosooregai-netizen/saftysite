@@ -227,11 +227,11 @@ function buildScheduleEntries(input: BuildScheduleReportSyncPlanInput): SyncEntr
     const linkedReport = scheduleLinkedReportKey
       ? indexedReports.byKey.get(scheduleLinkedReportKey) ?? null
       : null;
-    const report =
-      linkedReport ??
-      indexedReports.byScheduleId.get(schedule.id) ??
-      indexedReports.byRound.get(schedule.roundNo) ??
-      null;
+    const report = scheduleLinkedReportKey
+      ? linkedReport
+      : indexedReports.byScheduleId.get(schedule.id) ??
+        indexedReports.byRound.get(schedule.roundNo) ??
+        null;
     const reportKey = normalizeText(report?.reportKey) || scheduleLinkedReportKey;
     const isChangedReport = Boolean(reportKey && reportKey === changedReportKey);
     const date = isChangedReport
@@ -274,6 +274,10 @@ function buildScheduleEntries(input: BuildScheduleReportSyncPlanInput): SyncEntr
       (report.scheduleId ? input.schedules.find((schedule) => schedule.id === report.scheduleId) : null) ??
       input.schedules.find((schedule) => schedule.roundNo === normalizeRoundNo(report.visitRound)) ??
       null;
+    const matchingScheduleLinkedReportKey = normalizeText(matchingSchedule?.linkedReportKey);
+    if (matchingScheduleLinkedReportKey && matchingScheduleLinkedReportKey !== reportKey) {
+      return;
+    }
     const isChangedReport = reportKey === changedReportKey;
     const date = isChangedReport
       ? normalizeText(input.changedReport?.visitDate)
@@ -342,7 +346,9 @@ function buildChangedScheduleOnlyPlan(
   const linkedReport = changedLinkedReportKey
     ? indexedReports.byKey.get(changedLinkedReportKey) ?? null
     : null;
-  const scheduleReport = indexedReports.byScheduleId.get(schedule.id) ?? null;
+  const scheduleReport = changedLinkedReportKey
+    ? null
+    : indexedReports.byScheduleId.get(schedule.id) ?? null;
   const roundReport = changedLinkedReportKey
     ? null
     : indexedReports.byRound.get(schedule.roundNo) ?? null;

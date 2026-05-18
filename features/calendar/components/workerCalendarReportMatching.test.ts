@@ -8,6 +8,7 @@ import {
   buildWorkerCalendarReportLookup,
   buildWorkerCalendarRowsWithReportDates,
   mergeWorkerCalendarReportItems,
+  resolveWorkerCalendarGuidanceLinkBeforeCreate,
   resolveWorkerCalendarReportForSchedule,
 } from './workerCalendarReportMatching';
 
@@ -86,6 +87,18 @@ test('worker calendar report lookup prefers an explicit linked report key over r
   assert.equal(matched?.reportKey, 'report-linked');
 });
 
+test('worker calendar report lookup does not use round fallback when linked report is missing', () => {
+  const roundFallback = buildReport({ reportKey: 'session-local', visitDate: '2026-04-23', visitRound: 5 });
+  const lookup = buildWorkerCalendarReportLookup([roundFallback]);
+
+  const matched = resolveWorkerCalendarReportForSchedule(
+    { id: 'schedule-5', linkedReportKey: 'legacy:technical_guidance:656869', roundNo: 5 },
+    lookup,
+  );
+
+  assert.equal(matched, null);
+});
+
 test('worker calendar report lookup can match by schedule id before using round', () => {
   const scheduled = buildReport({
     reportKey: 'report-scheduled',
@@ -102,6 +115,47 @@ test('worker calendar report lookup can match by schedule id before using round'
   );
 
   assert.equal(matched?.reportKey, 'report-scheduled');
+});
+
+test('worker calendar launch keeps linked report when lookup is empty', () => {
+  const lookup = buildWorkerCalendarReportLookup([]);
+
+  const decision = resolveWorkerCalendarGuidanceLinkBeforeCreate({
+    localSessions: [],
+    lookup,
+    schedule: { id: 'schedule-8', linkedReportKey: 'legacy:technical_guidance:656869', roundNo: 8 },
+  });
+
+  assert.equal(decision?.source, 'linked-report-key');
+  assert.equal(decision?.linkedReportKey, 'legacy:technical_guidance:656869');
+  assert.equal(decision?.sessionId, 'legacy:technical_guidance:656869');
+  assert.equal(decision?.shouldAttemptSessionLoad, true);
+});
+
+test('worker calendar launch keeps linked report ahead of same-round local draft', () => {
+  const lookup = buildWorkerCalendarReportLookup([]);
+
+  const decision = resolveWorkerCalendarGuidanceLinkBeforeCreate({
+    localSessions: [{ id: 'session-local', reportNumber: 8, scheduleId: 'schedule-8' }],
+    lookup,
+    schedule: { id: 'schedule-8', linkedReportKey: 'legacy:technical_guidance:656869', roundNo: 8 },
+  });
+
+  assert.equal(decision?.source, 'linked-report-key');
+  assert.equal(decision?.linkedReportKey, 'legacy:technical_guidance:656869');
+});
+
+test('worker calendar launch can reuse local draft when schedule has no linked report', () => {
+  const lookup = buildWorkerCalendarReportLookup([]);
+
+  const decision = resolveWorkerCalendarGuidanceLinkBeforeCreate({
+    localSessions: [{ id: 'session-local', reportNumber: 8, scheduleId: 'schedule-8' }],
+    lookup,
+    schedule: { id: 'schedule-8', linkedReportKey: '', roundNo: 8 },
+  });
+
+  assert.equal(decision?.source, 'local-session');
+  assert.equal(decision?.linkedReportKey, 'session-local');
 });
 
 test('worker calendar report merge keeps local draft sessions when the remote index is stale', () => {

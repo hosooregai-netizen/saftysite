@@ -199,6 +199,77 @@ test('buildScheduleReportSyncPlan syncs a changed schedule date into the linked 
   });
 });
 
+test('buildScheduleReportSyncPlan keeps linked legacy report when changing a schedule with a local draft fallback', () => {
+  const plan = buildScheduleReportSyncPlan({
+    buildReportTitle: title,
+    changedSchedule: {
+      linkedReportKey: 'legacy:technical_guidance:656869',
+      plannedDate: '2026-04-22',
+      scheduleId: 'schedule-8',
+    },
+    contractWindow,
+    reports: [
+      report({
+        reportKey: 'session-local',
+        scheduleId: 'schedule-8',
+        visitDate: '2026-04-22',
+        visitRound: 8,
+      }),
+    ],
+    schedules: [
+      schedule({
+        id: 'schedule-8',
+        linkedReportKey: 'legacy:technical_guidance:656869',
+        plannedDate: '2026-04-10',
+        roundNo: 8,
+      }),
+    ],
+  });
+
+  assert.equal(plan.ok, true);
+  if (!plan.ok) return;
+  assert.deepEqual(plan.scheduleUpdates, [
+    {
+      actualVisitDate: '',
+      linkedReportKey: 'legacy:technical_guidance:656869',
+      plannedDate: '2026-04-22',
+      roundNo: 8,
+      scheduleId: 'schedule-8',
+    },
+  ]);
+  assert.deepEqual(plan.reportUpdates, []);
+});
+
+test('buildScheduleReportSyncPlan does not let round fallback replace a linked legacy report', () => {
+  const plan = buildScheduleReportSyncPlan({
+    buildReportTitle: title,
+    contractWindow,
+    reports: [
+      report({
+        reportKey: 'session-local',
+        scheduleId: 'schedule-8',
+        visitDate: '2026-04-10',
+        visitRound: 8,
+      }),
+    ],
+    schedules: [
+      schedule({
+        actualVisitDate: '2026-04-10',
+        id: 'schedule-8',
+        linkedReportKey: 'legacy:technical_guidance:656869',
+        plannedDate: '2026-04-10',
+        roundNo: 8,
+      }),
+      schedule({ id: 'schedule-9', roundNo: 9 }),
+    ],
+  });
+
+  assert.equal(plan.ok, true);
+  if (!plan.ok) return;
+  assert.deepEqual(plan.scheduleUpdates, []);
+  assert.deepEqual(plan.reportUpdates, []);
+});
+
 test('buildScheduleReportSyncPlan does not reorder other rounds for a manual schedule date change', () => {
   const plan = buildScheduleReportSyncPlan({
     buildReportTitle: title,
