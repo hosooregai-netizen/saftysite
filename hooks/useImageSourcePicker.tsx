@@ -4,11 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AppModal from '@/components/ui/AppModal';
 
 interface UseImageSourcePickerOptions {
+  albumButtonLabel?: string;
+  enablePhotoAlbum?: boolean;
   title?: string;
   /** 갤러리·파일 탐색기 (기본: 파일 선택) */
   fileButtonLabel?: string;
   /** 카메라 촬영 (기본: 카메라) */
   cameraButtonLabel?: string;
+  onOpenPhotoAlbum?: () => void;
 }
 
 function isPortableUploadEnvironment(): boolean {
@@ -25,9 +28,12 @@ function isPortableUploadEnvironment(): boolean {
 }
 
 export function useImageSourcePicker({
+  albumButtonLabel = '사진첩에서 선택',
+  enablePhotoAlbum = false,
   title = '사진 불러오기',
   fileButtonLabel = '파일 선택',
   cameraButtonLabel = '카메라',
+  onOpenPhotoAlbum,
 }: UseImageSourcePickerOptions = {}) {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -61,13 +67,13 @@ export function useImageSourcePicker({
   }, []);
 
   const requestPick = useCallback(() => {
-    if (isPortableEnvironment) {
+    if (isPortableEnvironment || enablePhotoAlbum) {
       setIsChoiceOpen(true);
       return;
     }
 
     galleryInputRef.current?.click();
-  }, [isPortableEnvironment]);
+  }, [enablePhotoAlbum, isPortableEnvironment]);
 
   const openGallery = useCallback(() => {
     setIsChoiceOpen(false);
@@ -78,6 +84,11 @@ export function useImageSourcePicker({
     setIsChoiceOpen(false);
     requestAnimationFrame(() => cameraInputRef.current?.click());
   }, []);
+
+  const openPhotoAlbum = useCallback(() => {
+    setIsChoiceOpen(false);
+    onOpenPhotoAlbum?.();
+  }, [onOpenPhotoAlbum]);
 
   const closeChoice = useCallback(() => {
     setIsChoiceOpen(false);
@@ -90,20 +101,31 @@ export function useImageSourcePicker({
       onClose={closeChoice}
       actions={
         <>
-          <button type="button" onClick={closeChoice} className="app-button app-button-secondary">
-            취소
-          </button>
+          {isPortableEnvironment && !enablePhotoAlbum ? (
+            <button type="button" onClick={closeChoice} className="app-button app-button-secondary">
+              취소
+            </button>
+          ) : null}
           <button type="button" onClick={openGallery} className="app-button app-button-secondary">
             {fileButtonLabel}
           </button>
-          <button type="button" onClick={openCamera} className="app-button app-button-primary">
-            {cameraButtonLabel}
-          </button>
+          {enablePhotoAlbum ? (
+            <button type="button" onClick={openPhotoAlbum} className="app-button app-button-primary">
+              {albumButtonLabel}
+            </button>
+          ) : null}
+          {isPortableEnvironment ? (
+            <button
+              type="button"
+              onClick={openCamera}
+              className={`app-button ${enablePhotoAlbum ? 'app-button-secondary' : 'app-button-primary'}`}
+            >
+              {cameraButtonLabel}
+            </button>
+          ) : null}
         </>
       }
-    >
-      <p>카메라로 촬영하거나 기기에서 파일을 선택하세요.</p>
-    </AppModal>
+    />
   );
 
   return {

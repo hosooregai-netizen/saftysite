@@ -12,6 +12,11 @@ import type {
 } from '@/types/backend';
 import type { ChartEntry } from './utils';
 
+export interface InspectionPhotoAlbumContext {
+  siteId: string;
+  roundNo: number;
+}
+
 export type ApplyDocumentUpdate = (
   key: InspectionSectionKey,
   source: InspectionDocumentSource,
@@ -28,6 +33,7 @@ export interface OverviewSectionProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
   isRelationHydrating: boolean;
   isRelationReady: boolean;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   relationStatus: ReportIndexStatus;
   session: InspectionSession;
   withFileData: WithFileData;
@@ -45,12 +51,14 @@ export interface HazardStatsSectionProps {
   isRelationReady: boolean;
   relationStatus: ReportIndexStatus;
   measurementTemplates: SafetyMeasurementTemplate[];
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   session: InspectionSession;
   withFileData: WithFileData;
 }
 
 export interface SupportSectionProps {
   applyDocumentUpdate: ApplyDocumentUpdate;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   session: InspectionSession;
   withFileData: WithFileData;
 }

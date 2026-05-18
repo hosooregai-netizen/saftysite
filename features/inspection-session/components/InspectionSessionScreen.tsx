@@ -57,6 +57,10 @@ export function InspectionSessionScreen({ sessionId }: InspectionSessionScreenPr
         isRelationHydrating: screen.isRelationHydrating,
         isRelationReady: screen.isRelationReady,
         measurementTemplates: screen.derivedData.measurementTemplates,
+        photoAlbumContext: {
+          siteId: screen.sectionSession!.siteKey || screen.site?.id || '',
+          roundNo: Math.max(1, screen.sectionSession!.reportNumber || 1),
+        },
         relationStatus: screen.relationStatus,
         session: screen.sectionSession!,
         withFileData: screen.withFileData,

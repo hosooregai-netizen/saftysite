@@ -5,11 +5,12 @@ import { Doc10MeasurementCard } from '@/features/inspection-session/workspace/se
 export default function Doc10Section({
   applyDocumentUpdate,
   measurementTemplates,
+  photoAlbumContext,
   session,
   withFileData,
 }: Pick<
   HazardStatsSectionProps,
-  'applyDocumentUpdate' | 'measurementTemplates' | 'session' | 'withFileData'
+  'applyDocumentUpdate' | 'measurementTemplates' | 'photoAlbumContext' | 'session' | 'withFileData'
 >) {
   return (
     <div className={styles.sectionStack}>
@@ -20,6 +21,7 @@ export default function Doc10Section({
           index={index}
           item={item}
           measurementTemplates={measurementTemplates}
+          photoAlbumContext={photoAlbumContext}
           totalCount={session.document10Measurements.length}
           withFileData={withFileData}
         />

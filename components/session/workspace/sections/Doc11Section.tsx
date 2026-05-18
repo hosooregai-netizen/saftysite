@@ -9,9 +9,10 @@ import {
   buildLocalDoc11EducationContent,
   generateStructuredDoc11EducationContent,
 } from '@/lib/openai/generateDoc11EducationContent';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 export default function Doc11Section(props: SupportSectionProps) {
-  const { applyDocumentUpdate, session, withFileData } = props;
+  const { applyDocumentUpdate, photoAlbumContext, session, withFileData } = props;
   const [generatingId, setGeneratingId] = useState<string | null>(null);
   const [contentGenNotice, setContentGenNotice] = useState<{
     id: string;
@@ -29,6 +30,18 @@ export default function Doc11Section(props: SupportSectionProps) {
         record.id === recordId ? { ...record, content } : record,
       ),
     }));
+
+  const patchRecordPhotoFromAlbum = (recordId: string, albumItem: PhotoAlbumItem) => {
+    const photoUrl = albumItem.originalUrl || albumItem.previewUrl;
+    if (!photoUrl) return;
+
+    applyDocumentUpdate('doc11', 'manual', (current) => ({
+      ...current,
+      document11EducationRecords: current.document11EducationRecords.map((record) =>
+        record.id === recordId ? { ...record, photoUrl } : record,
+      ),
+    }));
+  };
 
   const handleGenerateEducationContent = async (recordId: string) => {
     const record = session.document11EducationRecords.find((r) => r.id === recordId);
@@ -99,6 +112,8 @@ export default function Doc11Section(props: SupportSectionProps) {
                             labelLayout="field"
                             fieldClearOverlay
                             value={item.photoUrl}
+                            enablePhotoAlbum
+                            photoAlbumContext={photoAlbumContext}
                             onClear={() =>
                               applyDocumentUpdate('doc11', 'manual', (current) => ({
                                 ...current,
@@ -123,6 +138,9 @@ export default function Doc11Section(props: SupportSectionProps) {
                                 })),
                               )
                             }
+                            onAlbumSelect={(albumItem) =>
+                              patchRecordPhotoFromAlbum(item.id, albumItem)
+                            }
                           />
                         </div>
                       </td>
@@ -133,6 +151,8 @@ export default function Doc11Section(props: SupportSectionProps) {
                             label=""
                             labelLayout="field"
                             fieldClearOverlay
+                            mode="file"
+                            accept="image/*,.pdf,.hwp,.hwpx,.ppt,.pptx,.doc,.docx"
                             value={item.materialUrl}
                             onClear={() =>
                               applyDocumentUpdate('doc11', 'manual', (current) => ({

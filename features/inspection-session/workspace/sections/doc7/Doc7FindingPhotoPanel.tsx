@@ -1,13 +1,17 @@
 import type { CSSProperties } from 'react';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { UploadBox } from '@/components/session/workspace/widgets';
+import type { InspectionPhotoAlbumContext } from '@/components/session/workspace/types';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 interface Doc7FindingPhotoPanelProps {
   aiError: string;
   isAnalyzing: boolean;
   item: CurrentHazardFinding;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   onAiRetry: () => Promise<void>;
+  onAlbumSelect: (slot: 1 | 2, item: PhotoAlbumItem) => Promise<void>;
   onPhotoSelect: (slot: 1 | 2, file: File) => Promise<void>;
   updateFinding: (updater: (finding: CurrentHazardFinding) => CurrentHazardFinding) => void;
 }
@@ -16,7 +20,9 @@ export function Doc7FindingPhotoPanel({
   aiError,
   isAnalyzing,
   item,
+  photoAlbumContext,
   onAiRetry,
+  onAlbumSelect,
   onPhotoSelect,
   updateFinding,
 }: Doc7FindingPhotoPanelProps) {
@@ -65,7 +71,10 @@ export function Doc7FindingPhotoPanel({
                 fieldLabelMode="omit"
                 fitImageToBox
                 value={item.photoUrl}
+                enablePhotoAlbum
+                photoAlbumContext={photoAlbumContext}
                 onClear={() => updateFinding((finding) => ({ ...finding, photoUrl: '' }))}
+                onAlbumSelect={(albumItem) => onAlbumSelect(1, albumItem)}
                 onSelect={async (file) => onPhotoSelect(1, file)}
               />
             </div>
@@ -83,7 +92,10 @@ export function Doc7FindingPhotoPanel({
                 fieldLabelMode="omit"
                 fitImageToBox
                 value={item.photoUrl2 ?? ''}
+                enablePhotoAlbum
+                photoAlbumContext={photoAlbumContext}
                 onClear={() => updateFinding((finding) => ({ ...finding, photoUrl2: '' }))}
+                onAlbumSelect={(albumItem) => onAlbumSelect(2, albumItem)}
                 onSelect={async (file) => onPhotoSelect(2, file)}
               />
             </div>

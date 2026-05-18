@@ -97,7 +97,7 @@ export function MobileInspectionSessionStep3({
                     onAlbumSelected: async (albumItem) => {
                       const documentUrl = albumItem.originalUrl || albumItem.previewUrl;
                       const file = await assetUrlToFile(
-                        albumItem.previewUrl,
+                        albumItem.previewUrl || albumItem.originalUrl,
                         albumItem.fileName || `${scene.id}.jpg`,
                       );
                       await applyDoc3ScenePhoto(scene.id, index, documentUrl, file);

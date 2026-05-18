@@ -86,7 +86,7 @@ export function MobileInspectionSessionStep10MeasurementCard({
               onAlbumSelected: async (albumItem) => {
                 const documentUrl = albumItem.originalUrl || albumItem.previewUrl;
                 const file = await assetUrlToFile(
-                  albumItem.previewUrl,
+                  albumItem.previewUrl || albumItem.originalUrl,
                   albumItem.fileName || `${measurement.id}.jpg`,
                 );
                 await applyDoc10MeasurementPhoto(measurement.id, documentUrl, file);

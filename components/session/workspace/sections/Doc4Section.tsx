@@ -2,6 +2,7 @@ import { FOLLOW_UP_RESULT_OPTIONS } from '@/constants/inspectionSession';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 export default function Doc4Section(props: OverviewSectionProps) {
   const {
@@ -69,6 +70,13 @@ export default function Doc4Section(props: OverviewSectionProps) {
               followUp.id === item.id ? { ...followUp, [key]: value } : followUp,
             ),
           }));
+        const updatePhotoFromAlbum = (
+          key: 'beforePhotoUrl' | 'afterPhotoUrl',
+          albumItem: PhotoAlbumItem,
+        ) => {
+          const photoUrl = albumItem.originalUrl || albumItem.previewUrl;
+          if (photoUrl) updateField(key, photoUrl);
+        };
 
         return (
           <article key={item.id} className={`${styles.card} ${styles.doc4Card}`}>
@@ -101,9 +109,17 @@ export default function Doc4Section(props: OverviewSectionProps) {
                             label="시정 전 사진"
                             labelLayout="field"
                             value={item.beforePhotoUrl}
+                            disabled={isDerived}
+                            enablePhotoAlbum={!isDerived}
+                            photoAlbumContext={props.photoAlbumContext}
                             onClear={
                               isDerived ? undefined : () => updateField('beforePhotoUrl', '')
                             }
+                            onAlbumSelect={(albumItem) => {
+                              if (!isDerived) {
+                                updatePhotoFromAlbum('beforePhotoUrl', albumItem);
+                              }
+                            }}
                             onSelect={async (file) => {
                               if (!isDerived) {
                                 await withFileData(file, (dataUrl) =>
@@ -119,7 +135,12 @@ export default function Doc4Section(props: OverviewSectionProps) {
                             label="시정 후 사진"
                             labelLayout="field"
                             value={item.afterPhotoUrl}
+                            enablePhotoAlbum
+                            photoAlbumContext={props.photoAlbumContext}
                             onClear={() => updateField('afterPhotoUrl', '')}
+                            onAlbumSelect={(albumItem) =>
+                              updatePhotoFromAlbum('afterPhotoUrl', albumItem)
+                            }
                             onSelect={async (file) =>
                               withFileData(file, (dataUrl) =>
                                 updateField('afterPhotoUrl', dataUrl),

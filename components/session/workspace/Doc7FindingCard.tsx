@@ -1,7 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import type { ApplyDocumentUpdate, WithFileData } from '@/components/session/workspace/types';
+import type {
+  ApplyDocumentUpdate,
+  InspectionPhotoAlbumContext,
+  WithFileData,
+} from '@/components/session/workspace/types';
 import {
   assetUrlToFile,
   buildHazardFindingAutoFill,
@@ -15,6 +19,7 @@ import type {
   SafetyHazardCountermeasureCatalogItem,
 } from '@/types/backend';
 import type { CurrentHazardFinding } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 import type { CausativeAgentKey } from '@/types/siteOverview';
 
 function selectValueForRiskLevel(stored: string): string {
@@ -31,6 +36,7 @@ interface Doc7FindingCardProps {
   hazardCountermeasureCatalog: SafetyHazardCountermeasureCatalogItem[];
   item: CurrentHazardFinding;
   index: number;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   removable: boolean;
   withFileData: WithFileData;
 }
@@ -41,6 +47,7 @@ export default function Doc7FindingCard({
   hazardCountermeasureCatalog,
   item,
   index,
+  photoAlbumContext,
   removable,
   withFileData,
 }: Doc7FindingCardProps) {
@@ -96,6 +103,39 @@ export default function Doc7FindingCard({
     updateFinding((finding) => ({ ...finding, photoUrl2: assetUrl }));
   };
 
+  const handlePhotoAlbumSelect = async (slot: 1 | 2, albumItem: PhotoAlbumItem) => {
+    const assetUrl = albumItem.originalUrl || albumItem.previewUrl;
+    if (!assetUrl) return;
+
+    if (slot === 1) {
+      const isFirstSitePhoto = !item.photoUrl?.trim();
+      const shouldRunAi = isFirstSitePhoto && isFindingEmptyForAiAutofill(item);
+
+      updateFinding((finding) => ({ ...finding, photoUrl: assetUrl }));
+      if (!shouldRunAi) {
+        setAiError('');
+        return;
+      }
+
+      try {
+        const file = await assetUrlToFile(
+          albumItem.previewUrl || albumItem.originalUrl,
+          albumItem.fileName || `finding-${item.id}.jpg`,
+        );
+        await runAiAutofill(file);
+      } catch (error) {
+        setAiError(
+          error instanceof Error
+            ? error.message
+            : 'AI 자동채움을 위해 사진을 다시 불러오지 못했습니다.',
+        );
+      }
+      return;
+    }
+
+    updateFinding((finding) => ({ ...finding, photoUrl2: assetUrl }));
+  };
+
   const handleAiRetry = async () => {
     if (!item.photoUrl) return;
 
@@ -137,7 +177,9 @@ export default function Doc7FindingCard({
           aiError={aiError}
           isAnalyzing={isAnalyzing}
           item={item}
+          photoAlbumContext={photoAlbumContext}
           onAiRetry={handleAiRetry}
+          onAlbumSelect={handlePhotoAlbumSelect}
           onPhotoSelect={handlePhotoSelect}
           updateFinding={updateFinding}
         />

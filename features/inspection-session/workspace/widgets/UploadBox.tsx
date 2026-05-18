@@ -1,8 +1,10 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import type { CSSProperties, ChangeEvent } from 'react';
+import { useState, type CSSProperties, type ChangeEvent } from 'react';
 import { IMAGE_UPLOAD_LABEL_DESKTOP, IMAGE_UPLOAD_LABEL_MOBILE } from '@/constants/imageUploadLabels';
+import type { InspectionPhotoAlbumContext } from '@/components/session/workspace/types';
+import { PhotoAlbumPickerModal } from '@/features/photos/components/PhotoAlbumPickerModal';
 import { useImageSourcePicker } from '@/hooks/useImageSourcePicker';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { isImageValue } from '@/components/session/workspace/utils';
@@ -12,9 +14,12 @@ import {
   shouldOpenSafetyAssetInNewTab,
   shouldUseSafetyAssetDownloadAttribute,
 } from '@/lib/safetyApi/assetUrls';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 interface UploadBoxProps {
   accept?: string;
+  disabled?: boolean;
+  enablePhotoAlbum?: boolean;
   fileName?: string;
   fieldBodyHeight?: number;
   fieldClearOverlay?: boolean;
@@ -24,13 +29,17 @@ interface UploadBoxProps {
   label: string;
   labelLayout?: 'panel' | 'field';
   mode?: 'image' | 'file';
+  onAlbumSelect?: (item: PhotoAlbumItem) => Promise<void> | void;
   onClear?: () => void;
   onSelect: (file: File) => Promise<unknown> | void;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
   value: string;
 }
 
 export function UploadBox({
   accept = 'image/*',
+  disabled = false,
+  enablePhotoAlbum = false,
   fileName,
   fieldBodyHeight,
   fieldClearOverlay = false,
@@ -40,14 +49,27 @@ export function UploadBox({
   label,
   labelLayout = 'panel',
   mode = 'image',
+  onAlbumSelect,
   onClear,
   onSelect,
+  photoAlbumContext,
   value,
 }: UploadBoxProps) {
+  const [isAlbumPickerOpen, setIsAlbumPickerOpen] = useState(false);
   const resolvedValue = resolveSafetyAssetUrl(value);
   const hasValue = Boolean(resolvedValue);
   const isImage = mode === 'image' && isImageValue(resolvedValue);
+  const canUsePhotoAlbum = Boolean(
+    mode === 'image' &&
+      enablePhotoAlbum &&
+      onAlbumSelect &&
+      photoAlbumContext?.siteId &&
+      !disabled,
+  );
   const { cameraInputRef, galleryInputRef, pickerModal, requestPick } = useImageSourcePicker({
+    enablePhotoAlbum: canUsePhotoAlbum,
+    fileButtonLabel: '컴퓨터에서 업로드',
+    onOpenPhotoAlbum: () => setIsAlbumPickerOpen(true),
     title: '사진 불러오기',
   });
   const shouldUseDownload = shouldUseSafetyAssetDownloadAttribute(resolvedValue);
@@ -83,6 +105,11 @@ export function UploadBox({
     : undefined;
 
   const handleFileInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (disabled) {
+      event.currentTarget.value = '';
+      return;
+    }
+
     const file = event.currentTarget.files?.[0];
     if (file) {
       void Promise.resolve(onSelect(file));
@@ -99,6 +126,7 @@ export function UploadBox({
                 type="button"
                 className={styles.uploadPreviewHit}
                 style={containViewportStyle}
+                disabled={disabled}
                 onClick={() => requestPick()}
                 aria-label={`${label} 바꾸기`}
               >
@@ -111,7 +139,22 @@ export function UploadBox({
               </button>
             )
           : (
-              <label htmlFor={id} className={styles.uploadFileHit}>
+              <div
+                className={styles.uploadFileHit}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                aria-disabled={disabled}
+                onClick={() => {
+                  if (!disabled) requestPick();
+                }}
+                onKeyDown={(event) => {
+                  if (disabled) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    requestPick();
+                  }
+                }}
+              >
                 <div className={styles.filePreview}>
                   <strong className={styles.filePreviewTitle}>
                     {fileName || '업로드한 자료'}
@@ -129,13 +172,14 @@ export function UploadBox({
                   </a>
                   {assetWarning ? <p className={styles.filePreviewText}>{assetWarning}</p> : null}
                 </div>
-              </label>
+              </div>
             )
         : (
             <button
               type="button"
               className={styles.uploadPlaceholder}
               style={containViewportStyle}
+              disabled={disabled}
               onClick={() => requestPick()}
               aria-label={`${label} 선택`}
             >
@@ -184,6 +228,7 @@ export function UploadBox({
           type="file"
           accept={accept}
           className={styles.hiddenInput}
+          disabled={disabled}
           onChange={handleFileInputChange}
         />
         <input
@@ -192,9 +237,18 @@ export function UploadBox({
           accept="image/*"
           capture="environment"
           className={styles.hiddenInput}
+          disabled={disabled}
           onChange={handleFileInputChange}
         />
         {pickerModal}
+        {canUsePhotoAlbum && photoAlbumContext && onAlbumSelect ? (
+          <PhotoAlbumPickerModal
+            open={isAlbumPickerOpen}
+            siteId={photoAlbumContext.siteId}
+            onClose={() => setIsAlbumPickerOpen(false)}
+            onSelect={onAlbumSelect}
+          />
+        ) : null}
       </>
     ) : (
       <input
@@ -202,6 +256,7 @@ export function UploadBox({
         type="file"
         accept={accept}
         className={styles.hiddenInput}
+        disabled={disabled}
         onChange={handleFileInputChange}
       />
     );

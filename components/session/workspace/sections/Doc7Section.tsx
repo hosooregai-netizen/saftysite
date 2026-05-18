@@ -4,7 +4,7 @@ import Doc7FindingCard from '@/components/session/workspace/Doc7FindingCard';
 import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 
 export default function Doc7Section(props: HazardStatsSectionProps) {
-  const { applyDocumentUpdate, session, withFileData } = props;
+  const { applyDocumentUpdate, photoAlbumContext, session, withFileData } = props;
 
   const addFinding = () =>
     applyDocumentUpdate('doc7', 'manual', (current) => ({
@@ -22,6 +22,7 @@ export default function Doc7Section(props: HazardStatsSectionProps) {
           hazardCountermeasureCatalog={props.hazardCountermeasureCatalog}
           index={index}
           item={item}
+          photoAlbumContext={photoAlbumContext}
           removable={session.document7Findings.length > 1}
           withFileData={withFileData}
         />

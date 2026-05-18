@@ -162,11 +162,7 @@ export function MobileInspectionSessionScreen({
             openPhotoAlbumPicker={photoPicker.openPhotoAlbumPicker}
             openPhotoSourceCamera={photoPicker.openPhotoSourceCamera}
             openPhotoSourceGallery={photoPicker.openPhotoSourceGallery}
-            photoAlbumError={photoPicker.photoAlbumError}
-            photoAlbumLoading={photoPicker.photoAlbumLoading}
-            photoAlbumQuery={photoPicker.photoAlbumQuery}
-            photoAlbumRows={photoPicker.photoAlbumRows}
-            photoAlbumSelectingId={photoPicker.photoAlbumSelectingId}
+            photoAlbumSiteId={photoPicker.siteId}
             photoPickerCameraInputRef={photoPicker.photoPickerCameraInputRef}
             photoPickerGalleryInputRef={photoPicker.photoPickerGalleryInputRef}
             photoSourceTitle={photoPicker.photoSourceTitle}
@@ -175,7 +171,6 @@ export function MobileInspectionSessionScreen({
             session={session}
             setDocumentInfoOpen={setDocumentInfoOpen}
             setIsDoc2ProcessModalOpen={setIsDoc2ProcessModalOpen}
-            setPhotoAlbumQuery={photoPicker.setPhotoAlbumQuery}
           />
 
           {[

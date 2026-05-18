@@ -3,11 +3,12 @@ import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import type { SupportSectionProps } from '@/components/session/workspace/types';
 import { UploadBox } from '@/components/session/workspace/widgets';
 import type { ActivityRecord } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 const VISIBLE_ACTIVITY_COUNT = 2;
 
 export default function Doc12Section(props: SupportSectionProps) {
-  const { applyDocumentUpdate, session, withFileData } = props;
+  const { applyDocumentUpdate, photoAlbumContext, session, withFileData } = props;
   const activities = padDocument12Activities(session.document12Activities).slice(
     0,
     VISIBLE_ACTIVITY_COUNT,
@@ -24,6 +25,12 @@ export default function Doc12Section(props: SupportSectionProps) {
         ),
       };
     });
+
+  const patchActivityFromAlbum = (activityIndex: number, albumItem: PhotoAlbumItem) => {
+    const photoUrl = albumItem.originalUrl || albumItem.previewUrl;
+    if (!photoUrl) return;
+    patchActivity(activityIndex, { photoUrl });
+  };
 
   return (
     <div className={styles.sectionStack}>
@@ -77,7 +84,10 @@ export default function Doc12Section(props: SupportSectionProps) {
                           labelLayout="field"
                           fieldClearOverlay
                           value={activity.photoUrl}
+                          enablePhotoAlbum
+                          photoAlbumContext={photoAlbumContext}
                           onClear={() => patchActivity(index, { photoUrl: '' })}
+                          onAlbumSelect={(albumItem) => patchActivityFromAlbum(index, albumItem)}
                           onSelect={async (file) =>
                             withFileData(file, (dataUrl) =>
                               patchActivity(index, { photoUrl: dataUrl }),

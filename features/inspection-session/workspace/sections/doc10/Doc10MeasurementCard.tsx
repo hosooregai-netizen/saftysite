@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
 import { UploadBox } from '@/components/session/workspace/widgets';
+import { assetUrlToFile } from '@/components/session/workspace/doc7Ai';
 import type { HazardStatsSectionProps } from '@/components/session/workspace/types';
 import type { InspectionSession } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 import { findMeasurementTemplateByName, matchMeasurementTemplateByPhoto } from './doc10Ai';
 
 interface Doc10MeasurementCardProps {
@@ -11,6 +13,7 @@ interface Doc10MeasurementCardProps {
   index: number;
   item: InspectionSession['document10Measurements'][number];
   measurementTemplates: HazardStatsSectionProps['measurementTemplates'];
+  photoAlbumContext?: HazardStatsSectionProps['photoAlbumContext'];
   totalCount: number;
   withFileData: HazardStatsSectionProps['withFileData'];
 }
@@ -20,6 +23,7 @@ export function Doc10MeasurementCard({
   index,
   item,
   measurementTemplates,
+  photoAlbumContext,
   totalCount,
   withFileData,
 }: Doc10MeasurementCardProps) {
@@ -98,6 +102,50 @@ export function Doc10MeasurementCard({
     }
   };
 
+  const handlePhotoAlbumSelect = async (albumItem: PhotoAlbumItem) => {
+    setInstrumentMatchError('');
+
+    const photoUrl = albumItem.originalUrl || albumItem.previewUrl;
+    if (!photoUrl) return;
+
+    updateMeasurement((measurement) => ({
+      ...measurement,
+      photoUrl,
+    }));
+
+    if (templateOptions.length === 0) {
+      return;
+    }
+
+    setIsMatchingInstrument(true);
+    try {
+      const file = await assetUrlToFile(
+        albumItem.previewUrl || albumItem.originalUrl,
+        albumItem.fileName || `measurement-${item.id}.jpg`,
+      );
+      const matchedTemplate = await matchMeasurementTemplateByPhoto(file, templateOptions);
+      if (!matchedTemplate) {
+        return;
+      }
+
+      updateMeasurement((measurement) => ({
+        ...measurement,
+        photoUrl,
+        instrumentType: matchedTemplate.instrumentName,
+        safetyCriteria: matchedTemplate.safetyCriteria || measurement.safetyCriteria,
+        measurementUnit: matchedTemplate.measurementUnit || measurement.measurementUnit,
+      }));
+    } catch (error) {
+      setInstrumentMatchError(
+        error instanceof Error
+          ? error.message
+          : '계측장비 자동 매칭 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsMatchingInstrument(false);
+    }
+  };
+
   return (
     <article className={`${styles.card} ${styles.doc4Card}`}>
       <div className={styles.doc10CardInner}>
@@ -133,9 +181,12 @@ export function Doc10MeasurementCard({
                           labelLayout="field"
                           fieldClearOverlay
                           value={item.photoUrl}
+                          enablePhotoAlbum
+                          photoAlbumContext={photoAlbumContext}
                           onClear={() =>
                             updateMeasurement((measurement) => ({ ...measurement, photoUrl: '' }))
                           }
+                          onAlbumSelect={handlePhotoAlbumSelect}
                           onSelect={handlePhotoSelect}
                         />
                       </div>

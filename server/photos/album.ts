@@ -199,6 +199,33 @@ function buildLegacyItem(input: {
   };
 }
 
+function buildDoc2Items(report: SafetyReport, site: SafetySite) {
+  const session = normalizeInspectionSession(report.payload);
+  const reportTitle = normalizeText(report.report_title) || normalizeText(session.meta.reportTitle) || '지도보고서';
+  const pairs: Array<[string, string]> = [
+    ['accident-photo-1', normalizeText(session.document2Overview.accidentPhotoUrl)],
+    ['accident-photo-2', normalizeText(session.document2Overview.accidentPhotoUrl2)],
+  ];
+
+  return pairs
+    .map(([slotKey, source]) => {
+      if (!isImageLikeSource(source)) return null;
+      return buildLegacyItem({
+        createdAt: report.updated_at,
+        documentKey: 'doc2',
+        fileName: inferLegacyFileName(reportTitle, getSiteName(site), 'doc2', slotKey, source),
+        reportKey: report.report_key,
+        reportTitle,
+        roundNo: report.visit_round ?? 0,
+        site,
+        slotKey,
+        source,
+        uploadedByName: normalizeText(session.meta.drafter),
+      });
+    })
+    .filter((item): item is PhotoAlbumItem => Boolean(item));
+}
+
 function buildDoc3Items(report: SafetyReport, site: SafetySite) {
   const session = normalizeInspectionSession(report.payload);
   return session.document3Scenes
@@ -375,6 +402,7 @@ export function buildLegacyPhotoAlbumItemsForReport(
   }
 
   return [
+    ...buildDoc2Items(report, site),
     ...buildDoc3Items(report, site),
     ...buildDoc4Items(report, site),
     ...buildDoc7Items(report, site),

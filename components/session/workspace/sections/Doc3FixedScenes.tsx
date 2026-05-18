@@ -1,13 +1,19 @@
 import { UploadBox } from '@/components/session/workspace/widgets';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import type { InspectionPhotoAlbumContext } from '@/components/session/workspace/types';
 import type { SiteScenePhoto } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 export default function Doc3FixedScenes({
   items,
+  photoAlbumContext,
+  onAlbumSelect,
   onClear,
   onUpload,
 }: {
   items: SiteScenePhoto[];
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
+  onAlbumSelect: (sceneId: string, item: PhotoAlbumItem) => void;
   onClear: (sceneId: string) => void;
   onUpload: (sceneId: string, file: File) => Promise<void>;
 }) {
@@ -40,7 +46,10 @@ export default function Doc3FixedScenes({
                     labelLayout="field"
                     value={item.photoUrl}
                     fieldClearOverlay
+                    enablePhotoAlbum
+                    photoAlbumContext={photoAlbumContext}
                     onClear={() => onClear(item.id)}
+                    onAlbumSelect={(albumItem) => onAlbumSelect(item.id, albumItem)}
                     onSelect={async (file) => onUpload(item.id, file)}
                   />
                 </td>

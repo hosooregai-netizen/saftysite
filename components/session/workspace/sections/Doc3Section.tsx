@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { FIXED_SCENE_COUNT, TOTAL_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { isExtraScenePlaceholderTitle } from '@/constants/inspectionSession/scenePhotos';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import { assetUrlToFile } from '@/components/session/workspace/doc7Ai';
 import type { OverviewSectionProps } from '@/components/session/workspace/types';
 import type { SiteScenePhoto } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 import Doc3ExtraScenes from './Doc3ExtraScenes';
 import Doc3FixedScenes from './Doc3FixedScenes';
 
@@ -32,6 +34,7 @@ function patchScene(scenes: SiteScenePhoto[], sceneId: string, patch: Partial<Si
 
 export default function Doc3Section({
   applyDocumentUpdate,
+  photoAlbumContext,
   session,
   withFileData,
 }: OverviewSectionProps) {
@@ -57,6 +60,11 @@ export default function Doc3Section({
     if (dataUrl) updateScene(sceneId, { photoUrl: dataUrl });
   };
 
+  const handleFixedAlbumSelect = (sceneId: string, item: PhotoAlbumItem) => {
+    const photoUrl = item.originalUrl || item.previewUrl;
+    if (photoUrl) updateScene(sceneId, { photoUrl });
+  };
+
   const handleExtraUpload = async (sceneId: string, file: File, fallbackTitle: string) => {
     const priorTitle = session.document3Scenes.find((scene) => scene.id === sceneId)?.title;
     const useAutoTitle = isExtraScenePlaceholderTitle(priorTitle, fallbackTitle);
@@ -79,17 +87,53 @@ export default function Doc3Section({
     }
   };
 
+  const handleExtraAlbumSelect = async (
+    sceneId: string,
+    item: PhotoAlbumItem,
+    fallbackTitle: string,
+  ) => {
+    const photoUrl = item.originalUrl || item.previewUrl;
+    if (!photoUrl) return;
+
+    const priorTitle = session.document3Scenes.find((scene) => scene.id === sceneId)?.title;
+    const useAutoTitle = isExtraScenePlaceholderTitle(priorTitle, fallbackTitle);
+
+    if (!useAutoTitle) {
+      updateScene(sceneId, { photoUrl });
+      return;
+    }
+
+    updateScene(sceneId, { photoUrl, title: fallbackTitle });
+    toggleAnalyzing([sceneId], true);
+    try {
+      const file = await assetUrlToFile(
+        item.previewUrl || item.originalUrl,
+        item.fileName || `scene-${sceneId}.jpg`,
+      );
+      const title = await inferSceneTitle(file);
+      updateScene(sceneId, { title: title || fallbackTitle });
+    } catch (error) {
+      console.warn('Doc3 scene title inference skipped for album photo selection.', error);
+    } finally {
+      toggleAnalyzing([sceneId], false);
+    }
+  };
+
   return (
     <div className={`${styles.sectionStack} ${styles.doc3SceneStack}`}>
       <Doc3FixedScenes
         items={fixedScenes}
+        photoAlbumContext={photoAlbumContext}
         onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })}
+        onAlbumSelect={handleFixedAlbumSelect}
         onUpload={handleFixedUpload}
       />
       <Doc3ExtraScenes
         items={extraScenes}
         isAnalyzing={(sceneId) => analyzingSceneIds.includes(sceneId)}
+        photoAlbumContext={photoAlbumContext}
         onClear={(sceneId) => updateScene(sceneId, { photoUrl: '', title: '' })}
+        onAlbumSelect={handleExtraAlbumSelect}
         onTitleChange={(sceneId, value) => updateScene(sceneId, { title: value })}
         onUpload={handleExtraUpload}
       />

@@ -54,7 +54,7 @@ export function MobileInspectionSessionStep12({
   ): MobilePhotoSourceTarget => ({
     fieldLabel,
     onAlbumSelected: (albumItem) => {
-      updateActivity(activityIndex, { photoUrl: albumItem.previewUrl });
+      updateActivity(activityIndex, { photoUrl: albumItem.originalUrl || albumItem.previewUrl });
     },
     onFileSelected: async (file) => {
       await screen.withFileData(file, (value) => {

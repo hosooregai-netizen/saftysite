@@ -1,8 +1,7 @@
 'use client';
 
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { assetUrlToFile } from '@/components/session/workspace/doc7Ai';
-import { fetchPhotoAlbum } from '@/lib/photos/apiClient';
 import type { PhotoAlbumItem } from '@/types/photos';
 import type { MobilePhotoSourceTarget } from './mobileInspectionSessionHelpers';
 
@@ -15,52 +14,6 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
   const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
   const [isPhotoAlbumModalOpen, setIsPhotoAlbumModalOpen] = useState(false);
   const [photoSourceTitle, setPhotoSourceTitle] = useState('사진 가져오기');
-  const [photoAlbumQuery, setPhotoAlbumQuery] = useState('');
-  const [photoAlbumRows, setPhotoAlbumRows] = useState<PhotoAlbumItem[]>([]);
-  const [photoAlbumLoading, setPhotoAlbumLoading] = useState(false);
-  const [photoAlbumError, setPhotoAlbumError] = useState<string | null>(null);
-  const [photoAlbumSelectingId, setPhotoAlbumSelectingId] = useState<string | null>(null);
-  const deferredPhotoAlbumQuery = useDeferredValue(photoAlbumQuery.trim());
-
-  useEffect(() => {
-    if (!isPhotoAlbumModalOpen || !siteId) {
-      return;
-    }
-
-    let cancelled = false;
-    setPhotoAlbumLoading(true);
-    setPhotoAlbumError(null);
-
-    void fetchPhotoAlbum({
-      all: true,
-      query: deferredPhotoAlbumQuery,
-      siteId,
-      sortBy: 'capturedAt',
-      sortDir: 'desc',
-    })
-      .then((response) => {
-        if (!cancelled) {
-          setPhotoAlbumRows(response.rows);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setPhotoAlbumRows([]);
-          setPhotoAlbumError(
-            error instanceof Error ? error.message : '사진첩을 불러오지 못했습니다.',
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setPhotoAlbumLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [deferredPhotoAlbumQuery, isPhotoAlbumModalOpen, siteId]);
 
   const resetPhotoSourceTarget = () => {
     photoSourceTargetRef.current = null;
@@ -72,17 +25,12 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
 
   const closePhotoAlbumModal = () => {
     setIsPhotoAlbumModalOpen(false);
-    setPhotoAlbumQuery('');
-    setPhotoAlbumError(null);
-    setPhotoAlbumSelectingId(null);
     resetPhotoSourceTarget();
   };
 
   const openPhotoSourcePicker = (target: MobilePhotoSourceTarget) => {
     photoSourceTargetRef.current = target;
     setPhotoSourceTitle(`${target.fieldLabel} 사진 가져오기`);
-    setPhotoAlbumError(null);
-    setPhotoAlbumQuery('');
     setIsPhotoSourceModalOpen(true);
   };
 
@@ -129,8 +77,6 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
 
   const openPhotoAlbumPicker = () => {
     setIsPhotoSourceModalOpen(false);
-    setPhotoAlbumError(null);
-    setPhotoAlbumQuery('');
     setIsPhotoAlbumModalOpen(true);
   };
 
@@ -150,26 +96,14 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
       return;
     }
 
-    try {
-      setPhotoAlbumSelectingId(item.id);
-      setPhotoAlbumError(null);
-      if (target.onAlbumSelected) {
-        await Promise.resolve(target.onAlbumSelected(item));
-      } else {
-        const file = await assetUrlToFile(item.originalUrl || item.previewUrl, item.fileName || 'photo.jpg');
-        await Promise.resolve(target.onFileSelected(file));
-      }
-      setIsPhotoAlbumModalOpen(false);
-      setPhotoAlbumQuery('');
-      setPhotoAlbumError(null);
-      resetPhotoSourceTarget();
-    } catch (error) {
-      setPhotoAlbumError(
-        error instanceof Error ? error.message : '사진을 반영하는 중 오류가 발생했습니다.',
-      );
-    } finally {
-      setPhotoAlbumSelectingId(null);
+    if (target.onAlbumSelected) {
+      await Promise.resolve(target.onAlbumSelected(item));
+    } else {
+      const file = await assetUrlToFile(item.originalUrl || item.previewUrl, item.fileName || 'photo.jpg');
+      await Promise.resolve(target.onFileSelected(file));
     }
+    setIsPhotoAlbumModalOpen(false);
+    resetPhotoSourceTarget();
   };
 
   return {
@@ -184,15 +118,10 @@ export function useMobileInspectionPhotoPicker({ siteId }: UseMobileInspectionPh
     openPhotoSourceCamera,
     openPhotoSourceGallery,
     openPhotoSourcePicker,
-    photoAlbumError,
-    photoAlbumLoading,
-    photoAlbumQuery,
-    photoAlbumRows,
-    photoAlbumSelectingId,
     photoPickerCameraInputRef,
     photoPickerGalleryInputRef,
     photoSourceTitle,
     resetPhotoSourceTarget,
-    setPhotoAlbumQuery,
+    siteId,
   };
 }

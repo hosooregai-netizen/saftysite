@@ -12,6 +12,7 @@ import {
   buildDoc2ProcessNotesDraft,
   buildDoc2RiskFallback,
 } from '@/features/inspection-session/workspace/sections/doc2/doc2ProcessNotes';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 interface Doc2AccidentFieldsProps {
   props: OverviewSectionProps;
@@ -125,6 +126,16 @@ export function Doc2AccidentFields({ props }: Doc2AccidentFieldsProps) {
     updateOverviewField(props, key, value);
   };
 
+  const handleAccidentPhotoAlbumSelect = (
+    key: 'accidentPhotoUrl' | 'accidentPhotoUrl2',
+    item: PhotoAlbumItem,
+  ) => {
+    const value = item.originalUrl || item.previewUrl;
+    if (!value) return;
+
+    updateOverviewField(props, key, value);
+  };
+
   return (
     <div className={styles.doc2AccidentSections}>
       <section className={styles.doc2AccidentSectionBlock}>
@@ -224,9 +235,14 @@ export function Doc2AccidentFields({ props }: Doc2AccidentFieldsProps) {
                                 fieldClearOverlay
                                 fieldLabelMode="omit"
                                 fitImageToBox
+                                enablePhotoAlbum
+                                photoAlbumContext={props.photoAlbumContext}
                                 value={session.document2Overview.accidentPhotoUrl}
                                 onClear={() =>
                                   updateOverviewField(props, 'accidentPhotoUrl', '')
+                                }
+                                onAlbumSelect={(item) =>
+                                  handleAccidentPhotoAlbumSelect('accidentPhotoUrl', item)
                                 }
                                 onSelect={async (file) =>
                                   handleAccidentPhotoSelect('accidentPhotoUrl', file)
@@ -247,9 +263,14 @@ export function Doc2AccidentFields({ props }: Doc2AccidentFieldsProps) {
                                 fieldClearOverlay
                                 fieldLabelMode="omit"
                                 fitImageToBox
+                                enablePhotoAlbum
+                                photoAlbumContext={props.photoAlbumContext}
                                 value={session.document2Overview.accidentPhotoUrl2}
                                 onClear={() =>
                                   updateOverviewField(props, 'accidentPhotoUrl2', '')
+                                }
+                                onAlbumSelect={(item) =>
+                                  handleAccidentPhotoAlbumSelect('accidentPhotoUrl2', item)
                                 }
                                 onSelect={async (file) =>
                                   handleAccidentPhotoSelect('accidentPhotoUrl2', file)

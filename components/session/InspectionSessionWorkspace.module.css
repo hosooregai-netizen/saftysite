@@ -3697,6 +3697,23 @@ button.uploadPreviewHit {
   box-sizing: border-box;
 }
 
+button.uploadFileHit {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.uploadPlaceholder:disabled,
+button.uploadPreviewHit:disabled,
+button.uploadFileHit:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
 .uploadHint {
   display: block;
   font-size: var(--text-ui);

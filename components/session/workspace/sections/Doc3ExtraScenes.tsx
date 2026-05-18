@@ -1,18 +1,24 @@
 import { UploadBox } from '@/components/session/workspace/widgets';
 import styles from '@/components/session/InspectionSessionWorkspace.module.css';
+import type { InspectionPhotoAlbumContext } from '@/components/session/workspace/types';
 import { FIXED_SCENE_COUNT } from '@/constants/inspectionSession/catalog';
 import { getExtraSceneTitle } from '@/constants/inspectionSession/scenePhotos';
 import type { SiteScenePhoto } from '@/types/inspectionSession';
+import type { PhotoAlbumItem } from '@/types/photos';
 
 export default function Doc3ExtraScenes({
   items,
   isAnalyzing,
+  photoAlbumContext,
+  onAlbumSelect,
   onClear,
   onTitleChange,
   onUpload,
 }: {
   items: SiteScenePhoto[];
   isAnalyzing: (sceneId: string) => boolean;
+  photoAlbumContext?: InspectionPhotoAlbumContext | null;
+  onAlbumSelect: (sceneId: string, item: PhotoAlbumItem, defaultTitle: string) => Promise<void>;
   onClear: (sceneId: string) => void;
   onTitleChange: (sceneId: string, value: string) => void;
   onUpload: (sceneId: string, file: File, defaultTitle: string) => Promise<void>;
@@ -56,7 +62,10 @@ export default function Doc3ExtraScenes({
                       labelLayout="field"
                       value={item.photoUrl}
                       fieldClearOverlay
+                      enablePhotoAlbum
+                      photoAlbumContext={photoAlbumContext}
                       onClear={() => onClear(item.id)}
+                      onAlbumSelect={(albumItem) => onAlbumSelect(item.id, albumItem, defaultTitle)}
                       onSelect={async (file) => onUpload(item.id, file, defaultTitle)}
                     />
                   </td>

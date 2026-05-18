@@ -41,11 +41,7 @@ interface MobileInspectionSessionModalsProps {
   openPhotoAlbumPicker: () => void;
   openPhotoSourceCamera: () => void;
   openPhotoSourceGallery: () => void;
-  photoAlbumError: string | null;
-  photoAlbumLoading: boolean;
-  photoAlbumQuery: string;
-  photoAlbumRows: PhotoAlbumItem[];
-  photoAlbumSelectingId: string | null;
+  photoAlbumSiteId?: string | null;
   photoPickerCameraInputRef: MutableRefObject<HTMLInputElement | null>;
   photoPickerGalleryInputRef: MutableRefObject<HTMLInputElement | null>;
   photoSourceTitle: string;
@@ -54,7 +50,6 @@ interface MobileInspectionSessionModalsProps {
   session: InspectionSessionDraft | null;
   setDocumentInfoOpen: (open: boolean) => void;
   setIsDoc2ProcessModalOpen: (open: boolean) => void;
-  setPhotoAlbumQuery: (value: string) => void;
   documentInfoOpen: boolean;
 }
 
@@ -78,11 +73,7 @@ export function MobileInspectionSessionModals({
   openPhotoAlbumPicker,
   openPhotoSourceCamera,
   openPhotoSourceGallery,
-  photoAlbumError,
-  photoAlbumLoading,
-  photoAlbumQuery,
-  photoAlbumRows,
-  photoAlbumSelectingId,
+  photoAlbumSiteId,
   photoPickerCameraInputRef,
   photoPickerGalleryInputRef,
   photoSourceTitle,
@@ -91,7 +82,6 @@ export function MobileInspectionSessionModals({
   session,
   setDocumentInfoOpen,
   setIsDoc2ProcessModalOpen,
-  setPhotoAlbumQuery,
 }: MobileInspectionSessionModalsProps) {
   return (
     <>
@@ -129,12 +119,7 @@ export function MobileInspectionSessionModals({
         closePhotoAlbumModal={closePhotoAlbumModal}
         handlePhotoAlbumSelect={handlePhotoAlbumSelect}
         isPhotoAlbumModalOpen={isPhotoAlbumModalOpen}
-        photoAlbumError={photoAlbumError}
-        photoAlbumLoading={photoAlbumLoading}
-        photoAlbumQuery={photoAlbumQuery}
-        photoAlbumRows={photoAlbumRows}
-        photoAlbumSelectingId={photoAlbumSelectingId}
-        setPhotoAlbumQuery={setPhotoAlbumQuery}
+        siteId={photoAlbumSiteId}
       />
 
       {hasLoadedSessionPayload && session ? (
